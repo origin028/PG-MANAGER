@@ -1,0 +1,142 @@
+Module Name,HTTP Method,Backend Endpoint Path,Backend Function / Handler,Database Model / Table,Authorization Guard / Role,Admin App Connected,Resident App Connected,Real Database Persistence,Gap Classification,Status
+audit_logs,GET,/api/v1/audit-logs,audit_logs.py::get_audit_logs,audit_logs,Authenticated (User),NO,NO,READ,BACKEND_ONLY,COMPLETE
+auth,POST,/api/v1/auth/login,auth.py::login,"users, refresh_tokens, otp_verifications",Public / None,YES,NO,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/refresh,auth.py::refresh_token,"users, refresh_tokens, otp_verifications",Public / None,NO,NO,YES,BACKEND_ONLY,COMPLETE
+auth,POST,/api/v1/auth/logout,auth.py::logout,"users, refresh_tokens, otp_verifications",Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+auth,GET,/api/v1/auth/me,auth.py::get_current_user_profile,"users, refresh_tokens, otp_verifications",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/change-password,auth.py::change_user_password,"users, refresh_tokens, otp_verifications",Authenticated (User),NO,NO,YES,BACKEND_ONLY,COMPLETE
+auth,GET,/api/v1/auth/resident/properties,auth.py::get_resident_onboarding_properties,"users, refresh_tokens, otp_verifications",Public / None,NO,YES,READ,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/resident/register/otp/request,auth.py::request_resident_registration_otp,"users, refresh_tokens, otp_verifications",Authenticated (User),NO,YES,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/resident/register/otp/verify,auth.py::verify_resident_registration_otp,"users, refresh_tokens, otp_verifications",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/resident/login/otp/request,auth.py::request_resident_login_otp,"users, refresh_tokens, otp_verifications",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/resident/login/otp/verify,auth.py::verify_resident_login_otp,"users, refresh_tokens, otp_verifications",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/resident/register,auth.py::register_resident,"users, refresh_tokens, otp_verifications",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/admin/register,auth.py::admin_register,"users, refresh_tokens, otp_verifications",Public / None,YES,NO,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/admin/register/verify,auth.py::admin_register_verify,"users, refresh_tokens, otp_verifications",Public / None,YES,NO,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/admin/register/resend-otp,auth.py::admin_register_resend_otp,"users, refresh_tokens, otp_verifications",Public / None,YES,NO,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/admin/login,auth.py::admin_login,"users, refresh_tokens, otp_verifications",Public / None,YES,NO,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/admin/login/verify,auth.py::admin_login_verify,"users, refresh_tokens, otp_verifications",Public / None,YES,NO,YES,COMPLETE,COMPLETE
+auth,POST,/api/v1/auth/admin/login/resend-otp,auth.py::admin_login_resend_otp,"users, refresh_tokens, otp_verifications",Public / None,YES,NO,YES,COMPLETE,COMPLETE
+beds,POST,/api/v1/beds,beds.py::create_bed,"beds, rooms",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+beds,POST,/api/v1/beds/bulk,beds.py::create_beds_bulk,"beds, rooms",Authenticated (User),NO,NO,YES,BACKEND_ONLY,COMPLETE
+beds,GET,/api/v1/beds,beds.py::list_beds,"beds, rooms",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+beds,GET,/api/v1/beds/rooms/{room_id}/beds,beds.py::list_beds_by_room_path,"beds, rooms",Authenticated (User),NO,NO,READ,BACKEND_ONLY,COMPLETE
+beds,GET,/api/v1/beds/{bed_id},beds.py::get_bed_details,"beds, rooms",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+beds,PATCH,/api/v1/beds/{bed_id},beds.py::update_bed,"beds, rooms",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+beds,DELETE,/api/v1/beds/{bed_id},beds.py::delete_bed,"beds, rooms",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+company,GET,/api/v1/company/bed-capacity,company.py::get_bed_capacity,companies,Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+complaints,GET,/api/v1/complaints,complaints.py::list_complaints,complaints,Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+complaints,GET,/api/v1/complaints/{complaint_id},complaints.py::get_complaint,complaints,Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+complaints,PATCH,/api/v1/complaints/{complaint_id},complaints.py::update_complaint,complaints,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+complaints,POST,/api/v1/complaints/{complaint_id}/assign,complaints.py::assign_complaint,complaints,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+complaints,POST,/api/v1/complaints/{complaint_id}/resolve,complaints.py::resolve_complaint,complaints,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+expenses,POST,/api/v1/expenses,expenses.py::create_expense,expenses,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+expenses,GET,/api/v1/expenses,expenses.py::list_expenses,expenses,Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+expenses,GET,/api/v1/expenses/{expense_id},expenses.py::get_expense,expenses,Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+expenses,PATCH,/api/v1/expenses/{expense_id},expenses.py::update_expense,expenses,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+expenses,DELETE,/api/v1/expenses/{expense_id},expenses.py::delete_expense,expenses,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+food_menus,POST,/api/v1/food-menus,food_menus.py::create_food_menu_item,food_menus,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+food_menus,GET,/api/v1/food-menus,food_menus.py::list_food_menu,food_menus,Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+food_menus,GET,/api/v1/food-menus/{menu_id},food_menus.py::get_food_menu_item,food_menus,Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+food_menus,PATCH,/api/v1/food-menus/{menu_id},food_menus.py::update_food_menu_item,food_menus,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+food_menus,DELETE,/api/v1/food-menus/{menu_id},food_menus.py::delete_food_menu_item,food_menus,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+health,GET,/api/v1/health,health.py::health_check,None (System / DB Ping),Public / None,NO,NO,READ,BACKEND_ONLY,COMPLETE
+invoices,POST,/api/v1/invoices,invoices.py::create_invoice,"invoices, residents",Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+invoices,GET,/api/v1/invoices/my,invoices.py::get_my_invoices,"invoices, residents",Public / None,NO,NO,READ,BACKEND_ONLY,COMPLETE
+invoices,GET,/api/v1/invoices/{invoice_id},invoices.py::get_invoice_detail,"invoices, residents",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+invoices,GET,/api/v1/invoices,invoices.py::list_invoices,"invoices, residents",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+invoices,GET,/api/v1/invoices/{invoice_id}/pdf,invoices.py::download_invoice_pdf,"invoices, residents",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+invoices,PATCH,/api/v1/invoices/{invoice_id},invoices.py::update_invoice,"invoices, residents",Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+leads,POST,/api/v1/leads,leads.py::create_lead,leads,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+leads,GET,/api/v1/leads,leads.py::list_leads,leads,Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+leads,GET,/api/v1/leads/{lead_id},leads.py::get_lead,leads,Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+leads,PATCH,/api/v1/leads/{lead_id},leads.py::update_lead,leads,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+leads,DELETE,/api/v1/leads/{lead_id},leads.py::delete_lead,leads,Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+notices,POST,/api/v1/notices,notices.py::create_notice,notices,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+notices,GET,/api/v1/notices,notices.py::list_notices,notices,Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+notices,GET,/api/v1/notices/{notice_id},notices.py::get_notice,notices,Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+notices,PATCH,/api/v1/notices/{notice_id},notices.py::update_notice,notices,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+notices,DELETE,/api/v1/notices/{notice_id},notices.py::delete_notice,notices,Role Restricted,YES,YES,YES,COMPLETE,COMPLETE
+notifications,POST,/api/v1/notifications/device-token,notifications.py::register_device_token,notifications,Authenticated (User),NO,NO,YES,BACKEND_ONLY,COMPLETE
+notifications,GET,/api/v1/notifications,notifications.py::get_user_notifications,notifications,Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/links,payments.py::create_payment_link,"payments, payment_links, upi_payments",Authenticated (User),NO,NO,YES,BACKEND_ONLY,COMPLETE
+payments,GET,/api/v1/payments/links/{token}/checkout,payments.py::get_public_checkout_details,"payments, payment_links, upi_payments",Public / None,NO,NO,READ,BACKEND_ONLY,COMPLETE
+payments,POST,/api/v1/payments/links/{link_id}/whatsapp,payments.py::send_payment_link_whatsapp,"payments, payment_links, upi_payments",Authenticated (User),NO,NO,YES,BACKEND_ONLY,COMPLETE
+payments,POST,/api/v1/payments/webhook/razorpay,payments.py::handle_razorpay_webhook,"payments, payment_links, upi_payments",Public / None,NO,NO,YES,BACKEND_ONLY,COMPLETE
+payments,POST,/api/v1/payments/requests,payments.py::create_payment_request,"payments, payment_links, upi_payments",Authenticated (User),NO,YES,YES,COMPLETE,COMPLETE
+payments,GET,/api/v1/payments/{payment_id}/status,payments.py::get_payment_status,"payments, payment_links, upi_payments",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/verify,payments.py::verify_payment_checkout,"payments, payment_links, upi_payments",Role Restricted,NO,NO,YES,BACKEND_ONLY,COMPLETE
+payments,GET,/api/v1/payments/my,payments.py::get_my_payments,"payments, payment_links, upi_payments",Public / None,NO,NO,READ,BACKEND_ONLY,COMPLETE
+payments,GET,/api/v1/payments,payments.py::list_payments,"payments, payment_links, upi_payments",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/upi/initiate,payments.py::initiate_upi_rent_payment,"payments, payment_links, upi_payments",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/upi/{payment_id}/return,payments.py::return_from_upi_app,"payments, payment_links, upi_payments",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/upi/{payment_id}/cancel,payments.py::cancel_upi_payment,"payments, payment_links, upi_payments",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+payments,GET,/api/v1/payments/upi/{payment_id}/status,payments.py::get_upi_payment_status,"payments, payment_links, upi_payments",Authenticated (User),NO,YES,READ,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/upi/{payment_id}/verify,payments.py::verify_upi_payment_attempt,"payments, payment_links, upi_payments",Public / None,NO,YES,YES,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/upi/{payment_id}/admin-settle,payments.py::admin_settle_upi_payment,"payments, payment_links, upi_payments",Authenticated (User),NO,YES,YES,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/upi/webhook/bank,payments.py::bank_direct_upi_webhook,"payments, payment_links, upi_payments",Public / None,NO,NO,YES,BACKEND_ONLY,COMPLETE
+payments,POST,/api/v1/payments/manual,payments.py::record_manual_payment,"payments, payment_links, upi_payments",Authenticated (User),NO,NO,YES,BACKEND_ONLY,COMPLETE
+payments,POST,/api/v1/payments/demo/pay,payments.py::process_demo_payment,"payments, payment_links, upi_payments",Authenticated (User),NO,YES,YES,COMPLETE,COMPLETE
+payments,POST,/api/v1/payments/collect,payments.py::collect_rent,"payments, payment_links, upi_payments",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+payments,GET,/api/v1/payments/{payment_id},payments.py::get_payment_detail,"payments, payment_links, upi_payments",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+payments,GET,/api/v1/payments/{payment_id}/receipt,payments.py::get_payment_receipt,"payments, payment_links, upi_payments",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+properties,POST,/api/v1/properties,properties.py::create_property,properties,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+properties,GET,/api/v1/properties,properties.py::list_properties,properties,Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+properties,GET,/api/v1/properties/{property_id},properties.py::get_property,properties,Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+properties,PATCH,/api/v1/properties/{property_id},properties.py::update_property,properties,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+properties,DELETE,/api/v1/properties/{property_id},properties.py::deactivate_property,properties,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+properties,POST,/api/v1/properties/{property_id}/access,properties.py::assign_property_access,properties,Authenticated (User),YES,YES,YES,COMPLETE,COMPLETE
+receipts,GET,/api/v1/receipts/my,receipts.py::get_my_receipts,"receipts, payments",Public / None,NO,YES,READ,COMPLETE,COMPLETE
+receipts,GET,/api/v1/receipts/{receipt_id},receipts.py::get_receipt_detail,"receipts, payments",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+receipts,GET,/api/v1/receipts/{receipt_id}/pdf,receipts.py::download_receipt_pdf,"receipts, payments",Authenticated (User),YES,YES,READ,COMPLETE,COMPLETE
+reports,GET,/api/v1/reports/dashboard,reports.py::get_dashboard_summary,"invoices, payments, beds, properties",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+reports,GET,/api/v1/reports/financial,reports.py::get_financial_report,"invoices, payments, beds, properties",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+reports,GET,/api/v1/reports/payments,reports.py::get_payments_report,"invoices, payments, beds, properties",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+reports,GET,/api/v1/reports/payments/export,reports.py::export_payments_csv,"invoices, payments, beds, properties",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+reports,GET,/api/v1/reports/occupancy,reports.py::get_occupancy_report,"invoices, payments, beds, properties",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+reports,GET,/api/v1/reports/occupancy/export,reports.py::export_occupancy_csv,"invoices, payments, beds, properties",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/dashboard,resident_mobile.py::get_resident_dashboard,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/food-menu,resident_mobile.py::get_food_menu,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/invoices,resident_mobile.py::get_resident_invoices,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/invoices/{invoice_id},resident_mobile.py::get_resident_invoice_detail,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/payments,resident_mobile.py::get_resident_payments,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/profile,resident_mobile.py::get_resident_profile,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/property,resident_mobile.py::get_resident_property,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/complaints,resident_mobile.py::list_resident_complaints,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,POST,/api/v1/resident/complaints/upload-photo,resident_mobile.py::upload_complaint_photo,"residents, users, invoices, complaints",Resident Token,NO,YES,YES,COMPLETE,COMPLETE
+resident_mobile,POST,/api/v1/resident/complaints,resident_mobile.py::create_resident_complaint,"residents, users, invoices, complaints",Resident Token,NO,YES,YES,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/property-contacts,resident_mobile.py::get_property_contacts,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,GET,/api/v1/resident/settings,resident_mobile.py::get_resident_settings,"residents, users, invoices, complaints",Resident Token,NO,YES,READ,COMPLETE,COMPLETE
+resident_mobile,PATCH,/api/v1/resident/settings,resident_mobile.py::update_resident_settings,"residents, users, invoices, complaints",Resident Token,NO,YES,YES,COMPLETE,COMPLETE
+residents,GET,/api/v1/residents/me,residents.py::get_resident_profile_me,"residents, users, beds",Authenticated (User),NO,NO,READ,BACKEND_ONLY,COMPLETE
+residents,POST,/api/v1/residents,residents.py::onboard_resident,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,GET,/api/v1/residents,residents.py::list_residents,"residents, users, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+residents,GET,/api/v1/residents/pending-approvals,residents.py::list_pending_resident_approvals,"residents, users, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+residents,POST,/api/v1/residents/{resident_id}/approve,residents.py::approve_resident_registration,"residents, users, beds",Role Restricted,YES,NO,YES,COMPLETE,COMPLETE
+residents,POST,/api/v1/residents/{resident_id}/reject,residents.py::reject_resident_registration,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,POST,/api/v1/residents/{resident_id}/checkout,residents.py::checkout_resident,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,GET,/api/v1/residents/{resident_id},residents.py::get_resident_detail,"residents, users, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+residents,PATCH,/api/v1/residents/{resident_id},residents.py::update_resident_details,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,POST,/api/v1/residents/{resident_id}/kyc/verify,residents.py::verify_resident_kyc,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,POST,/api/v1/residents/{resident_id}/kyc/reject,residents.py::reject_resident_kyc,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,POST,/api/v1/residents/{resident_id}/verify-kyc,residents.py::verify_resident_kyc_alias,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,POST,/api/v1/residents/{resident_id}/reject-kyc,residents.py::reject_resident_kyc_alias,"residents, users, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+residents,GET,/api/v1/residents/{resident_id}/kyc-document/{doc_type},residents.py::get_resident_kyc_document,"residents, users, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+residents,GET,/api/v1/residents/{resident_id}/kyc-documents/{doc_type},residents.py::get_resident_kyc_document,"residents, users, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+rooms,POST,/api/v1/rooms,rooms.py::create_room,"rooms, properties, beds",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+rooms,GET,/api/v1/rooms,rooms.py::list_rooms,"rooms, properties, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+rooms,GET,/api/v1/rooms/floor-wise,rooms.py::get_rooms_floor_wise,"rooms, properties, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+rooms,GET,/api/v1/rooms/{room_id},rooms.py::get_room_details,"rooms, properties, beds",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+rooms,PATCH,/api/v1/rooms/{room_id},rooms.py::update_room,"rooms, properties, beds",Role Restricted,YES,NO,YES,COMPLETE,COMPLETE
+settings,GET,/api/v1/settings/company,settings.py::get_company_settings,"companies, resident_preferences",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+settings,PATCH,/api/v1/settings/company,settings.py::update_company_settings,"companies, resident_preferences",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+settings,GET,/api/v1/settings/subscription,settings.py::get_subscription_details,"companies, resident_preferences",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+staff,POST,/api/v1/staff,staff.py::create_staff,"staff, users",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+staff,GET,/api/v1/staff,staff.py::list_staff,"staff, users",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+staff,GET,/api/v1/staff/{staff_id},staff.py::get_staff_detail,"staff, users",Authenticated (User),YES,NO,READ,COMPLETE,COMPLETE
+staff,PATCH,/api/v1/staff/{staff_id},staff.py::update_staff,"staff, users",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+staff,DELETE,/api/v1/staff/{staff_id},staff.py::delete_staff,"staff, users",Authenticated (User),YES,NO,YES,COMPLETE,COMPLETE
+users,GET,/api/v1/users,users.py::get_users,"users, roles",Authenticated (User),NO,YES,READ,COMPLETE,COMPLETE
+users,PATCH,/api/v1/users/me,users.py::update_current_user_profile,"users, roles",Authenticated (User),NO,YES,YES,COMPLETE,COMPLETE
+users,GET,/api/v1/users/{user_id},users.py::get_user_detail,"users, roles",Authenticated (User),NO,YES,READ,COMPLETE,COMPLETE
+users,PATCH,/api/v1/users/{user_id}/email,users.py::update_user_email,"users, roles",Authenticated (User),NO,YES,YES,COMPLETE,COMPLETE

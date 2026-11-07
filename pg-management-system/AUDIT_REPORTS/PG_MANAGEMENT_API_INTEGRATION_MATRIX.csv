@@ -1,0 +1,145 @@
+Module,HTTP Method,Backend Endpoint,Backend API Exists,Admin App Connected,Resident App Connected,Real DB Data,Auth Requirement,Integration Status
+audit_logs,GET,/api/v1/audit-logs,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+auth,POST,/api/v1/auth/login,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+auth,POST,/api/v1/auth/refresh,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+auth,POST,/api/v1/auth/logout,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+auth,GET,/api/v1/auth/me,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+auth,POST,/api/v1/auth/change-password,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+auth,GET,/api/v1/auth/resident/properties,YES,NO,YES,YES,Public / None,Connected to Resident App
+auth,POST,/api/v1/auth/resident/register/otp/request,YES,NO,YES,YES,Authenticated (User),Connected to Resident App
+auth,POST,/api/v1/auth/resident/register/otp/verify,YES,NO,YES,YES,Public / None,Connected to Resident App
+auth,POST,/api/v1/auth/resident/login/otp/request,YES,NO,YES,YES,Public / None,Connected to Resident App
+auth,POST,/api/v1/auth/resident/login/otp/verify,YES,NO,YES,YES,Public / None,Connected to Resident App
+auth,POST,/api/v1/auth/resident/register,YES,NO,YES,YES,Public / None,Connected to Resident App
+auth,POST,/api/v1/auth/admin/register,YES,YES,NO,YES,Public / None,Connected to Admin App
+auth,POST,/api/v1/auth/admin/register/verify,YES,YES,NO,YES,Public / None,Connected to Admin App
+auth,POST,/api/v1/auth/admin/register/resend-otp,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+auth,POST,/api/v1/auth/admin/login,YES,YES,NO,YES,Public / None,Connected to Admin App
+auth,POST,/api/v1/auth/admin/login/verify,YES,YES,NO,YES,Public / None,Connected to Admin App
+auth,POST,/api/v1/auth/admin/login/resend-otp,YES,YES,NO,YES,Public / None,Connected to Admin App
+beds,POST,/api/v1/beds,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+beds,POST,/api/v1/beds/bulk,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+beds,GET,/api/v1/beds,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+beds,GET,/api/v1/beds/rooms/{room_id}/beds,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+beds,GET,/api/v1/beds/{bed_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+beds,PATCH,/api/v1/beds/{bed_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+beds,DELETE,/api/v1/beds/{bed_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+company,GET,/api/v1/company/bed-capacity,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+complaints,GET,/api/v1/complaints,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+complaints,GET,/api/v1/complaints/{complaint_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+complaints,PATCH,/api/v1/complaints/{complaint_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+complaints,POST,/api/v1/complaints/{complaint_id}/assign,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+complaints,POST,/api/v1/complaints/{complaint_id}/resolve,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+expenses,POST,/api/v1/expenses,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+expenses,GET,/api/v1/expenses,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+expenses,GET,/api/v1/expenses/{expense_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+expenses,PATCH,/api/v1/expenses/{expense_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+expenses,DELETE,/api/v1/expenses/{expense_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+food_menus,POST,/api/v1/food-menus,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+food_menus,GET,/api/v1/food-menus,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+food_menus,GET,/api/v1/food-menus/{menu_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+food_menus,PATCH,/api/v1/food-menus/{menu_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+food_menus,DELETE,/api/v1/food-menus/{menu_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+health,GET,/api/v1/health,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+invoices,POST,/api/v1/invoices,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+invoices,GET,/api/v1/invoices/my,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+invoices,GET,/api/v1/invoices/{invoice_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+invoices,GET,/api/v1/invoices,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+invoices,GET,/api/v1/invoices/{invoice_id}/pdf,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+invoices,PATCH,/api/v1/invoices/{invoice_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+leads,POST,/api/v1/leads,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+leads,GET,/api/v1/leads,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+leads,GET,/api/v1/leads/{lead_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+leads,PATCH,/api/v1/leads/{lead_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+leads,DELETE,/api/v1/leads/{lead_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+notices,POST,/api/v1/notices,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+notices,GET,/api/v1/notices,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+notices,GET,/api/v1/notices/{notice_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+notices,PATCH,/api/v1/notices/{notice_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+notices,DELETE,/api/v1/notices/{notice_id},YES,YES,YES,YES,Role Restricted,Connected to Both Apps
+notifications,POST,/api/v1/notifications/device-token,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+notifications,GET,/api/v1/notifications,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+notifications,GET,/api/v1/notifications/unread-count,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+notifications,PATCH,/api/v1/notifications/{id}/read,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+notifications,POST,/api/v1/notifications/read-all,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+payments,POST,/api/v1/payments/links,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+payments,GET,/api/v1/payments/links/{token}/checkout,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+payments,POST,/api/v1/payments/links/{link_id}/whatsapp,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+payments,POST,/api/v1/payments/webhook/razorpay,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+payments,POST,/api/v1/payments/requests,YES,NO,YES,YES,Authenticated (User),Connected to Resident App
+payments,GET,/api/v1/payments/{payment_id}/status,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+payments,POST,/api/v1/payments/verify,YES,NO,NO,YES,Role Restricted,Backend Only (No Frontend Caller)
+payments,GET,/api/v1/payments/my,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+payments,GET,/api/v1/payments,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+payments,POST,/api/v1/payments/upi/initiate,YES,NO,YES,YES,Public / None,Connected to Resident App
+payments,POST,/api/v1/payments/upi/{payment_id}/return,YES,NO,YES,YES,Public / None,Connected to Resident App
+payments,POST,/api/v1/payments/upi/{payment_id}/cancel,YES,NO,YES,YES,Public / None,Connected to Resident App
+payments,GET,/api/v1/payments/upi/{payment_id}/status,YES,NO,YES,YES,Authenticated (User),Connected to Resident App
+payments,POST,/api/v1/payments/upi/{payment_id}/verify,YES,NO,YES,YES,Public / None,Connected to Resident App
+payments,POST,/api/v1/payments/upi/{payment_id}/admin-settle,YES,NO,YES,YES,Authenticated (User),Connected to Resident App
+payments,POST,/api/v1/payments/upi/webhook/bank,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+payments,POST,/api/v1/payments/manual,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+payments,POST,/api/v1/payments/demo/pay,YES,NO,YES,YES,Authenticated (User),Connected to Resident App
+payments,POST,/api/v1/payments/collect,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+payments,GET,/api/v1/payments/{payment_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+payments,GET,/api/v1/payments/{payment_id}/receipt,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+properties,POST,/api/v1/properties,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+properties,GET,/api/v1/properties,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+properties,GET,/api/v1/properties/{property_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+properties,PATCH,/api/v1/properties/{property_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+properties,DELETE,/api/v1/properties/{property_id},YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+properties,POST,/api/v1/properties/{property_id}/access,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+receipts,GET,/api/v1/receipts/my,YES,NO,NO,YES,Public / None,Backend Only (No Frontend Caller)
+receipts,GET,/api/v1/receipts/{receipt_id},YES,NO,YES,YES,Authenticated (User),Connected to Resident App
+receipts,GET,/api/v1/receipts/{receipt_id}/pdf,YES,YES,YES,YES,Authenticated (User),Connected to Both Apps
+reports,GET,/api/v1/reports/dashboard,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+reports,GET,/api/v1/reports/financial,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+reports,GET,/api/v1/reports/payments,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+reports,GET,/api/v1/reports/payments/export,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+reports,GET,/api/v1/reports/occupancy,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+reports,GET,/api/v1/reports/occupancy/export,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+resident_mobile,GET,/api/v1/resident/dashboard,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/food-menu,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/invoices,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/invoices/{invoice_id},YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/payments,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/profile,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/property,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/complaints,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,POST,/api/v1/resident/complaints/upload-photo,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,POST,/api/v1/resident/complaints,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/property-contacts,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,GET,/api/v1/resident/settings,YES,NO,YES,YES,Resident Token,Connected to Resident App
+resident_mobile,PATCH,/api/v1/resident/settings,YES,NO,YES,YES,Resident Token,Connected to Resident App
+residents,GET,/api/v1/residents/me,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+residents,POST,/api/v1/residents,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,GET,/api/v1/residents,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,GET,/api/v1/residents/pending-approvals,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,POST,/api/v1/residents/{resident_id}/approve,YES,YES,NO,YES,Role Restricted,Connected to Admin App
+residents,POST,/api/v1/residents/{resident_id}/reject,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,POST,/api/v1/residents/{resident_id}/checkout,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,GET,/api/v1/residents/{resident_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,PATCH,/api/v1/residents/{resident_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,POST,/api/v1/residents/{resident_id}/kyc/verify,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,POST,/api/v1/residents/{resident_id}/kyc/reject,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,POST,/api/v1/residents/{resident_id}/verify-kyc,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,POST,/api/v1/residents/{resident_id}/reject-kyc,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,GET,/api/v1/residents/{resident_id}/kyc-document/{doc_type},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+residents,GET,/api/v1/residents/{resident_id}/kyc-documents/{doc_type},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+rooms,POST,/api/v1/rooms,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+rooms,GET,/api/v1/rooms,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+rooms,GET,/api/v1/rooms/floor-wise,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+rooms,GET,/api/v1/rooms/{room_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+rooms,PATCH,/api/v1/rooms/{room_id},YES,YES,NO,YES,Role Restricted,Connected to Admin App
+settings,GET,/api/v1/settings/company,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+settings,PATCH,/api/v1/settings/company,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+settings,GET,/api/v1/settings/subscription,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+staff,POST,/api/v1/staff,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+staff,GET,/api/v1/staff,YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+staff,GET,/api/v1/staff/{staff_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+staff,PATCH,/api/v1/staff/{staff_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+staff,DELETE,/api/v1/staff/{staff_id},YES,YES,NO,YES,Authenticated (User),Connected to Admin App
+users,GET,/api/v1/users,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+users,PATCH,/api/v1/users/me,YES,NO,YES,YES,Authenticated (User),Connected to Resident App
+users,GET,/api/v1/users/{user_id},YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)
+users,PATCH,/api/v1/users/{user_id}/email,YES,NO,NO,YES,Authenticated (User),Backend Only (No Frontend Caller)

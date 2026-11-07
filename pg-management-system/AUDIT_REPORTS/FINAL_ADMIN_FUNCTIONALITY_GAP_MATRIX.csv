@@ -1,0 +1,109 @@
+Screen Name,User Action,Expected Business Functionality,Flutter Function/Callback,API Endpoint and HTTP Method,Backend Route and Service,Database Model/Table,Real DB Persistence,Loading/Error/Success States,Status
+SplashScreen,Auto-navigate on app start,Route authenticated users to Dashboard or unauthenticated to Login,_SplashScreenState.initState (Timer),None (Local Token Check),TokenStorage.isAuthenticated,Local secure storage,N/A,YES,COMPLETE
+LoginScreen,Enter Email,Input administrator email address,_emailController,None (Client State),None,None,N/A,YES,COMPLETE
+LoginScreen,Enter Password,Input administrator password,_passwordController,None (Client State),None,None,N/A,YES,COMPLETE
+LoginScreen,Toggle Password Visibility,Show/hide password text in input field,setState(() => _obscurePassword = !_obscurePassword),None (Client State),None,None,N/A,YES,COMPLETE
+LoginScreen,Click Log In Button,Authenticate admin and save JWT access and refresh tokens,_handleLogin(),POST /api/v1/auth/admin/login,auth.admin_login -> AuthService.admin_login,users / refresh_tokens,YES,YES,COMPLETE
+LoginScreen,Click Register Link,Navigate to PG Owner Registration screen,context.go('/register'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+RegisterScreen,Enter Business Name,Input company/business legal name,_businessNameController,None (Client State),None,None,N/A,YES,COMPLETE
+RegisterScreen,Enter Admin Email,Input administrator registered email,_emailController,None (Client State),None,None,N/A,YES,COMPLETE
+RegisterScreen,Enter Password,Input administrator secure password,_passwordController,None (Client State),None,None,N/A,YES,COMPLETE
+RegisterScreen,Toggle Password Visibility,Show/hide password text,setState(() => _obscurePassword = !_obscurePassword),None (Client State),None,None,N/A,YES,COMPLETE
+RegisterScreen,Enter Super Key,Input Origin cryptographic Super Key for admin verification,_superKeyController,None (Client State),None,None,N/A,YES,COMPLETE
+RegisterScreen,Agree to Terms,Checkbox to accept terms and conditions,setState(() => _agreedToTerms = val),None (Client State),None,None,N/A,YES,COMPLETE
+RegisterScreen,Click Register Now,Register company and Super Admin user with bed quota,_onRegister(),POST /api/v1/auth/admin/register,auth.admin_register -> AuthService.admin_register,companies / users / roles,YES,YES,COMPLETE
+RegisterScreen,Click Log In Link,Navigate to Admin Login screen,context.go('/login'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Select Property Dropdown,Switch active PG property across all admin modules,AppDropdown.onChanged -> AppData.selectedPropertyId,GET /api/v1/properties,properties.list_properties -> PropertyRepository,properties,YES,YES,COMPLETE
+AdminLayout,Navigate to Dashboard,Switch view to Dashboard,context.go('/dashboard'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Properties,Switch view to Properties management,context.go('/properties'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Rooms,Switch view to Rooms & Beds management,context.go('/rooms'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Residents,Switch view to Residents directory & KYC,context.go('/residents'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Payments,Switch view to Invoices & Rent collection,context.go('/payments'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Expenses,Switch view to Property operational expenses,context.go('/expenses'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Complaints,Switch view to Maintenance complaints,context.go('/complaints'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Staff,Switch view to Staff & Caretaker roster,context.go('/staff'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Leads,Switch view to Leads CRM pipeline,context.go('/leads'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Reports,Switch view to Analytics & Statements,context.go('/reports'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Food Menu,Switch view to 7-day Meal planner,context.go('/food-menu'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+AdminLayout,Navigate to Settings,Switch view to Company Profile & Theme,context.go('/settings'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+DashboardScreen,Load Dashboard Metrics,Fetch occupancy revenue and pending approval counts,_loadDashboardData(),GET /api/v1/reports/dashboard,reports.get_dashboard_reports,properties / rooms / beds / invoices / residents,YES,YES,COMPLETE
+DashboardScreen,Fetch Company Bed Capacity,Fetch 240 bed capacity quota and current usage,_loadDashboardData(),GET /api/v1/company/bed-capacity,company.get_company_bed_capacity,companies / beds,YES,YES,COMPLETE
+DashboardScreen,Fetch Pending Approvals,Fetch list of self-registered residents awaiting approval,_loadDashboardData(),GET /api/v1/residents/pending-approvals,residents.list_pending_resident_approvals,pending_resident_registrations,YES,YES,COMPLETE
+DashboardScreen,Open Approval Dialog,View resident KYC details and select Room/Bed,_showApprovalDialog(resident),None (Client Modal),None,None,N/A,YES,COMPLETE
+DashboardScreen,Select Room for Approval,Choose target room from property room dropdown,AppDropdown.onChanged,None (Client State),None,None,N/A,YES,COMPLETE
+DashboardScreen,Select Bed for Approval,Choose target available bed from room beds dropdown,AppDropdown.onChanged,None (Client State),None,None,N/A,YES,COMPLETE
+DashboardScreen,Confirm Approval,Approve resident allocate bed and create active tenancy,AdminApiService.approveResident(),POST /api/v1/residents/{id}/approve,residents.approve_resident_registration,residents / beds / users,YES,YES,COMPLETE
+DashboardScreen,Reject Approval,Reject resident registration with rejection notes,AdminApiService.rejectResident(),POST /api/v1/residents/{id}/reject,residents.reject_resident_registration,pending_resident_registrations,YES,YES,COMPLETE
+DashboardScreen,Room Availability Card Tap,Open floor-wise room availability breakdown dialog,_showRoomAvailabilityDialog(),GET /api/v1/rooms/floor-wise,rooms.list_rooms_floor_wise,rooms / beds,YES,YES,COMPLETE
+PropertiesScreen,Fetch Properties List,Fetch all properties owned by administrator,_loadProperties(),GET /api/v1/properties,properties.list_properties -> PropertyRepository,properties,YES,YES,COMPLETE
+PropertiesScreen,Open Add Property Dialog,Open modal to create a new PG property,_showAddPropertyDialog(),None (Client Modal),None,None,N/A,YES,COMPLETE
+PropertiesScreen,Submit Add Property,Create new PG property with floors address and amenities,AdminApiService.createProperty(),POST /api/v1/properties,properties.create_property,properties,YES,YES,COMPLETE
+PropertiesScreen,Open Edit Property Dialog,Open modal to edit existing PG property details,_showEditPropertyDialog(),None (Client Modal),None,None,N/A,YES,COMPLETE
+PropertiesScreen,Submit Edit Property,Update property name address manager or floors,AdminApiService.updateProperty(),PUT /api/v1/properties/{id},properties.update_property,properties,YES,YES,COMPLETE
+PropertiesScreen,Delete Property via Dialog,Delete or deactivate property from within edit dialog,AdminApiService.deleteProperty(),DELETE /api/v1/properties/{id},properties.delete_property,properties,YES,YES,COMPLETE
+PropertiesScreen,Delete Property via Table Icon,Trash icon on table row removes property,_properties.removeWhere(),None (Local Memory Only),None,Local AppData (No API Call),NO,YES,PARTIAL
+RoomsBedsScreen,Fetch Floor-Wise Rooms,Load rooms and beds grouped by floor for property,_loadRoomsFromApi(),GET /api/v1/rooms/floor-wise,rooms.list_rooms_floor_wise,rooms / beds,YES,YES,COMPLETE
+RoomsBedsScreen,Filter by Sharing Type,Filter displayed rooms by Single Double Triple or All,setState(() => _selectedFilter = type),None (Client Filter),None,None,N/A,YES,COMPLETE
+RoomsBedsScreen,Open Add Room Modal,Open form to add room and constituent beds,_showAddRoomModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+RoomsBedsScreen,Submit Add Room,Create room record and generate constituent bed records,AdminApiService.createRoom() + createBed(),POST /api/v1/rooms & POST /api/v1/beds,rooms.create_room & beds.create_bed,rooms / beds,YES,YES,COMPLETE
+RoomsBedsScreen,Open Manage Room Modal,Open room management modal with bed status breakdown,_showManageRoomModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+RoomsBedsScreen,Submit Delete Room,Delete empty room or soft-deactivate room with checkouts,AdminApiService.deleteRoom(),DELETE /api/v1/rooms/{id},rooms.delete_room,rooms / beds,YES,YES,COMPLETE
+RoomsBedsScreen,Tap Bed Pill,Inspect bed occupancy and view resident name or vacant status,onTap -> _showBedDetail(),None (Client Modal),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Fetch Residents List,Load resident directory filtered by property and status,_loadResidentsFromApi(),GET /api/v1/residents,residents.list_residents,residents / users,YES,YES,COMPLETE
+ResidentsScreen,Search Resident Input,Filter residents list by search term name or phone,onChanged -> setState(),None (Client Filter),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Filter Tenancy Status,Filter by All Active Pending or Inactive tabs,onTap -> setState(),None (Client Filter),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Filter KYC Status,Filter by All Verified Pending or Rejected tabs,onTap -> setState(),None (Client Filter),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Open Add Resident Modal,Open manual resident onboarding modal,_showAddResidentModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Select Room and Bed,Select assigned room and bed from live dropdowns,AppDropdown.onChanged,None (Client State),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Submit Onboard Resident,Create user resident record and allocate bed,AdminApiService.onboardResident(),POST /api/v1/residents,residents.onboard_resident,users / residents / beds,YES,YES,COMPLETE
+ResidentsScreen,View KYC Document,Fetch Aadhaar or PAN document binary bytes,AdminApiService.getKycDocumentBytes(),GET /api/v1/residents/{id}/kyc-document/{type},residents.get_resident_kyc_document,residents (file storage),YES,YES,COMPLETE
+ResidentsScreen,Verify Resident KYC,Mark resident KYC status as Verified,AdminApiService.verifyResidentKYC(),POST /api/v1/residents/{id}/verify-kyc,residents.verify_resident_kyc,residents,YES,YES,COMPLETE
+ResidentsScreen,Reject Resident KYC,Mark resident KYC status as Rejected with reason,AdminApiService.rejectResidentKYC(),POST /api/v1/residents/{id}/reject-kyc,residents.reject_resident_kyc,residents,YES,YES,COMPLETE
+ResidentsScreen,Open Room Transfer Modal,Open modal to transfer resident to new room/bed,_showTransferModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Submit Room Transfer,Transfer resident release old bed and occupy new bed,AdminApiService.transferResident(),PATCH /api/v1/residents/{id},residents.update_resident,residents / beds / audit_logs,YES,YES,COMPLETE
+ResidentsScreen,Open Checkout Modal,Open checkout modal with damage deduction input,_showCheckoutModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+ResidentsScreen,Submit Checkout Settlement,Settle deposit refund release bed and deactivate user,AdminApiService.checkoutResident(),POST /api/v1/residents/{id}/checkout,residents.checkout_resident,residents / beds / users,YES,YES,COMPLETE
+PaymentsScreen,Fetch Invoices List,Load all rent invoices filtered by property and status,_loadInvoicesFromApi(),GET /api/v1/invoices,invoices.list_invoices,invoices / residents,YES,YES,COMPLETE
+PaymentsScreen,Filter Invoice Status,Filter by All Paid Unpaid or Pending tabs,onTap -> setState(),None (Client Filter),None,None,N/A,YES,COMPLETE
+PaymentsScreen,Open Collect Rent Modal,Open offline rent collection modal for unpaid invoice,_showCollectRentModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+PaymentsScreen,Select Offline Payment Mode,Choose Cash Bank Transfer UPI or Cheque,onSelected -> setState(),None (Client State),None,None,N/A,YES,COMPLETE
+PaymentsScreen,Submit Rent Collection,Record offline payment update invoice and generate receipt,AdminApiService.collectPayment(),POST /api/v1/payments/collect,payments.collect_rent_offline,payments / invoices / receipts,YES,YES,COMPLETE
+PaymentsScreen,Open Create Test Invoice Dialog,Open dialog to generate safe ₹1 test invoice,_showCreateTestInvoiceDialog(),None (Client Modal),None,None,N/A,YES,COMPLETE
+PaymentsScreen,Submit Create Test Invoice,Generate ₹1.00 TEST invoice for verification,AdminApiService.createInvoice(),POST /api/v1/invoices,invoices.create_invoice,invoices,YES,YES,COMPLETE
+PaymentsScreen,Download Receipt PDF,Download binary PDF receipt for settled payment,AdminApiService.downloadReceiptPdf(),GET /api/v1/receipts/{id}/pdf,receipts.download_receipt_pdf,receipts / payments / invoices,YES,YES,COMPLETE
+ExpensesScreen,Fetch Expenses List,Load operating expenses filtered by property and category,_loadExpensesFromApi(),GET /api/v1/expenses,expenses.list_expenses,expenses,YES,YES,COMPLETE
+ExpensesScreen,Filter Expense Category,Filter by Maintenance Utilities Food Cleaning Staff or Other,onTap -> setState(),None (Client Filter),None,None,N/A,YES,COMPLETE
+ExpensesScreen,Open Add Expense Modal,Open modal to record property operational expense,_showAddExpenseModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+ExpensesScreen,Submit Add Expense,Create expense record with category vendor amount and date,AdminApiService.createExpense(),POST /api/v1/expenses,expenses.create_expense,expenses,YES,YES,COMPLETE
+ExpensesScreen,Delete Expense,Delete expense record from property ledger,AdminApiService.deleteExpense(),DELETE /api/v1/expenses/{id},expenses.delete_expense,expenses,YES,YES,COMPLETE
+ComplaintsScreen,Fetch Complaints List,Load maintenance complaints filtered by property and status,_loadComplaintsFromApi(),GET /api/v1/complaints,complaints.list_complaints,complaints / residents,YES,YES,COMPLETE
+ComplaintsScreen,Filter Complaint Status,Filter by All Open In Progress or Resolved tabs,onTap -> setState(),None (Client Filter),None,None,N/A,YES,COMPLETE
+ComplaintsScreen,Submit Resolve Complaint,Resolve complaint and attach resolution inspection notes,AdminApiService.resolveComplaint(),POST /api/v1/complaints/{id}/resolve,complaints.resolve_complaint,complaints,YES,YES,COMPLETE
+ComplaintsScreen,Submit Update Status,Update complaint progress status to IN_PROGRESS or OPEN,AdminApiService.updateComplaint(),PATCH /api/v1/complaints/{id},complaints.update_complaint,complaints,YES,YES,COMPLETE
+StaffScreen,Fetch Staff List,Load staff and caretaker roster for active property,_loadStaffFromApi(),GET /api/v1/staff,staff.list_staff,staff,YES,YES,COMPLETE
+StaffScreen,Open Add Staff Modal,Open modal to hire or register staff member,_showAddStaffModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+StaffScreen,Submit Add Staff,Create staff record with name role phone and salary,AdminApiService.createStaff(),POST /api/v1/staff,staff.create_staff,staff,YES,YES,COMPLETE
+StaffScreen,Open Edit Staff Modal,Open modal to edit existing staff details,_showEditStaffModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+StaffScreen,Submit Edit Staff,Update staff role phone availability or salary,AdminApiService.updateStaff(),PATCH /api/v1/staff/{id},staff.update_staff,staff,YES,YES,COMPLETE
+StaffScreen,Delete Staff,Remove staff member from property roster,AdminApiService.deleteStaff(),DELETE /api/v1/staff/{id},staff.delete_staff,staff,YES,YES,COMPLETE
+LeadsScreen,Fetch Leads List,Load prospective tenant leads CRM pipeline,_loadLeadsFromApi(),GET /api/v1/leads,leads.list_leads,leads,YES,YES,COMPLETE
+LeadsScreen,Filter Lead Status,Filter by All New Contacted Visit Scheduled Converted or Lost,onTap -> setState(),None (Client Filter),None,None,N/A,YES,COMPLETE
+LeadsScreen,Open Add Lead Modal,Open modal to record prospective tenant inquiry,_showAddLeadModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+LeadsScreen,Submit Add Lead,Create lead record with source status and contact info,AdminApiService.createLead(),POST /api/v1/leads,leads.create_lead,leads,YES,YES,COMPLETE
+LeadsScreen,Open Update Status Modal,Open modal to advance lead through CRM pipeline,_showUpdateStatusModal(),None (Client Modal),None,None,N/A,YES,COMPLETE
+LeadsScreen,Submit Update Lead Status,Update lead status to Contacted Visit Scheduled or Converted,AdminApiService.updateLead(),PATCH /api/v1/leads/{id},leads.update_lead,leads,YES,YES,COMPLETE
+LeadsScreen,One-Click Convert Lead to Resident,Prefill onboarding modal directly from converted lead data,Pending implementation,None,None,None,NO,NO,MISSING
+FoodMenuScreen,Fetch Weekly Menu,Load 7-day meal schedule for property,_loadMenuFromApi(),GET /api/v1/food-menus,food_menus.list_food_menus,food_menus,YES,YES,COMPLETE
+FoodMenuScreen,Select Day of Week,Switch meal plan editor between Monday and Sunday,onTap -> setState(),None (Client State),None,None,N/A,YES,COMPLETE
+FoodMenuScreen,Edit Breakfast Lunch Dinner,Input dish descriptions for daily meal slots,TextEditingController,None (Client State),None,None,N/A,YES,COMPLETE
+FoodMenuScreen,Submit Save Menu,Save or update meal schedule for selected day,AdminApiService.saveFoodMenuItem(),POST /api/v1/food-menus,food_menus.create_or_update_food_menu,food_menus,YES,YES,COMPLETE
+ReportsScreen,Fetch Financial Report,Load revenue operational expenses and net margin KPIs,_loadFinancialReport(),GET /api/v1/reports/financial,reports.get_financial_report,invoices / payments / expenses,YES,YES,COMPLETE
+ReportsScreen,Select Property Filter,Switch report scoping between active properties,AppDropdown.onChanged,None (Client State),None,None,N/A,YES,COMPLETE
+ReportsScreen,Export Payments CSV,Download full payment transaction statement as CSV,AdminApiService.exportPaymentsReportCsv(),GET /api/v1/reports/payments/export,reports.export_payments_csv,payments / invoices / residents,YES,YES,COMPLETE
+ReportsScreen,Export Occupancy CSV,Download room and bed occupancy statement as CSV,AdminApiService.exportOccupancyReportCsv(),GET /api/v1/reports/occupancy/export,reports.export_occupancy_csv,rooms / beds / residents,YES,YES,COMPLETE
+SettingsScreen,Fetch Company Settings,Load legal company profile email phone and address,_loadCompanySettings(),GET /api/v1/settings/company,settings.get_company_settings,companies,YES,YES,COMPLETE
+SettingsScreen,Open Edit Profile Modal,Open dialog to edit company details,_showEditProfileDialog(),None (Client Modal),None,None,N/A,YES,COMPLETE
+SettingsScreen,Submit Company Profile Update,Update registered business name email and phone,AdminApiService.updateCompanySettings(),PATCH /api/v1/settings/company,settings.update_company_settings,companies,YES,YES,COMPLETE
+SettingsScreen,Toggle Theme Switcher,Toggle between Light Mode and Dark Mode,AppTheme.toggleTheme(),None (Client State),None,None,N/A,YES,COMPLETE
+SettingsScreen,Open Log Out Confirmation Modal,Open confirmation modal before terminating session,_showLogoutDialog(),None (Client Modal),None,None,N/A,YES,COMPLETE
+SettingsScreen,Confirm Log Out,Clear JWT tokens and redirect to Login screen,TokenStorage.clear() + context.go('/login'),POST /api/v1/auth/logout,auth.logout,refresh_tokens,YES,YES,COMPLETE

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pg-management-backend"
+version = "1.0.0"
+description = "Production backend API for PG Management System"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sqlalchemy>=2.0.30",
+    "alembic>=1.13.0",
+    "pydantic>=2.8.0",
+    "pydantic-settings>=2.4.0",
+    "psycopg[binary,pool]>=3.2.0",
+    "pyjwt[crypto]>=2.9.0",
+    "bcrypt>=4.0.0",
+    "python-multipart>=0.0.9",
+    "python-dotenv>=1.0.1",
+    "email-validator>=2.0.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

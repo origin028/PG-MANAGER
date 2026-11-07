@@ -1,0 +1,100 @@
+Screen Name,User Action,Expected Business Functionality,Flutter Function/Callback,API Endpoint and HTTP Method,Backend Route and Service,Database Model/Table,Real DB Persistence,Loading/Error/Success States,Status
+LoginScreen,Enter Mobile Number,Input 10-digit mobile number for resident login,_phoneController,None (Client State),None,None,N/A,YES,COMPLETE
+LoginScreen,Enter Password,Input resident account password,_passwordController,None (Client State),None,None,N/A,YES,COMPLETE
+LoginScreen,Toggle Password Visibility,Show/hide plain text password,setState(() => _obscurePassword = !_obscurePassword),None (Client State),None,None,N/A,YES,COMPLETE
+LoginScreen,Submit Password Login,Authenticate resident via credentials & obtain JWT tokens,_handlePasswordLogin,POST /api/v1/auth/resident/login,auth.py::login_resident,"users, residents",YES,YES,COMPLETE
+LoginScreen,Request Login OTP,Send one-time password to resident mobile number,_requestLoginOtp,POST /api/v1/auth/resident/login/otp/request,auth.py::request_login_otp,otp_verifications,YES,YES,COMPLETE
+LoginScreen,Verify Login OTP & Login,Validate 6-digit OTP and login resident,_verifyLoginOtp,POST /api/v1/auth/resident/login/otp/verify,auth.py::verify_login_otp,"users, residents",YES,YES,COMPLETE
+RegisterScreen,Fill Registration Details & Select Property,"Input resident full legal name, phone, select PG branch & attach KYC doc","_nameController, _selectedPropertyId, _pickDocImage",GET /api/v1/auth/resident/properties,auth.py::get_resident_properties,properties,N/A,YES,COMPLETE
+RegisterScreen,Request Registration OTP,Send SMS OTP to verify mobile number before submission,_requestRegistrationOtp,POST /api/v1/auth/resident/register/otp/request,auth.py::request_registration_otp,otp_verifications,YES,YES,COMPLETE
+RegisterScreen,Verify OTP and Submit Registration,Verify OTP & submit KYC onboarding registration,_verifyAndRegister,POST /api/v1/auth/resident/register/otp/verify,auth.py::verify_registration_otp,"users, residents, kyc_documents",YES,YES,COMPLETE
+MainLayout,Select Home Tab,Switch active navigation shell tab to Home,_onItemTapped(0) -> context.go('/home'),None (Shell Navigation),None,None,N/A,YES,COMPLETE
+MainLayout,Select Payments Tab,Switch active navigation shell tab to Invoices & Payments,_onItemTapped(1) -> context.go('/payments'),None (Shell Navigation),None,None,N/A,YES,COMPLETE
+MainLayout,Select Food Menu Tab,Switch active navigation shell tab to Weekly Food Menu,_onItemTapped(2) -> context.go('/food-menu'),None (Shell Navigation),None,None,N/A,YES,COMPLETE
+MainLayout,Select More Menu Tab,Switch active navigation shell tab to More Services,_onItemTapped(3) -> context.go('/menu'),None (Shell Navigation),None,None,N/A,YES,COMPLETE
+HomeScreen,Pull to Refresh Dashboard,"Reload resident profile, notices, and payment banner",_loadDashboardData,GET /api/v1/resident/dashboard,resident.py::get_resident_dashboard,"residents, invoices, notices",N/A,YES,COMPLETE
+HomeScreen,Tap Profile Header,Navigate to resident profile & stay details screen,context.push('/profile'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+HomeScreen,Tap Notifications Icon,Navigate to notifications & notices center,context.push('/notices'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+HomeScreen,Click Quick Pay Rent,Open rent payment options screen for current pending rent,"context.push('/rent-payment', extra: invoice)",None (Client Navigation),None,None,N/A,YES,COMPLETE
+HomeScreen,Click Raise Complaint Shortcut,Open complaint submission form,context.push('/raise-complaint'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+HomeScreen,Click Food Menu Shortcut,View current day and weekly meals schedule,context.go('/food-menu'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+HomeScreen,Click Property Details Shortcut,"View PG address, rules, amenities and warden contact",context.push('/property-details'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+HomeScreen,Click Emergency Contacts Shortcut,Open emergency calling desk,context.push('/call-management'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+PaymentsScreen,Pull to Refresh Invoices & History,Reload invoices list and transaction history,_loadInvoicesAndPayments,GET /api/v1/resident/invoices,resident.py::get_my_invoices,"invoices, payments",N/A,YES,COMPLETE
+PaymentsScreen,Switch to Pending Invoices Tab,View outstanding rent and utility invoices,setState(() => _selectedTab = 0),None (Client State),None,None,N/A,YES,COMPLETE
+PaymentsScreen,Switch to Payment History Tab,View historical settled payments and transactions,setState(() => _selectedTab = 1),GET /api/v1/resident/payments,resident.py::get_my_payments,payments,N/A,YES,COMPLETE
+PaymentsScreen,Click Pay Now on Invoice,Launch checkout flow with invoice payload,"context.push('/rent-payment', extra: invoice)",None (Client Navigation),None,None,N/A,YES,COMPLETE
+PaymentsScreen,Click View Receipt on Paid Item,Open digital payment receipt for completed transaction,"context.push('/receipt', extra: payment)",None (Client Navigation),None,None,N/A,YES,COMPLETE
+RentPaymentScreen,Load Invoice & Merchant Parameters,Fetch invoice details & merchant UPI parameters,_loadInvoiceDetails,GET /api/v1/resident/invoices/{id},resident.py::get_my_invoice_detail,"invoices, properties",N/A,YES,COMPLETE
+RentPaymentScreen,Select Google Pay Option,Initiate Google Pay UPI intent launching,_launchUpiIntent('gpay'),POST /api/v1/payments/upi/direct/initiate,payments.py::initiate_direct_upi,"payments, upi_payments",YES,YES,COMPLETE
+RentPaymentScreen,Select PhonePe Option,Initiate PhonePe UPI intent launching,_launchUpiIntent('phonepe'),POST /api/v1/payments/upi/direct/initiate,payments.py::initiate_direct_upi,"payments, upi_payments",YES,YES,COMPLETE
+RentPaymentScreen,Select Paytm Option,Initiate Paytm UPI intent launching,_launchUpiIntent('paytm'),POST /api/v1/payments/upi/direct/initiate,payments.py::initiate_direct_upi,"payments, upi_payments",YES,YES,COMPLETE
+RentPaymentScreen,Select Navi Option,Initiate Navi UPI intent launching,_launchUpiIntent('navi'),POST /api/v1/payments/upi/direct/initiate,payments.py::initiate_direct_upi,"payments, upi_payments",YES,YES,COMPLETE
+RentPaymentScreen,Select Other UPI Apps / Chooser,Initiate generic UPI intent chooser on Android,_launchGenericUpiIntent(),POST /api/v1/payments/upi/direct/initiate,payments.py::initiate_direct_upi,"payments, upi_payments",YES,YES,COMPLETE
+RentPaymentScreen,Select UPI QR Code Option,Display dynamic UPI QR Code on screen for scanning,_showQrCodeDialog,POST /api/v1/payments/upi/direct/initiate,payments.py::initiate_direct_upi,"payments, upi_payments",YES,YES,COMPLETE
+RentPaymentScreen,Select Offline Bank Transfer Option,"Display PG bank account details (A/C, IFSC, UPI ID)",_toggleOfflineTransferView,None (Client State),None,None,N/A,YES,COMPLETE
+RentPaymentScreen,Enter Offline UTR / Reference,Input bank transfer transaction reference number,_utrController,None (Client State),None,None,N/A,YES,COMPLETE
+RentPaymentScreen,Submit Offline Payment Reference,Submit bank transfer reference for admin reconciliation,_submitOfflinePayment,POST /api/v1/payments/collect,payments.py::collect_payment,"payments, invoices",YES,YES,COMPLETE
+RentPaymentScreen,Execute Sandbox Demo Payment,Complete test invoice payment instantly for QA verification,_handleDemoPay,POST /api/v1/payments/demo-pay,payments.py::demo_pay,"payments, invoices",YES,YES,COMPLETE
+RentPaymentScreen,Cancel UPI Payment Attempt,Cancel pending payment initiation and restore invoice,_cancelPayment,POST /api/v1/payments/upi/direct/{id}/cancel,payments.py::cancel_direct_upi,payments,YES,YES,COMPLETE
+PaymentStatusScreen,Poll Payment Status,Poll backend for transaction settlement confirmation,_pollPaymentStatus,GET /api/v1/payments/upi/direct/{id}/status,payments.py::get_direct_upi_status,"payments, invoices",N/A,YES,COMPLETE
+PaymentStatusScreen,Manual Refresh Status,Trigger immediate status check from server,_checkStatusNow,GET /api/v1/payments/upi/direct/{id}/status,payments.py::get_direct_upi_status,"payments, invoices",N/A,YES,COMPLETE
+PaymentStatusScreen,Click View Receipt,Open digital receipt on successful payment settlement,"context.push('/receipt', extra: receipt)",None (Client Navigation),None,None,N/A,YES,COMPLETE
+PaymentStatusScreen,Click Retry Payment,Return to payment selection upon failed transaction,context.pop(),None (Client Navigation),None,None,N/A,YES,COMPLETE
+PaymentStatusScreen,Click Return Home,Navigate back to resident home screen,context.go('/home'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+ReceiptScreen,Fetch Receipt Details,"Load transaction, property, and invoice details for receipt",_loadReceiptDetails,GET /api/v1/receipts/{id},receipts.py::get_receipt,"receipts, payments",N/A,YES,COMPLETE
+ReceiptScreen,Download PDF Receipt,Download official branded PDF payment receipt to device,_downloadPdfReceipt,GET /api/v1/receipts/{id}/pdf,receipts.py::download_receipt_pdf,receipts (binary PDF stream),N/A,YES,COMPLETE
+ReceiptScreen,Share Receipt,Share receipt summary / PDF via system share sheet,_shareReceipt,None (System Share Sheet),None,None,N/A,YES,COMPLETE
+ReceiptScreen,Navigate Back / Close,Close receipt viewer and return to payments tab,context.go('/payments'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+ComplaintsScreen,Pull to Refresh Complaints,Load active complaints and their tracking statuses,_loadComplaints,GET /api/v1/resident/complaints,complaints.py::list_resident_complaints,complaints,N/A,YES,COMPLETE
+ComplaintsScreen,Click Raise Complaint FAB,Open new complaint submission form,context.push('/raise-complaint'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+ComplaintsScreen,Filter by Category Chip,"Filter displayed complaints (Electrical, Plumbing, Wi-Fi)",setState(() => _selectedCategory = cat),None (Client State),None,None,N/A,YES,COMPLETE
+ComplaintsScreen,Expand Complaint Timeline,View resolution remarks and staff assignment details,setState(() => isExpanded = !isExpanded),None (Client State),None,None,N/A,YES,COMPLETE
+RaiseComplaintScreen,Select Complaint Category,"Choose issue category (Electrical, Plumbing, Cleanliness, Food)",_categoryDropdown,None (Client State),None,None,N/A,YES,COMPLETE
+RaiseComplaintScreen,Enter Issue Details,Input title and detailed explanation of complaint,"_titleController, _descController",None (Client State),None,None,N/A,YES,COMPLETE
+RaiseComplaintScreen,Select Urgency Priority,"Set priority level (Low, Medium, High)",_prioritySelector,None (Client State),None,None,N/A,YES,COMPLETE
+RaiseComplaintScreen,Attach Defect Photo,Pick photo of issue from camera or gallery,_pickImage,None (Client State),None,None,N/A,YES,COMPLETE
+RaiseComplaintScreen,Submit Maintenance Complaint,Create complaint record and upload photo to server,_submitComplaint,POST /api/v1/resident/complaints,complaints.py::create_resident_complaint,complaints,YES,YES,COMPLETE
+AllComplaintsScreen,Pull to Refresh Complaint History,Reload full history of all submitted complaints,_loadAllComplaints,GET /api/v1/resident/complaints,complaints.py::list_resident_complaints,complaints,N/A,YES,COMPLETE
+AllComplaintsScreen,Search Complaints,Filter complaint list by keyword in title/description,_searchController.onChanged,None (Client Filter),None,None,N/A,YES,COMPLETE
+AllComplaintsScreen,Filter by Status Tab,"Toggle between All, Open, In Progress, and Resolved",setState(() => _statusFilter = tab),None (Client Filter),None,None,N/A,YES,COMPLETE
+AllComplaintsScreen,Tap Complaint Card Details,Open modal dialog showing complaint resolution notes,_showDetailsModal,None (Client State),None,None,N/A,YES,COMPLETE
+FoodMenuScreen,Pull to Refresh Weekly Menu,Fetch full weekly meal schedule from backend,_loadFoodMenu,GET /api/v1/resident/food-menu,food_menu.py::get_weekly_menu,food_menu,N/A,YES,COMPLETE
+FoodMenuScreen,Select Day of Week,Switch tab to view menu for specific weekday (Mon-Sun),setState(() => _selectedDayIndex = idx),None (Client State),None,None,N/A,YES,COMPLETE
+FoodMenuScreen,Expand Meal Card,View dish ingredients and serving timings,setState(() => isExpanded = !isExpanded),None (Client State),None,None,N/A,YES,COMPLETE
+FoodMenuScreen,Toggle Veg Only Filter,Filter displayed dishes for pure vegetarian items,setState(() => _vegOnly = !_vegOnly),None (Client Filter),None,None,N/A,YES,COMPLETE
+NoticesScreen,Pull to Refresh Notices,Fetch PG notices and broadcast announcements,_loadNotices,GET /api/v1/notices,notices.py::list_notices,notices,N/A,YES,COMPLETE
+NoticesScreen,Filter Notice Category,"Filter notices by tag (General, Maintenance, Event)",setState(() => _selectedTag = tag),None (Client Filter),None,None,N/A,YES,COMPLETE
+NoticesScreen,Expand Notice Card,Read full announcement body text and attachments,setState(() => isExpanded = !isExpanded),None (Client State),None,None,N/A,YES,COMPLETE
+NoticesScreen,Mark All Notifications Read,Clear unread badges across resident notifications,_markAllRead,POST /api/v1/notifications/read-all,notifications.py::mark_all_read,notifications,YES,YES,COMPLETE
+ProfileScreen,Pull to Refresh Profile,"Load resident profile, room, bed, and KYC status",_loadProfile,GET /api/v1/resident/profile,resident.py::get_my_profile,"residents, users, rooms, beds",N/A,YES,COMPLETE
+ProfileScreen,Edit Emergency Contact Name,Update emergency contact person's name,_emergencyNameController,None (Client State),None,None,N/A,YES,COMPLETE
+ProfileScreen,Edit Emergency Contact Phone,Update emergency contact phone number,_emergencyPhoneController,None (Client State),None,None,N/A,YES,COMPLETE
+ProfileScreen,Save Profile Changes,Persist updated emergency details to backend database,_saveProfile,PATCH /api/v1/resident/profile,resident.py::update_resident_profile,residents,YES,YES,COMPLETE
+ProfileScreen,View Masked KYC Document,Inspect verified document status and masked ID number,_showKycModal,None (Client State),None,None,N/A,YES,COMPLETE
+ProfileScreen,Logout Resident Account,Revoke authentication tokens and return to login screen,_logout,POST /api/v1/auth/logout,auth.py::logout,token_blacklist (local cleared),YES,YES,COMPLETE
+PropertyDetailsScreen,Pull to Refresh Property Info,"Fetch PG branch details, amenities, and rules",_loadProperty,GET /api/v1/resident/property,resident.py::get_my_property,properties,N/A,YES,COMPLETE
+PropertyDetailsScreen,Call PG Warden,Direct dial PG warden via device phone dialer,_callWarden,None (Native Phone Dialer),None,None,N/A,YES,COMPLETE
+PropertyDetailsScreen,Open Google Maps Location,Open PG address in Google Maps or external navigation,_openMaps,None (External Maps Intent),None,None,N/A,YES,COMPLETE
+PropertyDetailsScreen,View PG Rules & Policy,"Open full terms, gate timings, and PG guidelines",_showRulesDialog,None (Client State),None,None,N/A,YES,COMPLETE
+CallManagementScreen,Fetch Property Staff Contacts,"Load contact directory for caretaker, security & warden",_loadContacts,GET /api/v1/resident/property-contacts,resident.py::get_property_contacts,"staff, properties",N/A,YES,COMPLETE
+CallManagementScreen,Call Caretaker Button,Initiate phone call to on-duty PG caretaker,_callCaretaker,None (Native Phone Dialer),None,None,N/A,YES,COMPLETE
+CallManagementScreen,Call Security Gate Button,Initiate phone call to main entrance security desk,_callSecurity,None (Native Phone Dialer),None,None,N/A,YES,COMPLETE
+CallManagementScreen,Call Emergency Hotline Button,Direct dial 112 emergency national helpline,_callEmergency,None (Native Phone Dialer),None,None,N/A,YES,COMPLETE
+RentDepositScreen,Load Rent & Deposit Ledger,"Fetch monthly rent, advance deposit, and refund policy",_loadFinancialSummary,GET /api/v1/resident/profile,resident.py::get_my_profile,residents,N/A,YES,COMPLETE
+RentDepositScreen,Click Pay Upcoming Rent,Navigate directly to rent checkout screen,context.push('/rent-payment'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+SettingsScreen,Load Resident Preferences,Fetch dark mode and notification reminder settings,_loadSettings,GET /api/v1/resident/settings,resident.py::get_resident_settings,resident_settings,N/A,YES,COMPLETE
+SettingsScreen,Toggle Dark Theme,Switch app interface between light and dark themes,_toggleTheme,PATCH /api/v1/resident/settings,resident.py::update_resident_settings,resident_settings,YES,YES,COMPLETE
+SettingsScreen,Toggle Rent Reminder Notifications,Enable or disable automatic rent due push notifications,_toggleRentReminders,PATCH /api/v1/resident/settings,resident.py::update_resident_settings,resident_settings,YES,YES,COMPLETE
+SettingsScreen,Toggle Maintenance Alert Notifications,Enable or disable complaint update push notifications,_toggleMaintenanceAlerts,PATCH /api/v1/resident/settings,resident.py::update_resident_settings,resident_settings,YES,YES,COMPLETE
+SettingsScreen,Resident Logout,Sign out and clear session tokens from device storage,_logout,POST /api/v1/auth/logout,auth.py::logout,token_blacklist (local cleared),YES,YES,COMPLETE
+MenuScreen,Navigate to My Profile,Open resident profile and KYC screen,context.push('/profile'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+MenuScreen,Navigate to My Room & Property,Open PG property information and amenities,context.push('/property-details'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+MenuScreen,Navigate to Rent & Security Deposit,Open rent structure and deposit ledger screen,context.push('/rent-deposit'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+MenuScreen,Navigate to Complaints & Requests,Open complaints center,context.push('/complaints'),None (Client Navigation),None,None,N/A,YES,COMPLETE
+PocFlutterUpiScreen,Select Target UPI App,Choose UPI application from detected installed packages,setState(() => _selectedApp = app),None (Client State),None,None,N/A,YES,COMPLETE
+PocFlutterUpiScreen,Enter Test VPA & Amount,Set payee VPA and ₹1 test payment amount,"_vpaController, _amountController",None (Client State),None,None,N/A,YES,COMPLETE
+PocFlutterUpiScreen,Launch Intent Test,Trigger native UPI intent launch via upi_pay package,_launchUpiPayment,None (Isolated Test Harness),None,None,N/A,YES,COMPLETE
+PocUpiPayScreen,Select Gateway Intent Mode,Toggle between Intent URI and Direct Chooser,setState(() => _mode = val),None (Client State),None,None,N/A,YES,COMPLETE
+PocUpiPayScreen,Enter Transaction Reference,Input custom transaction reference note for testing,_noteController,None (Client State),None,None,N/A,YES,COMPLETE
+PocUpiPayScreen,Execute Intent Launch,Launch Android intent with raw UPI URI string,_launchRawIntent,None (Isolated Test Harness),None,None,N/A,YES,COMPLETE

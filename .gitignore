@@ -1,0 +1,118 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Environment Variables & Secrets
+.env
+.env.local
+*.pem
+*.key
+
+# Database
+*.sqlite
+*.sqlite3
+*.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Release Keystores & Properties
+*.keystore
+*.jks
+key.properties
+release_apks/
+
+# ==========================================
+# PG MANAGEMENT PROJECT - ADDITIONAL IGNORE
+# ==========================================
+
+# Flutter generated files
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.metadata.tmp
+
+# Flutter / Android generated files
+**/build/
+**/.dart_tool/
+**/android/.gradle/
+**/android/local.properties/
+**/ios/Flutter/Generated.xcconfig/
+
+# Node.js
+node_modules/
+**/node_modules/
+
+# Production and development backups
+.backups*/
+**/.backups*/
+production_backups/
+**/production_backups/
+
+# Database backups and exports
+*.dump
+*.sql.gz
+*.bak
+audit_data_dump.json
+
+# Private uploaded documents
+**/uploads/
+
+# Application release files
+**/release_apks/
+*.apk
+*.aab
+
+# Logs and crash reports
+*.log
+hs_err_pid*.log
+pytest_*.txt
+replay_pid*.log
+routes.txt
+test2.txt
+test3.txt
+
+# IDE files
+*.iml
+
+# Android / Java memory dumps
+*.hprof
+
+# Accidentally generated files / temporary artifacts
+gr.py
+t *
