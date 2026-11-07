@@ -38,6 +38,10 @@ class Invoice(Base, UUIDMixin, TimestampMixin):
     )  # PENDING, PARTIALLY_PAID, PAID, OVERDUE, CANCELLED
     notes: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
 
+    @property
+    def balance_amount(self) -> float:
+        return max(0.0, float(self.amount) - float(self.paid_amount))
+
     # Relationships
     resident: Mapped["Resident"] = relationship("Resident", back_populates="invoices")
     payments: Mapped[List["Payment"]] = relationship("Payment", back_populates="invoice")

@@ -4,8 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.logging import logger, setup_logging
 from app.core.security import get_password_hash
-from app.db.base import Base
-from app.db.session import SessionLocal, engine
+from app.db.session import SessionLocal
 from app.models.company import Company
 from app.models.property import Property
 from app.models.role import Role
@@ -14,8 +13,6 @@ from app.models.user import User, UserPropertyAccess
 
 def seed_database(db: Session) -> None:
     """Seeds the database with initial company, roles, 5 properties, and test users."""
-    logger.info("Initializing database schema...")
-    Base.metadata.create_all(bind=engine)
 
     # 1. Seed or retrieve Company
     company = db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))

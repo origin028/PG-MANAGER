@@ -18,7 +18,26 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     # Database
-    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/pg_management_db"
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@127.0.0.1:5432/pg_management"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_database_url(cls, v: str) -> str:
+        if not v or not isinstance(v, str) or v.startswith("sqlite"):
+            return v
+        try:
+            from urllib.parse import urlparse, quote_plus, unquote, urlunparse
+            parsed = urlparse(v)
+            if parsed.password:
+                raw_password = unquote(parsed.password)
+                encoded_password = quote_plus(raw_password)
+                user_part = f"{parsed.username}:{encoded_password}" if parsed.username else ""
+                host_part = f"{parsed.hostname}" + (f":{parsed.port}" if parsed.port else "")
+                netloc = f"{user_part}@{host_part}" if user_part else host_part
+                return urlunparse((parsed.scheme, netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+        except Exception:
+            pass
+        return v
 
     # CORS
     CORS_ORIGINS: Union[List[str], str] = ["*"]
@@ -36,6 +55,19 @@ class Settings(BaseSettings):
         elif isinstance(v, (list, str)):
             return v
         raise ValueError(v)
+
+    # Email
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    EMAIL_FROM: str = ""
+    EMAIL_ENABLED: bool = False
+
+    # OTP
+    OTP_EXPIRE_MINUTES: int = 10
+    OTP_LENGTH: int = 6
+    OTP_MAX_ATTEMPTS: int = 5
 
     # Logging
     LOG_LEVEL: str = "INFO"

@@ -22,7 +22,10 @@ class Lead(Base, UUIDMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(
         sa.String(50), default="NEW", nullable=False, index=True
     )  # NEW, CONTACTED, VISIT_SCHEDULED, BOOKED, LOST
+    source: Mapped[Optional[str]] = mapped_column(sa.String(100), nullable=True)
+    requirement: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     visit_date: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    follow_up_date: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
 
     # Relationships

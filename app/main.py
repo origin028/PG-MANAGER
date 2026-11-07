@@ -4,11 +4,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+import sqlalchemy as sa
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.exceptions import PGException
 from app.core.logging import logger, setup_logging
-from app.db.base import Base
 from app.db.session import engine
 from app.schemas.common import ErrorDetail, ErrorResponse
 
@@ -18,10 +18,16 @@ async def lifespan(app: FastAPI):
     # Startup
     setup_logging()
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
-    # For SQLite local dev: automatically create tables if needed
-    if settings.DATABASE_URL.startswith("sqlite"):
-        Base.metadata.create_all(bind=engine)
-        logger.info("SQLite database tables verified/created.")
+
+    # Non-destructive database connectivity verification
+    try:
+        with engine.connect() as conn:
+            conn.execute(sa.text("SELECT 1"))
+        logger.info("Database connectivity verified successfully.")
+    except Exception as exc:
+        logger.error(f"Database connectivity check failed: {exc}")
+        raise
+
     yield
     # Shutdown
     logger.info("Shutting down application...")

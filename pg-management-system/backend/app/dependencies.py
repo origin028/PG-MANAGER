@@ -46,8 +46,8 @@ def get_current_user(
     if not user:
         raise AuthenticationError("User associated with token does not exist.")
 
-    if not user.is_active:
-        raise AuthenticationError("Account has been deactivated. Please contact administrator.")
+    if not user.is_active or getattr(user, "approval_status", "APPROVED") == "REJECTED":
+        raise AuthenticationError("Account has been deactivated or rejected. Please contact administrator.")
 
     return user
 
@@ -82,11 +82,23 @@ def get_property_context(
 
 def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> None:
     """Verifies that the current user has access rights for the target property."""
+    prop = db.get(Property, property_id)
+    if not prop or prop.company_id != user.company_id:
+        raise PermissionDeniedError("Access to this property is not permitted.")
+
     if user.role.name == "SUPER_ADMIN":
-        prop = db.get(Property, property_id)
-        if not prop or prop.company_id != user.company_id:
-            raise PermissionDeniedError("Access to this property is not permitted.")
         return
+
+    if user.role.name == "RESIDENT":
+        if not user.resident_profile or user.resident_profile.property_id != property_id:
+            raise PermissionDeniedError(f"You do not have access rights for property '{property_id}'.")
+        return
+
+    # For Property Manager: if no specific restrictions exist, permit access to company property
+    if user.role.name == "PROPERTY_MANAGER":
+        has_specific_access = db.query(UserPropertyAccess).filter_by(user_id=user.id).first() is not None
+        if not has_specific_access:
+            return
 
     # Check property assignment junction table
     access = db.query(UserPropertyAccess).filter_by(
@@ -94,3 +106,34 @@ def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> N
     ).first()
     if not access:
         raise PermissionDeniedError(f"You do not have access rights for property '{property_id}'.")
+
+
+def get_current_active_resident(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Validates that the authenticated user is an active, fully approved resident.
+    Blocks pending, rejected, and suspended resident accounts from protected data.
+    """
+    import sqlalchemy as sa
+    from app.models.resident import Resident
+
+    if current_user.role.name != "RESIDENT":
+        raise PermissionDeniedError("Only resident accounts can access this resource.")
+
+    resident = db.scalar(sa.select(Resident).where(Resident.user_id == current_user.id))
+    if not resident:
+        raise PermissionDeniedError("Resident profile not found for this account.")
+
+    # Strictly check approval status on both User and Resident models
+    if getattr(current_user, "approval_status", "APPROVED") == "PENDING_APPROVAL" or resident.status == "PENDING_APPROVAL":
+        raise PermissionDeniedError("Your account registration is pending admin approval.")
+
+    if getattr(current_user, "approval_status", "APPROVED") == "REJECTED" or resident.status == "REJECTED":
+        raise PermissionDeniedError("Your account registration was rejected by the property administrator.")
+
+    if not current_user.is_active or resident.status != "ACTIVE":
+        raise PermissionDeniedError("Resident account is inactive or suspended.")
+
+    return resident

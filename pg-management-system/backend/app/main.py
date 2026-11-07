@@ -1,8 +1,10 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import settings
@@ -31,10 +33,17 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
+@app.get("/docs", include_in_schema=False)
+def redirect_to_swagger():
+    """Convenience redirect to Swagger documentation."""
+    return RedirectResponse(url="/api/v1/docs")
+
 # Configure Cross-Origin Resource Sharing (CORS)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS if isinstance(settings.CORS_ORIGINS, list) else ["*"],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -120,3 +129,7 @@ def root():
 
 # Mount the versioned API router under /api
 app.include_router(api_router, prefix="/api")
+
+# Ensure uploads directory exists on disk for secure storage (not mounted publicly)
+uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
+uploads_dir.mkdir(parents=True, exist_ok=True)

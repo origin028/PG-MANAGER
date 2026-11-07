@@ -1,14 +1,22 @@
 import uuid
 from typing import Optional
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.dependencies import get_db, require_roles
+from app.dependencies import get_current_user, get_db, require_roles
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 from app.schemas.common import APIResponse, PaginatedData
-from app.schemas.user import UserProfile, UserSummary
+from app.schemas.user import (
+    UserCreate,
+    UserEmailUpdateRequest,
+    UserEmailUpdateResponse,
+    UserProfile,
+    UserSummary,
+    UserUpdate,
+)
 from app.services.auth_service import AuthService
+from app.services.user_service import UserService
 
 router = APIRouter()
 
@@ -57,6 +65,33 @@ def get_users(
     )
 
 
+@router.patch("/me", response_model=APIResponse[UserProfile], status_code=status.HTTP_200_OK)
+def update_current_user_profile(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Updates current authenticated user's profile details."""
+    update_data = payload.model_dump(exclude_unset=True)
+    if "full_name" in update_data and update_data["full_name"]:
+        current_user.full_name = update_data["full_name"].strip()
+    if "avatar_url" in update_data:
+        current_user.avatar_url = update_data["avatar_url"]
+    if "phone" in update_data and update_data["phone"]:
+        current_user.phone = update_data["phone"].strip()
+
+    db.commit()
+    db.refresh(current_user)
+
+    service = AuthService(db)
+    profile = service.build_user_profile(current_user)
+    return APIResponse(
+        success=True,
+        message="Profile updated successfully.",
+        data=profile,
+    )
+
+
 @router.get("/{user_id}", response_model=APIResponse[UserProfile], status_code=status.HTTP_200_OK)
 def get_user_detail(
     user_id: uuid.UUID,
@@ -76,4 +111,43 @@ def get_user_detail(
         success=True,
         message="User profile retrieved.",
         data=profile,
+    )
+
+
+@router.patch(
+    "/{user_id}/email",
+    response_model=APIResponse[UserEmailUpdateResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Update user or resident email address",
+)
+def update_user_email(
+    user_id: uuid.UUID,
+    payload: UserEmailUpdateRequest,
+    request: Request,
+    current_user: User = Depends(require_roles("SUPER_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    """
+    Updates the email address of an existing user or resident.
+    Strictly restricted to authenticated SUPER_ADMIN users.
+    Ensures email uniqueness, normalizes email, updates User.email (used for resident OTP delivery),
+    and records an immutable audit log entry in a single atomic database transaction.
+    """
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    service = UserService(db)
+    result = service.update_user_email(
+        user_id=user_id,
+        new_email=payload.target_email,
+        current_admin=current_user,
+        reason=payload.reason,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+
+    return APIResponse(
+        success=True,
+        message=f"User email updated successfully from '{result['old_email'] or 'None'}' to '{result['new_email']}'.",
+        data=UserEmailUpdateResponse(**result),
     )

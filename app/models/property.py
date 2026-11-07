@@ -38,3 +38,18 @@ class Property(Base, UUIDMixin, TimestampMixin):
     user_accesses: Mapped[List["UserPropertyAccess"]] = relationship(
         "UserPropertyAccess", back_populates="property", cascade="all, delete-orphan"
     )
+    rooms: Mapped[List["Room"]] = relationship(
+        "Room", back_populates="property", cascade="all, delete-orphan"
+    )
+    beds: Mapped[List["Bed"]] = relationship(
+        "Bed", back_populates="property", cascade="all, delete-orphan"
+    )
+    residents: Mapped[List["Resident"]] = relationship(
+        "Resident", back_populates="property", cascade="all, delete-orphan"
+    )
+    invoices: Mapped[List["Invoice"]] = relationship(
+        "Invoice", back_populates="property", cascade="all, delete-orphan"
+    )
+    payments: Mapped[List["Payment"]] = relationship(
+        "Payment", back_populates="property", cascade="all, delete-orphan"
+    )

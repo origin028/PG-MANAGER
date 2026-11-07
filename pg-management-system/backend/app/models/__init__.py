@@ -14,6 +14,15 @@ from app.models.lead import Lead
 from app.models.notice import Notice
 from app.models.audit_log import AuditLog
 from app.models.notification import Notification
+from app.models.device_token import DeviceToken
+from app.models.receipt import Receipt
+from app.models.webhook_event import ProcessedWebhookEvent
+from app.models.payment_link import PaymentLink
+from app.models.payment_reservation import PaymentReservation
+from app.models.otp_verification import OTPVerification
+from app.models.pending_registration import PendingResidentRegistration
+from app.models.food_menu import FoodMenu
+from app.models.resident_preference import ResidentPreference
 
 __all__ = [
     "Base",
@@ -35,4 +44,13 @@ __all__ = [
     "Notice",
     "AuditLog",
     "Notification",
+    "DeviceToken",
+    "Receipt",
+    "ProcessedWebhookEvent",
+    "PaymentLink",
+    "PaymentReservation",
+    "OTPVerification",
+    "PendingResidentRegistration",
+    "FoodMenu",
+    "ResidentPreference",
 ]

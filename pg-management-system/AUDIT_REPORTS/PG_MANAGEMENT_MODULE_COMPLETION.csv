@@ -1,0 +1,31 @@
+Module Name,Backend Completion %,Admin App Integration %,Resident App Integration %,Database Readiness %,Key Notes & Evidence
+Authentication and Authorization,95,95,95,95,Complete multi-role auth with bcrypt & JWT tokens
+Admin Registration,95,95,0,95,PG owner onboarding with Super Key validation
+Super Admin Registration / Super Key,95,95,0,95,Enterprise common super key validation
+Email OTP Verification,95,0,95,95,Salted SHA-256 OTP engine with SMTP & Mock providers
+JWT Access and Refresh Tokens,95,95,95,95,Stateless access tokens and database-backed refresh tokens
+Company Management,95,95,0,95,Multi-tenant company scoping and bed limit enforcement
+Property Management,95,95,95,95,Full CRUD with backend delete access control and dynamic contact integration
+Rooms Management,95,95,90,95,Canonical floor-wise hierarchy safe room deletion with bed foreign key handling
+Beds Management,95,95,90,95,Individual bed allocation soft-delete capacity barrier automatic reallocation on transfer
+Resident Management,95,95,95,95,Resident roster search KYC status canonical onboarding path profile update via /users/me
+Resident Registration,95,0,95,95,Mobile self-service registration with multipart KYC & OTP
+Resident Approval,95,95,0,95,Admin approval/rejection modal with room/bed allocation
+Resident Check-in,95,90,90,95,Check-in date tracking and active status activation
+Resident Checkout,95,95,85,95,Row-locked settlement damage charges unpaid dues reconciliation security deposit refund bed release
+Leads Management,95,95,0,95,CRM inquiry tracking status transitions follow-up dates real API persistence
+Complaints Management,95,95,95,95,Resident ticketing photo upload admin staff assignment and status updates
+Staff Management,95,95,0,95,Staff roster emergency contacts roles and salaries real API persistence
+Expenses Management,95,95,0,95,Expense tracking by property category and payment mode real API creation and deletion
+Invoice Management,95,95,95,95,Monthly rent billing duplicate cycle guard PDF generation
+Payments Management,95,95,95,95,Payment ledger manual collection demo payment testing
+UPI Payment Initiation,100,0,100,95,Direct UPI URI generation with 1 INR safe test invoice guard and %20 encoding
+Payment Verification,95,95,95,95,Authoritative verification pendingVerification hold admin-settle
+Payment Receipts,95,95,95,95,Auto-generated receipts authentic PDF streaming & download with file saving on both apps
+Dashboard and Analytics,95,95,90,95,Admin occupancy metrics bed capacity and resident stay summary
+Reports and Exports,95,90,0,95,Financial report occupancy summary payment and occupancy CSV export downloads
+Settings,95,95,95,95,Company profile settings preferences dark mode language push notification preferences via real APIs
+Audit Logs,90,0,0,95,Immutable audit trail logged across operations
+Notifications,95,95,95,95,In-app notifications unread count individual read read-all and broadcast notices
+File Upload / KYC Documents,95,90,90,95,Sanitized local storage and secure authenticated streaming
+API Error Handling and Validation,95,95,95,95,Global standard APIResponse envelope and Pydantic v2 validation

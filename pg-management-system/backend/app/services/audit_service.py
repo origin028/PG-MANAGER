@@ -19,6 +19,7 @@ def record_audit_log(
     details: Optional[Dict[str, Any]] = None,
     ip_address: Optional[str] = None,
     user_agent: Optional[str] = None,
+    commit: bool = True,
 ) -> AuditLog:
     """Records an audit log entry within the active transaction."""
     try:
@@ -36,10 +37,14 @@ def record_audit_log(
             user_agent=user_agent,
         )
         db.add(log_entry)
-        db.commit()
-        db.refresh(log_entry)
+        if commit:
+            db.commit()
+            db.refresh(log_entry)
+        else:
+            db.flush()
         return log_entry
     except Exception as e:
         logger.error(f"Failed to record audit log: {e}", exc_info=True)
-        db.rollback()
+        if commit:
+            db.rollback()
         raise

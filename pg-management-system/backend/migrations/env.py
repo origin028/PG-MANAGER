@@ -16,8 +16,8 @@ if config.config_file_name is not None:
 # Set model metadata
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url with application settings
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Override sqlalchemy.url with application settings (escape % for configparser interpolation)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

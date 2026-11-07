@@ -40,6 +40,7 @@ class Complaint(Base, UUIDMixin, TimestampMixin):
         sa.String(50), default="PENDING", nullable=False, index=True
     )  # PENDING, ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED
     resolution_notes: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    photo_path: Mapped[Optional[str]] = mapped_column(sa.String(512), nullable=True)
 
     # Relationships
     property: Mapped["Property"] = relationship("Property", back_populates="complaints")

@@ -17,6 +17,14 @@ class UserRepository:
     def get_by_email(self, email: str) -> Optional[User]:
         return self.db.scalar(sa.select(User).where(sa.func.lower(User.email) == email.lower()))
 
+    def get_by_email_exclude_user(self, email: str, exclude_user_id: uuid.UUID) -> Optional[User]:
+        return self.db.scalar(
+            sa.select(User).where(
+                sa.func.lower(User.email) == email.strip().lower(),
+                User.id != exclude_user_id,
+            )
+        )
+
     def get_by_phone(self, phone: str) -> Optional[User]:
         return self.db.scalar(sa.select(User).where(User.phone == phone))
 

@@ -81,6 +81,7 @@ class AuthService:
             allowed_properties=summaries,
             is_active=user.is_active,
             is_verified=user.is_verified,
+            approval_status=getattr(user, "approval_status", "APPROVED"),
             avatar_url=user.avatar_url,
             last_login_at=user.last_login_at,
             created_at=user.created_at,
@@ -139,6 +140,143 @@ class AuthService:
             company_id=user.company_id,
             resource_id=str(user.id),
             details={"client_type": client_type, "device_info": device_info},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        profile = self.build_user_profile(user)
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=profile,
+        )
+
+    def issue_tokens_for_admin(
+        self,
+        user: User,
+        client_type: str = "admin_web",
+        device_info: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> TokenResponse:
+        """Issues authentication tokens for an admin user authenticated via 2FA Super Key."""
+        self.validate_client_access(user, client_type)
+
+        user.last_login_at = datetime.now(timezone.utc)
+        props = self.prop_repo.list_accessible_properties(user)
+        prop_ids = ["*"] if user.role.name == "SUPER_ADMIN" else [str(p.id) for p in props]
+
+        claims = {
+            "role": user.role.name,
+            "company_id": str(user.company_id),
+            "allowed_properties": prop_ids,
+            "client_type": client_type,
+        }
+        access_token = create_access_token(subject=str(user.id), claims=claims)
+        refresh_token = create_refresh_token(subject=str(user.id), claims={"client_type": client_type})
+
+        decoded_refresh = decode_token(refresh_token)
+        exp_timestamp = decoded_refresh.get("exp")
+        expires_at = (
+            datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+            if exp_timestamp
+            else datetime.now(timezone.utc)
+        )
+
+        db_token = RefreshToken(
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            client_type=client_type,
+            device_info=device_info,
+            expires_at=expires_at,
+            is_revoked=False,
+        )
+        self.user_repo.save_refresh_token(db_token)
+
+        record_audit_log(
+            db=self.db,
+            action="AUTH_ADMIN_2FA_LOGIN",
+            resource_type="auth",
+            user_id=user.id,
+            user_email=user.email,
+            user_role=user.role.name,
+            company_id=user.company_id,
+            resource_id=str(user.id),
+            details={"client_type": client_type, "auth_method": "SUPER_KEY_2FA"},
+            ip_address=ip_address,
+            user_agent=user_agent,
+        )
+
+        profile = self.build_user_profile(user)
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+            user=profile,
+        )
+
+    def issue_tokens_for_resident(
+        self,
+        user: User,
+        client_type: str = "resident_mobile",
+        device_info: Optional[str] = None,
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+    ) -> TokenResponse:
+        """Issues authentication tokens for a resident authenticated via OTP without password."""
+        self.validate_client_access(user, client_type)
+
+        if getattr(user, "approval_status", "APPROVED") == "PENDING_APPROVAL":
+            raise PermissionDeniedError("Your registration is awaiting admin approval. Please wait for approval before logging in.")
+        if getattr(user, "approval_status", "APPROVED") == "REJECTED":
+            raise PermissionDeniedError("Your resident registration has been rejected. Please contact PG administrator.")
+        if not user.is_active:
+            raise PermissionDeniedError("Resident account is inactive. Please contact PG administrator.")
+
+        user.last_login_at = datetime.now(timezone.utc)
+        props = self.prop_repo.list_accessible_properties(user)
+        prop_ids = ["*"] if user.role.name == "SUPER_ADMIN" else [str(p.id) for p in props]
+
+        claims = {
+            "role": user.role.name,
+            "company_id": str(user.company_id),
+            "allowed_properties": prop_ids,
+            "client_type": client_type,
+        }
+        access_token = create_access_token(subject=str(user.id), claims=claims)
+        refresh_token = create_refresh_token(subject=str(user.id), claims={"client_type": client_type})
+
+        decoded_refresh = decode_token(refresh_token)
+        exp_timestamp = decoded_refresh.get("exp")
+        expires_at = (
+            datetime.fromtimestamp(exp_timestamp, tz=timezone.utc)
+            if exp_timestamp
+            else datetime.now(timezone.utc)
+        )
+
+        db_token = RefreshToken(
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            client_type=client_type,
+            device_info=device_info,
+            expires_at=expires_at,
+            is_revoked=False,
+        )
+        self.user_repo.save_refresh_token(db_token)
+
+        record_audit_log(
+            db=self.db,
+            action="AUTH_RESIDENT_LOGIN_OTP",
+            resource_type="auth",
+            user_id=user.id,
+            user_email=user.email,
+            user_role=user.role.name,
+            company_id=user.company_id,
+            resource_id=str(user.id),
+            details={"client_type": client_type, "device_info": device_info, "method": "email_otp"},
             ip_address=ip_address,
             user_agent=user_agent,
         )

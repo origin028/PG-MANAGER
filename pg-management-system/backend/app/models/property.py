@@ -16,6 +16,9 @@ class Company(Base, UUIDMixin, TimestampMixin):
     address: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     tax_id: Mapped[Optional[str]] = mapped_column(sa.String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=True, nullable=False)
+    subscription_plan: Mapped[str] = mapped_column(sa.String(50), default="STANDARD", nullable=False)
+    subscription_status: Mapped[str] = mapped_column(sa.String(50), default="ACTIVE", nullable=False)
+    bed_limit: Mapped[int] = mapped_column(sa.Integer, default=240, nullable=False, server_default="240")
 
     # Relationships
     properties: Mapped[List["Property"]] = relationship("Property", back_populates="company")
@@ -43,7 +46,10 @@ class Property(Base, UUIDMixin, TimestampMixin):
     contact_email: Mapped[Optional[str]] = mapped_column(sa.String(255), nullable=True)
     total_floors: Mapped[int] = mapped_column(sa.Integer, default=4, nullable=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=True, nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
     settings: Mapped[Dict[str, Any]] = mapped_column(sa.JSON, default=dict, nullable=False)
+    amenities: Mapped[Optional[List[str]]] = mapped_column(sa.JSON, default=list, nullable=True)
+    rules: Mapped[Optional[List[str]]] = mapped_column(sa.JSON, default=list, nullable=True)
 
     # Relationships
     company: Mapped["Company"] = relationship("Company", back_populates="properties")
@@ -55,3 +61,4 @@ class Property(Base, UUIDMixin, TimestampMixin):
     staff_members: Mapped[List["Staff"]] = relationship("Staff", back_populates="property")
     leads: Mapped[List["Lead"]] = relationship("Lead", back_populates="property")
     notices: Mapped[List["Notice"]] = relationship("Notice", back_populates="property")
+    food_menus: Mapped[List["FoodMenu"]] = relationship("FoodMenu", back_populates="property")

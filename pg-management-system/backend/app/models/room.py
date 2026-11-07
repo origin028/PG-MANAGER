@@ -1,3 +1,4 @@
+import builtins
 import uuid
 from typing import Any, Dict, List, Optional
 import sqlalchemy as sa
@@ -20,8 +21,8 @@ class Room(Base, UUIDMixin, TimestampMixin):
     room_type: Mapped[str] = mapped_column(
         sa.String(50), default="DOUBLE_SHARING", nullable=False
     )  # SINGLE, DOUBLE_SHARING, TRIPLE_SHARING, FOUR_SHARING
-    max_occupancy: Mapped[int] = mapped_column(sa.Integer, default=2, nullable=False)
-    base_rent: Mapped[float] = mapped_column(sa.Numeric(10, 2), default=0.00, nullable=False)
+    base_monthly_rent: Mapped[float] = mapped_column(sa.Numeric(10, 2), default=0.00, nullable=False)
+    deposit_amount: Mapped[float] = mapped_column(sa.Numeric(10, 2), default=0.00, nullable=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=True, nullable=False)
     amenities: Mapped[Dict[str, Any]] = mapped_column(sa.JSON, default=dict, nullable=False)
 
@@ -29,3 +30,38 @@ class Room(Base, UUIDMixin, TimestampMixin):
     property: Mapped["Property"] = relationship("Property", back_populates="rooms")
     beds: Mapped[List["Bed"]] = relationship("Bed", back_populates="room", cascade="all, delete-orphan")
     residents: Mapped[List["Resident"]] = relationship("Resident", back_populates="room")
+
+    @builtins.property
+    def base_rent(self) -> float:
+        return float(self.base_monthly_rent or 0.0)
+
+    @base_rent.setter
+    def base_rent(self, value: float) -> None:
+        self.base_monthly_rent = value
+
+    @builtins.property
+    def max_occupancy(self) -> int:
+        if getattr(self, "_max_occupancy_val", None) is not None:
+            return self._max_occupancy_val
+        type_upper = (self.room_type or "").upper()
+        if "SINGLE" in type_upper:
+            return 1
+        elif "DOUBLE" in type_upper:
+            return 2
+        elif "TRIPLE" in type_upper:
+            return 3
+        elif "FOUR" in type_upper:
+            return 4
+        return max(len(self.beds) if self.beds else 1, 1)
+
+    @max_occupancy.setter
+    def max_occupancy(self, value: int) -> None:
+        self._max_occupancy_val = value
+
+    @builtins.property
+    def floor(self) -> int:
+        return self.floor_number
+
+    @floor.setter
+    def floor(self, value: int) -> None:
+        self.floor_number = value

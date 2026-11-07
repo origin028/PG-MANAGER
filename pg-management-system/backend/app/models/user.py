@@ -32,6 +32,9 @@ class User(Base, UUIDMixin, TimestampMixin):
     password_hash: Mapped[str] = mapped_column(sa.String(255), nullable=False)
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=True, nullable=False)
     is_verified: Mapped[bool] = mapped_column(sa.Boolean, default=False, nullable=False)
+    approval_status: Mapped[str] = mapped_column(
+        sa.String(50), default="APPROVED", nullable=False, index=True
+    )  # PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED
     avatar_url: Mapped[Optional[str]] = mapped_column(sa.String(512), nullable=True)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
         sa.DateTime(timezone=True), nullable=True
@@ -54,6 +57,12 @@ class User(Base, UUIDMixin, TimestampMixin):
     )
     notifications: Mapped[List["Notification"]] = relationship(
         "Notification", back_populates="user"
+    )
+    resident_preference: Mapped[Optional["ResidentPreference"]] = relationship(
+        "ResidentPreference", back_populates="user", uselist=False
+    )
+    device_tokens: Mapped[List["DeviceToken"]] = relationship(
+        "DeviceToken", back_populates="user", cascade="all, delete-orphan"
     )
     audit_logs: Mapped[List["AuditLog"]] = relationship(
         "AuditLog", back_populates="user"

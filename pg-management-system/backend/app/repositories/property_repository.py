@@ -26,6 +26,22 @@ class PropertyRepository:
             )
             return list(self.db.scalars(query).all())
 
+        if user.role.name == "RESIDENT":
+            if user.resident_profile and user.resident_profile.property_id:
+                prop = self.get_by_id(user.resident_profile.property_id)
+                if prop and prop.is_active:
+                    return [prop]
+            return []
+
+        has_specific_access = self.db.query(UserPropertyAccess).filter_by(user_id=user.id).first() is not None
+        if not has_specific_access:
+            query = (
+                sa.select(Property)
+                .where(Property.company_id == user.company_id, Property.is_active == True)
+                .order_by(Property.name.asc())
+            )
+            return list(self.db.scalars(query).all())
+
         query = (
             sa.select(Property)
             .join(UserPropertyAccess, UserPropertyAccess.property_id == Property.id)
@@ -35,9 +51,22 @@ class PropertyRepository:
         return list(self.db.scalars(query).all())
 
     def check_access(self, user: User, property_id: uuid.UUID) -> bool:
+        prop = self.get_by_id(property_id)
+        if not prop or prop.company_id != user.company_id:
+            return False
+
         if user.role.name == "SUPER_ADMIN":
-            prop = self.get_by_id(property_id)
-            return prop is not None and prop.company_id == user.company_id
+            return True
+
+        if user.role.name == "RESIDENT":
+            return (
+                user.resident_profile is not None
+                and user.resident_profile.property_id == property_id
+            )
+
+        has_specific_access = self.db.query(UserPropertyAccess).filter_by(user_id=user.id).first() is not None
+        if not has_specific_access:
+            return True
 
         access = self.db.scalar(
             sa.select(UserPropertyAccess).where(
