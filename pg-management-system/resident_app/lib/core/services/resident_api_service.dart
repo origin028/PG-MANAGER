@@ -244,10 +244,11 @@ class ResidentApiService {
     return 0;
   }
 
-  static Future<Map<String, dynamic>> updateProfile({String? fullName, String? avatarUrl}) async {
+  static Future<Map<String, dynamic>> updateProfile({String? fullName, String? avatarUrl, String? phone}) async {
     final body = <String, dynamic>{};
     if (fullName != null) body['full_name'] = fullName;
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;
+    if (phone != null) body['phone'] = phone;
     final res = await ApiClient.patch('/users/me', body: body);
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }

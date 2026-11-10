@@ -722,16 +722,63 @@ class _LoginScreenState extends State<LoginScreen> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
                             child: InkWell(
-                              onTap: () {
+                              onTap: () async {
+                                if (isPending) {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                      title: const Row(
+                                        children: [
+                                          Icon(Icons.hourglass_top_rounded, color: Color(0xFFD97706)),
+                                          SizedBox(width: 10),
+                                          Text('Approval Pending', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                        ],
+                                      ),
+                                      content: Text(
+                                        'Registration for ${resident['name']} is currently awaiting admin approval. Please wait for approval or select an active profile.',
+                                        style: const TextStyle(fontSize: 14, height: 1.4, color: AppTheme.textDark),
+                                      ),
+                                      actions: [
+                                        ElevatedButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: AppTheme.primaryBlue,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                          ),
+                                          child: const Text('OK'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                final messenger = ScaffoldMessenger.of(context);
+                                final navigator = GoRouter.of(context);
+
                                 AppData.currentResident = Map<String, dynamic>.from(resident);
-                                ScaffoldMessenger.of(context).showSnackBar(
+                                await TokenStorage.saveTokens(
+                                  accessToken: 'demo_token_${resident['phone'] ?? '123'}',
+                                  refreshToken: 'demo_refresh_${resident['phone'] ?? '123'}',
+                                  user: {
+                                    'full_name': resident['name'],
+                                    'phone': resident['phone'],
+                                    'email': resident['email'],
+                                  },
+                                );
+                                await TokenStorage.saveResidentProfile(Map<String, dynamic>.from(resident));
+
+                                if (!mounted) return;
+                                messenger.showSnackBar(
                                   SnackBar(
                                     content: Text('Logged in as ${resident['name']}!'),
                                     backgroundColor: AppTheme.primaryBlue,
                                     duration: const Duration(seconds: 1),
                                   ),
                                 );
-                                context.go('/home', extra: resident);
+                                navigator.go('/home', extra: resident);
                               },
                               borderRadius: BorderRadius.circular(12),
                               child: Container(

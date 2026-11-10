@@ -61,14 +61,28 @@ class AdminResidentOnboardRequest(BaseModel):
 
 class ResidentUpdateRequest(BaseModel):
     full_name: Optional[str] = None
+    name: Optional[str] = None
     phone: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
+    emergency_contact: Optional[str] = None
+    occupation: Optional[str] = None
+    gender: Optional[str] = None
+    date_of_birth: Optional[date] = None
+    dob: Optional[str] = None
+    house_flat_no: Optional[str] = None
+    street: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    pincode: Optional[str] = None
     room_id: Optional[uuid.UUID] = None
     bed_id: Optional[uuid.UUID] = None
     monthly_rent: Optional[float] = None
+    rent: Optional[float] = None
     security_deposit: Optional[float] = None
+    deposit: Optional[float] = None
     status: Optional[str] = None  # ACTIVE, NOTICE_PERIOD, CHECKED_OUT
     expected_check_out_date: Optional[date] = None
 

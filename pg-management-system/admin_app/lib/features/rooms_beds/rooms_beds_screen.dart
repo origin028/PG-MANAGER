@@ -205,7 +205,6 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
                 ElevatedButton(
-                  onPressed: () {
                   onPressed: () async {
                     String roomNo = numberController.text.trim();
 
@@ -250,15 +249,6 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                         floorNum = 4;
                       }
 
-                      AdminApiService.createRoom({
-                        'property_id': propId,
-                        'room_number': roomNo,
-                        'floor_number': floorNum,
-                        'room_type': selectedType.contains('Single') ? 'SINGLE' : (selectedType.contains('2') ? 'DOUBLE' : (selectedType.contains('3') ? 'TRIPLE' : 'OTHER')),
-                        'base_monthly_rent': 8000,
-                        'deposit_amount': 10000,
-                        'max_occupancy': bedCount,
-                      }).then((createdRoom) {
                       try {
                         final createdRoom = await AdminApiService.createRoom({
                           'property_id': propId,
@@ -270,7 +260,6 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                           'max_occupancy': bedCount,
                         });
                         if (createdRoom.isNotEmpty && createdRoom['id'] != null) {
-                          Future.wait(List.generate(bedCount, (i) {
                           createdRoomId = createdRoom['id'].toString();
                           await Future.wait(List.generate(bedCount, (i) {
                             return AdminApiService.createBed({
@@ -278,17 +267,9 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                               'bed_number': String.fromCharCode(65 + i),
                               'monthly_rent': 8000,
                             });
-                          })).then((_) {
-                            _loadRoomsFromApi();
-                          }).catchError((e) {
-                            debugPrint('API createBed error: $e');
-                          });
                           }));
                           _loadRoomsFromApi();
                         }
-                      }).catchError((e) {
-                        debugPrint('API createRoom error: $e');
-                      });
                       } catch (e) {
                         if (dialogContext.mounted) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -311,21 +292,10 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
 
                     if (!mounted) return;
                     setState(() {
-                      AppData.rooms.add({
-                        'number': roomNo,
-                        'floor': selectedFloor,
-                        'type': selectedType,
-                        'beds': newBeds,
-                      });
                       AppData.rooms.add(newRoom);
                       AppData.saveRoomsToStorage();
                     });
 
-                    final messenger = ScaffoldMessenger.of(context);
-                    Navigator.pop(dialogContext);
-                    messenger.showSnackBar(
-                      SnackBar(content: Text('Room $roomNo added on $selectedFloor!'), backgroundColor: Colors.green),
-                    );
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(

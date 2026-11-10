@@ -122,7 +122,6 @@ class _StaffScreenState extends State<StaffScreen> {
               child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
             ),
             ElevatedButton(
-              onPressed: () {
               onPressed: () async {
                 if (nameController.text.isEmpty || phoneController.text.isEmpty) {
                   ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -134,14 +133,6 @@ class _StaffScreenState extends State<StaffScreen> {
                 final propId = AppData.selectedPropertyId;
                 String? createdStaffId;
                 if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
-                  AdminApiService.createStaff({
-                    'property_id': propId,
-                    'name': nameController.text.trim(),
-                    'role': selectedRole.toUpperCase(),
-                    'phone': phoneController.text.trim(),
-                    'salary': double.tryParse(salaryController.text.trim()) ?? 15000.0,
-                    'joining_date': DateTime.now().toIso8601String().substring(0, 10),
-                  }).then((_) {
                   try {
                     final created = await AdminApiService.createStaff({
                       'property_id': propId,
@@ -155,9 +146,6 @@ class _StaffScreenState extends State<StaffScreen> {
                       createdStaffId = created['id'].toString();
                     }
                     _loadStaffFromApi();
-                  }).catchError((e) {
-                    debugPrint('API createStaff error: $e');
-                  });
                   } catch (e) {
                     if (dialogContext.mounted) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -181,21 +169,9 @@ class _StaffScreenState extends State<StaffScreen> {
 
                 if (!mounted) return;
                 setState(() {
-                  _staff.insert(0, {
-                    'name': nameController.text,
-                    'role': selectedRole,
-                    'phone': phoneController.text,
-                    'salary': salaryController.text.isEmpty ? '0' : salaryController.text,
-                    'status': 'Active',
-                  });
                   _staff.insert(0, newStaff);
                 });
 
-                final messenger = ScaffoldMessenger.of(context);
-                Navigator.pop(dialogContext);
-                messenger.showSnackBar(
-                  const SnackBar(content: Text('Staff Member Added!'), backgroundColor: Colors.green),
-                );
                 if (dialogContext.mounted) Navigator.pop(dialogContext);
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -283,17 +259,12 @@ class _StaffScreenState extends State<StaffScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     TextButton.icon(
-                      onPressed: () {
                       onPressed: () async {
                         final staffId = staffMember['id']?.toString();
                         if (staffId != null && staffId.isNotEmpty && !staffId.startsWith('staff-')) {
-                          AdminApiService.deleteStaff(staffId).then((_) {
                           try {
                             await AdminApiService.deleteStaff(staffId);
                             _loadStaffFromApi();
-                          }).catchError((e) {
-                            debugPrint('API deleteStaff error: $e');
-                          });
                           } catch (e) {
                             if (dialogContext.mounted) {
                               ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -306,13 +277,6 @@ class _StaffScreenState extends State<StaffScreen> {
                         setState(() {
                           _staff.remove(staffMember);
                         });
-                        Navigator.pop(dialogContext);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${staffMember['name']} removed!'),
-                            backgroundColor: Colors.orange,
-                          ),
-                        );
                         if (dialogContext.mounted) Navigator.pop(dialogContext);
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -335,7 +299,6 @@ class _StaffScreenState extends State<StaffScreen> {
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: () {
                           onPressed: () async {
                             final name = nameController.text.trim();
                             final phone = phoneController.text.trim();
@@ -348,12 +311,6 @@ class _StaffScreenState extends State<StaffScreen> {
 
                             final staffId = staffMember['id']?.toString();
                             if (staffId != null && staffId.isNotEmpty && !staffId.startsWith('staff-')) {
-                              AdminApiService.updateStaff(staffId, {
-                                'name': name,
-                                'role': selectedRole.toUpperCase(),
-                                'phone': phone,
-                                'salary': double.tryParse(salaryController.text.trim()) ?? 15000.0,
-                              }).then((_) {
                               try {
                                 await AdminApiService.updateStaff(staffId, {
                                   'name': name,
@@ -362,9 +319,6 @@ class _StaffScreenState extends State<StaffScreen> {
                                   'salary': double.tryParse(salaryController.text.trim()) ?? 15000.0,
                                 });
                                 _loadStaffFromApi();
-                              }).catchError((e) {
-                                debugPrint('API updateStaff error: $e');
-                              });
                               } catch (e) {
                                 if (dialogContext.mounted) {
                                   ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -383,11 +337,6 @@ class _StaffScreenState extends State<StaffScreen> {
                               staffMember['salary'] = salaryController.text.trim().isEmpty ? '0' : salaryController.text.trim();
                             });
 
-                            final messenger = ScaffoldMessenger.of(context);
-                            Navigator.pop(dialogContext);
-                            messenger.showSnackBar(
-                              const SnackBar(content: Text('Staff details updated!'), backgroundColor: Colors.green),
-                            );
                             if (dialogContext.mounted) Navigator.pop(dialogContext);
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(

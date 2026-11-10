@@ -169,11 +169,13 @@ void main() {
       expect(find.text('05 Nov 2026'), findsOneWidget);
       expect(find.textContaining('PG Owner'), findsOneWidget);
       expect(find.text('Select Payment Method'), findsOneWidget);
-      expect(find.text('Google Pay'), findsOneWidget);
-      expect(find.text('Pay using PhonePe'), findsOneWidget);
+      expect(find.text('Google Pay (G Pay)'), findsOneWidget);
+      expect(find.text('PhonePe'), findsOneWidget);
+      expect(find.text('PayPal'), findsOneWidget);
+      expect(find.text('Credit Card / Debit Card'), findsOneWidget);
     });
 
-    testWidgets('RentPaymentScreen opens payment options modal with PhonePe and Google Pay when autoOpen is true', (WidgetTester tester) async {
+    testWidgets('RentPaymentScreen opens payment options modal with 4 clean payment methods when autoOpen is true', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1200);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -196,9 +198,11 @@ void main() {
 
       // Modal should be open showing Payment Options
       expect(find.text('Payment Options'), findsOneWidget);
-      expect(find.textContaining('Select PhonePe or Google Pay'), findsOneWidget);
-      expect(find.text('Opens Google Pay app directly to pay'), findsOneWidget);
-      expect(find.text('Opens PhonePe app directly to pay'), findsOneWidget);
+      expect(find.textContaining('Choose from Google Pay, PhonePe, PayPal, or Credit Card'), findsOneWidget);
+      expect(find.text('Google Pay (G Pay)'), findsNWidgets(2));
+      expect(find.text('PhonePe'), findsNWidgets(2));
+      expect(find.text('PayPal'), findsNWidgets(2));
+      expect(find.text('Credit Card / Debit Card'), findsNWidgets(2));
 
       // Cancel button closes modal
       await tester.tap(find.text('Cancel'));
@@ -482,8 +486,8 @@ void main() {
     });
   });
 
-  group('Gateway-Free UPI Payment Methods Tests', () {
-    testWidgets('RentPaymentScreen renders both gateway-free options on screen and in modal', (WidgetTester tester) async {
+  group('Four Primary Payment Methods Tests (GPay, PhonePe, PayPal, Credit Card)', () {
+    testWidgets('RentPaymentScreen renders 4 primary options on screen and in modal', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -492,7 +496,7 @@ void main() {
         const MaterialApp(
           home: RentPaymentScreen(
             invoiceData: {
-              'id': 'INV-TEST-FREE-1',
+              'id': 'INV-TEST-4METHODS',
               'month': 'November 2026',
               'amount': 8000,
               'date': '05 Nov 2026',
@@ -503,28 +507,28 @@ void main() {
       );
       await tester.pump();
 
-      // Check method 1 tile
-      expect(find.text('Pay using Google Pay'), findsOneWidget);
-      expect(find.text('Auto-copies UPI ID & opens Google Pay for reliable transfer'), findsOneWidget);
+      // Verify all 4 primary options exist
+      expect(find.text('Google Pay (G Pay)'), findsOneWidget);
+      expect(find.text('PhonePe'), findsOneWidget);
+      expect(find.text('PayPal'), findsOneWidget);
+      expect(find.text('Credit Card / Debit Card'), findsOneWidget);
 
-      // Check method 2 tile
-      expect(find.text('Dynamic UPI QR Code'), findsOneWidget);
-      expect(find.text('Scan to pay with another phone or from gallery'), findsOneWidget);
-
-      // Open modal
+      // Open bottom sheet modal via 'Pay ₹ 8000 Now'
       await tester.tap(find.text('Pay ₹ 8000 Now'));
       await tester.pumpAndSettle();
 
-      // Modal options
+      // Modal options should also list all 4
       expect(find.text('Payment Options'), findsOneWidget);
-      expect(find.text('Auto-copies UPI ID & opens Google Pay for reliable transfer'), findsNWidgets(2));
-      expect(find.text('Scan to pay with another phone or from gallery'), findsNWidgets(2));
+      expect(find.text('Google Pay (G Pay)'), findsNWidgets(2));
+      expect(find.text('PhonePe'), findsNWidgets(2));
+      expect(find.text('PayPal'), findsNWidgets(2));
+      expect(find.text('Credit Card / Debit Card'), findsNWidgets(2));
 
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
     });
 
-    testWidgets('Method 1: Pay using Google Pay copies VPA and displays complete instructions & buttons', (WidgetTester tester) async {
+    testWidgets('Tapping Google Pay opens redirect modal with QR, app open button, and instant confirm', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
@@ -533,9 +537,9 @@ void main() {
         const MaterialApp(
           home: RentPaymentScreen(
             invoiceData: {
-              'id': 'INV-TEST-FREE-1',
+              'id': 'INV-TEST-GPAY',
               'month': 'November 2026',
-              'amount': 1.0,
+              'amount': 8000,
               'date': '05 Nov 2026',
               'status': 'Pending',
             },
@@ -544,344 +548,138 @@ void main() {
       );
       await tester.pump();
 
-      // Tap "Pay using Google Pay"
-      await tester.tap(find.text('Pay using Google Pay').first);
+      await tester.tap(find.text('Google Pay (G Pay)'));
       await tester.pumpAndSettle();
 
-      // Verify bottom sheet contents
-      expect(find.text('UPI ID auto-copied to clipboard'), findsOneWidget);
-      expect(find.text('masisokatali90900@okaxis'), findsWidgets);
-      expect(find.text("Saukatali Masi"), findsWidgets);
-      expect(find.text('₹ 1.00'), findsWidgets);
-
-      // Verify step instructions
-      expect(find.text('How to complete your payment:'), findsOneWidget);
+      expect(find.text('Redirecting to Google Pay app...'), findsOneWidget);
       expect(find.text('Open Google Pay App'), findsOneWidget);
-      expect(find.text('I Have Paid / Check Status'), findsOneWidget);
+      expect(find.text('I Have Paid via Google Pay (Confirm)'), findsOneWidget);
 
-      // Verify important disclaimer is present
-      expect(find.textContaining('Payment details are not automatically prefilled in Google Pay'), findsOneWidget);
-
-      // Verify clipboard has VPA
-      final clip = await Clipboard.getData(Clipboard.kTextPlain);
-      expect(clip?.text, 'masisokatali90900@okaxis');
-
-      // Tap Close
-      await tester.tap(find.text('Close'));
-      await tester.pumpAndSettle();
-    });
-
-    testWidgets('Method 2: Dynamic UPI QR Code renders QrImageView, instructions, and save/share actions', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: RentPaymentScreen(
-            invoiceData: {
-              'id': 'INV-TEST-FREE-QR',
-              'month': 'November 2026',
-              'amount': 1.0,
-              'date': '05 Nov 2026',
-              'status': 'Pending',
-            },
-          ),
-        ),
-      );
-      await tester.pump();
-
-      // Tap "Dynamic UPI QR Code"
-      await tester.tap(find.text('Dynamic UPI QR Code').first);
+      // Confirm payment instant settlement
+      await tester.tap(find.text('I Have Paid via Google Pay (Confirm)'));
       await tester.pumpAndSettle();
 
-      // Verify dynamic QR modal is open
-      expect(find.text('Scan with any UPI app to pay ₹1.00'), findsOneWidget);
-      expect(find.text('masisokatali90900@okaxis'), findsWidgets);
-      expect(find.text("Saukatali Masi"), findsWidgets);
-      expect(find.text('INV-TEST-FREE-QR'), findsWidgets);
-      expect(find.text('₹ 1.00'), findsWidgets);
-
-      // Verify scanner instructions
-      expect(find.text('How to scan this QR Code:'), findsOneWidget);
-      expect(find.textContaining('A phone cannot scan a QR code displayed directly on its own screen'), findsOneWidget);
-
-      // Verify actions
-      expect(find.text('Save QR Link'), findsOneWidget);
-      expect(find.text('Share Details'), findsOneWidget);
-      expect(find.text('I Have Transferred / Confirm Payment'), findsOneWidget);
-
-      // Test Save QR Link copies valid URI
-      await tester.tap(find.text('Save QR Link'));
-      await tester.pumpAndSettle();
-      final clipData = await Clipboard.getData(Clipboard.kTextPlain);
-      expect(clipData?.text, startsWith('upi://pay?'));
-      expect(clipData?.text, contains('pa=masisokatali90900%40okaxis'));
-      expect(clipData?.text, contains('am=1.00'));
-      expect(clipData?.text, contains('cu=INR'));
-
-      // Test Share Details copies summary
-      await tester.tap(find.text('Share Details'));
-      await tester.pumpAndSettle();
-      final shareClip = await Clipboard.getData(Clipboard.kTextPlain);
-      expect(shareClip?.text, contains('INV-TEST-FREE-QR'));
-      expect(shareClip?.text, contains("Saukatali Masi"));
-      expect(shareClip?.text, contains('₹1.00'));
-
-      // Tap Close
-      await tester.tap(find.text('Close'));
-      await tester.pumpAndSettle();
-    });
-
-    testWidgets('Method 1 from modal opens Google Pay instruction dialog seamlessly', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: RentPaymentScreen(
-            invoiceData: {
-              'id': 'INV-TEST-MODAL-1',
-              'month': 'November 2026',
-              'amount': 8000,
-              'date': '05 Nov 2026',
-              'status': 'Pending',
-              'autoOpen': true,
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // In open modal, tap "Pay using Google Pay"
-      await tester.tap(find.text('Pay using Google Pay').last);
-      await tester.pumpAndSettle();
-
-      // Should open the instruction bottom sheet
-      expect(find.text('Open Google Pay App'), findsOneWidget);
-      expect(find.text('UPI ID auto-copied to clipboard'), findsOneWidget);
-
-      await tester.tap(find.text('Close').last);
-      await tester.pumpAndSettle();
-    });
-
-    testWidgets('Method 2 from modal opens Dynamic QR bottom sheet seamlessly', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: RentPaymentScreen(
-            invoiceData: {
-              'id': 'INV-TEST-MODAL-2',
-              'month': 'November 2026',
-              'amount': 8000,
-              'date': '05 Nov 2026',
-              'status': 'Pending',
-              'autoOpen': true,
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // In open modal, tap "Dynamic UPI QR Code"
-      await tester.tap(find.text('Dynamic UPI QR Code').last);
-      await tester.pumpAndSettle();
-
-      // Should open the Dynamic QR bottom sheet
-      expect(find.text('Dynamic UPI QR Code'), findsWidgets);
-      expect(find.text('Save QR Link'), findsOneWidget);
-      expect(find.text('Share Details'), findsOneWidget);
-
-      await tester.tap(find.text('Close').last);
-      await tester.pumpAndSettle();
-    });
-  });
-
-  group('Dedicated PhonePe Direct Integration Tests', () {
-    test('RentPaymentScreen.phonePePackage targets com.phonepe.app strictly', () {
-      expect(RentPaymentScreen.phonePePackage, 'com.phonepe.app');
-    });
-
-    test('buildPhonePeIntentUri generates valid Android Intent targeting com.phonepe.app with ₹1.00', () {
-      final intentUri = RentPaymentScreen.buildPhonePeIntentUri(
-        payeeVpa: 'masisokatali90900@okaxis',
-        payeeName: "Saukatali Masi",
-        amount: 1.0,
-        currency: 'INR',
-        transactionNote: "Rent Payment INV-2026-TEST - Saukatali Masi",
-        transactionRef: 'UPI-20261106-PHONEPE1',
-      );
-
-      final uriString = intentUri.toString();
-      expect(uriString, startsWith('intent://pay?'));
-      expect(uriString, contains('pa=masisokatali90900%40okaxis'));
-      expect(uriString, contains('pn=Saukatali%20Masi'));
-      expect(uriString, contains('am=1.00'));
-      expect(uriString, contains('cu=INR'));
-      expect(uriString, contains('tr=UPI-20261106-PHONEPE1'));
-      expect(uriString, endsWith('#Intent;scheme=upi;package=com.phonepe.app;end'));
-    });
-
-    test('buildPhonePeIntentUri generates valid Android Intent targeting com.phonepe.app with ₹8000.00 and merchantCode', () {
-      final intentUri = RentPaymentScreen.buildPhonePeIntentUri(
-        payeeVpa: 'masisokatali90900@okaxis',
-        payeeName: "Saukatali Masi",
-        amount: 8000.0,
-        currency: 'INR',
-        transactionNote: "Rent Payment INV-2026-010 - Saukatali Masi",
-        transactionRef: 'UPI-20261106-PHONEPE8000',
-        merchantCode: '6513',
-      );
-
-      final uriString = intentUri.toString();
-      expect(uriString, startsWith('intent://pay?'));
-      expect(uriString, contains('am=8000.00'));
-      expect(uriString, contains('mc=6513'));
-      expect(uriString, endsWith('#Intent;scheme=upi;package=com.phonepe.app;end'));
-    });
-
-    testWidgets('Pay using PhonePe tile renders with subtitle specifying com.phonepe.app', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: RentPaymentScreen(
-            invoiceData: {
-              'id': 'INV-TEST-PHONEPE-UI',
-              'month': 'November 2026',
-              'amount': 1.0,
-              'date': '05 Nov 2026',
-              'status': 'Pending',
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Pay using PhonePe'), findsOneWidget);
-      expect(find.text('Direct UPI payment via PhonePe (com.phonepe.app)'), findsOneWidget);
-    });
-
-    testWidgets('Modal contains Pay using PhonePe with direct intent description', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: RentPaymentScreen(
-            invoiceData: {
-              'id': 'INV-TEST-PHONEPE-MODAL',
-              'month': 'November 2026',
-              'amount': 1.0,
-              'date': '05 Nov 2026',
-              'status': 'Pending',
-              'autoOpen': true,
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // In autoOpen mode, Pay using PhonePe appears on both the background page and the modal sheet
-      expect(find.text('Pay using PhonePe'), findsNWidgets(2));
-      expect(find.text('Opens PhonePe app directly to pay'), findsOneWidget);
-    });
-
-    testWidgets('Tapping Pay using PhonePe invokes native channel and sets PENDING_VERIFICATION', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1400);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
-
-      String? invokedMethod;
-      Map<dynamic, dynamic>? invokedArgs;
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-        const MethodChannel('com.originpg.resident/native_upi'),
-        (MethodCall call) async {
-          invokedMethod = call.method;
-          invokedArgs = call.arguments as Map<dynamic, dynamic>?;
-          return {'status': 'SUCCESS', 'method': 'EXPLICIT_UPI_INTENT'};
-        },
-      );
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: RentPaymentScreen(
-            invoiceData: {
-              'id': 'INV-TEST-PHONEPE-TAP',
-              'month': 'November 2026',
-              'amount': 1.0,
-              'date': '05 Nov 2026',
-              'status': 'Pending',
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Pay using PhonePe').first);
-      await tester.pumpAndSettle();
-
-      expect(invokedMethod, 'launchPhonePeDirect');
-      expect(invokedArgs?['package'], 'com.phonepe.app');
-      expect(invokedArgs?['payeeVpa'], 'masisokatali90900@okaxis');
-      expect(invokedArgs?['payeeName'], "Saukatali Masi");
-      expect(invokedArgs?['amount'], '1.00');
-
-      // Verify payment verification service saved state in SharedPreferences
       final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('pg_payment_tx_INV-TEST-PHONEPE-TAP');
+      final raw = prefs.getString('pg_payment_tx_INV-TEST-GPAY');
       expect(raw, isNotNull);
       final json = jsonDecode(raw!) as Map<String, dynamic>;
-      expect(json['state'], 'pendingVerification');
+      expect(json['state'], 'successful');
+      expect(json['paymentApp'], 'Google Pay');
+    });
+
+    testWidgets('Tapping PhonePe opens redirect modal with QR, app open button, and instant confirm', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: RentPaymentScreen(
+            invoiceData: {
+              'id': 'INV-TEST-PHONEPE',
+              'month': 'November 2026',
+              'amount': 8000,
+              'date': '05 Nov 2026',
+              'status': 'Pending',
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('PhonePe'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Redirecting to PhonePe app...'), findsOneWidget);
+      expect(find.text('Open PhonePe App'), findsOneWidget);
+      expect(find.text('I Have Paid via PhonePe (Confirm)'), findsOneWidget);
+
+      await tester.tap(find.text('I Have Paid via PhonePe (Confirm)'));
+      await tester.pumpAndSettle();
+
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('pg_payment_tx_INV-TEST-PHONEPE');
+      expect(raw, isNotNull);
+      final json = jsonDecode(raw!) as Map<String, dynamic>;
+      expect(json['state'], 'successful');
       expect(json['paymentApp'], 'PhonePe');
     });
 
-    testWidgets('When PhonePe cannot be resolved, dialog displays without opening generic chooser', (WidgetTester tester) async {
+    testWidgets('Tapping PayPal opens PayPal checkout modal and settles successfully', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
-
-      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
-        const MethodChannel('com.originpg.resident/native_upi'),
-        (MethodCall call) async {
-          return {'status': 'ACTIVITY_NOT_RESOLVED', 'message': 'No activity found'};
-        },
-      );
 
       await tester.pumpWidget(
         const MaterialApp(
           home: RentPaymentScreen(
             invoiceData: {
-              'id': 'INV-TEST-PHONEPE-UNAVAIL',
+              'id': 'INV-TEST-PAYPAL',
               'month': 'November 2026',
-              'amount': 1.0,
+              'amount': 8000,
               'date': '05 Nov 2026',
               'status': 'Pending',
             },
           ),
         ),
       );
+      await tester.pump();
+
+      await tester.tap(find.text('PayPal'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Pay using PhonePe').first);
+      expect(find.text('PayPal Checkout'), findsOneWidget);
+      expect(find.text('Redirecting to PayPal secure session...'), findsOneWidget);
+      expect(find.text('Pay ₹8000 with PayPal'), findsOneWidget);
+
+      await tester.tap(find.text('Pay ₹8000 with PayPal'));
+      await tester.pump(const Duration(milliseconds: 1000));
       await tester.pumpAndSettle();
 
-      // Should display PhonePe Not Available dialog
-      expect(find.text('PhonePe Not Available'), findsOneWidget);
-      expect(find.textContaining('The PhonePe application (com.phonepe.app) could not be opened'), findsOneWidget);
-      expect(find.text('masisokatali90900@okaxis'), findsWidgets);
-      expect(find.text('Use Other UPI App'), findsOneWidget);
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('pg_payment_tx_INV-TEST-PAYPAL');
+      expect(raw, isNotNull);
+      final json = jsonDecode(raw!) as Map<String, dynamic>;
+      expect(json['state'], 'successful');
+      expect(json['paymentApp'], 'PayPal');
+    });
 
-      await tester.tap(find.text('Cancel'));
+    testWidgets('Tapping Credit Card opens Credit Card checkout modal and settles successfully', (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: RentPaymentScreen(
+            invoiceData: {
+              'id': 'INV-TEST-CC',
+              'month': 'November 2026',
+              'amount': 8000,
+              'date': '05 Nov 2026',
+              'status': 'Pending',
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Credit Card / Debit Card'));
       await tester.pumpAndSettle();
+
+      expect(find.text('Credit Card / Debit Card'), findsNWidgets(2));
+      expect(find.text('Pay ₹8000 Securely'), findsOneWidget);
+
+      await tester.tap(find.text('Pay ₹8000 Securely'));
+      await tester.pump(const Duration(milliseconds: 1000));
+      await tester.pumpAndSettle();
+
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('pg_payment_tx_INV-TEST-CC');
+      expect(raw, isNotNull);
+      final json = jsonDecode(raw!) as Map<String, dynamic>;
+      expect(json['state'], 'successful');
+      expect(json['paymentApp'], 'Credit Card');
     });
   });
 }

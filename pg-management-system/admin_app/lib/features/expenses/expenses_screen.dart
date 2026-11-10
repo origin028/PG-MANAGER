@@ -70,7 +70,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final titleController = TextEditingController();
     final amountController = TextEditingController();
     String selectedCategory = 'Utilities';
-    String selectedProperty = 'Green View PG - Hebbal';
     String selectedProperty = AppData.selectedProperty;
 
     showDialog(
@@ -134,7 +133,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       elevation: 2,
                       dropdownColor: Colors.white,
                       icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.textGrey),
-                      items: ['Green View PG - Hebbal', 'BNR Luxury PG', 'Skyline Girls PG'].map((String prop) {
                       items: dynamicProps.map((String prop) {
                         return DropdownMenuItem(value: prop, child: Text(prop, overflow: TextOverflow.ellipsis));
                       }).toList(),
@@ -151,7 +149,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
                 ElevatedButton(
-                  onPressed: () {
                   onPressed: () async {
                     final desc = titleController.text.trim();
                     final amt = int.tryParse(amountController.text.trim()) ?? 0;
@@ -162,16 +159,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                       return;
                     }
 
-                    final propId = AppData.selectedPropertyId;
-                    if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
-                      AdminApiService.createExpense({
-                        'property_id': propId,
-                        'title': desc,
-                        'amount': amt.toDouble(),
-                        'category': selectedCategory.toUpperCase().replaceAll(' & ', '_').replaceAll(' ', '_'),
-                        'method': 'UPI',
-                        'date': DateTime.now().toIso8601String().substring(0, 10),
-                      }).then((_) {
                     // Find matching property ID
                     String? targetPropId;
                     for (var p in AppData.properties) {
@@ -211,9 +198,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                           createdExpenseId = created['id'].toString();
                         }
                         _loadExpensesFromApi();
-                      }).catchError((e) {
-                        debugPrint('API createExpense error: $e');
-                      });
                       } catch (e) {
                         if (dialogContext.mounted) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -237,25 +221,14 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
                     if (!mounted) return;
                     setState(() {
-                      _otherExpenses.insert(0, {
-                        'date': 'Today',
-                        'category': selectedCategory,
-                        'description': desc,
-                        'amount': amt,
-                        'property': selectedProperty,
-                      });
                       _otherExpenses.insert(0, newExpense);
                     });
 
-                    final messenger = ScaffoldMessenger.of(context);
-                    Navigator.pop(dialogContext);
-                    messenger.showSnackBar(
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Expense logged successfully!'), backgroundColor: Colors.green),
                     );
                   },
-                  child: const Text('Add Expense'),
                   child: const Text('Save Expense'),
                 ),
               ],
@@ -271,7 +244,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
     final roleController = TextEditingController(text: 'Cook');
     final amountController = TextEditingController();
     String selectedMonth = 'September 2026';
-    String selectedProperty = 'Green View PG - Hebbal';
     String selectedProperty = AppData.selectedProperty;
 
     showDialog(
@@ -327,7 +299,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             elevation: 2,
                             dropdownColor: Colors.white,
                             icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.textGrey),
-                            items: ['September 2026', 'August 2026', 'October 2026'].map((String m) {
                             items: ['September 2026', 'August 2026', 'October 2026', 'November 2026'].map((String m) {
                               return DropdownMenuItem(value: m, child: Text(m, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis));
                             }).toList(),
@@ -346,7 +317,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                             elevation: 2,
                             dropdownColor: Colors.white,
                             icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.textGrey),
-                            items: ['Green View PG - Hebbal', 'BNR Luxury PG'].map((String prop) {
                             items: dynamicProps.map((String prop) {
                               return DropdownMenuItem(value: prop, child: Text(prop, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis));
                             }).toList(),
@@ -366,7 +336,6 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
                 ElevatedButton(
-                  onPressed: () {
                   onPressed: () async {
                     final name = nameController.text.trim();
                     final amt = int.tryParse(amountController.text.trim()) ?? 0;
@@ -426,20 +395,9 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
                     if (!mounted) return;
                     setState(() {
-                      _employeeSalaries.insert(0, {
-                        'name': name,
-                        'role': roleController.text.trim(),
-                        'payment_date': 'Today',
-                        'salary_month': selectedMonth,
-                        'amount': amt,
-                        'property': selectedProperty,
-                      });
                       _employeeSalaries.insert(0, newSalary);
                     });
 
-                    final messenger = ScaffoldMessenger.of(context);
-                    Navigator.pop(dialogContext);
-                    messenger.showSnackBar(
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Salary payment recorded!'), backgroundColor: Colors.green),

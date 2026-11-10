@@ -71,9 +71,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
-          builder: (context, setModalState) {
           builder: (modalCtx, setModalState) {
+            return AlertDialog(
               title: const Text('Add New Lead'),
               content: SizedBox(
                 width: 400,
@@ -123,9 +122,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
                 ElevatedButton(
-                  onPressed: () {
-                  onPressed: () {
                   onPressed: () async {
+                    final name = nameController.text.trim();
                     final phone = phoneController.text.trim();
                     if (name.isEmpty || phone.isEmpty) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -135,16 +133,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
                     }
 
                     final propId = AppData.selectedPropertyId;
-                    if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
                     String? createdLeadId;
-                      AdminApiService.createLead({
-                      AdminApiService.createLead({
-                        'property_id': propId,
-                        'name': name,
-                        'phone': phone,
-                        'source': selectedSource.toUpperCase().replaceAll('-', '_'),
-                        'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
-                      }).then((_) {
+                    if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
                       try {
                         final created = await AdminApiService.createLead({
                           'property_id': propId,
@@ -156,10 +146,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
                         if (created.isNotEmpty && created['id'] != null) {
                           createdLeadId = created['id'].toString();
                         }
-                      }).catchError((e) {
-                      }).catchError((e) {
-                        debugPrint('API createLead error: $e');
-                      });
+                        _loadLeadsFromApi();
                       } catch (e) {
                         if (dialogContext.mounted) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
@@ -168,8 +155,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
                         }
                         return;
                       }
+                    }
 
-                    setState(() {
                     final newLead = <String, dynamic>{
                       'name': name,
                       'phone': phone,
@@ -182,23 +169,16 @@ class _LeadsScreenState extends State<LeadsScreen> {
                     }
 
                     if (!mounted) return;
-                      _leads.insert(0, {
-                      _leads.insert(0, {
-                        'name': name,
-                        'phone': phone,
-                        'source': selectedSource,
-                        'status': selectedStatus,
-                        'date': 'Today',
-                      });
+                    setState(() {
                       _leads.insert(0, newLead);
+                    });
 
-                    final messenger = ScaffoldMessenger.of(context);
-                    final messenger = ScaffoldMessenger.of(context);
-                    Navigator.pop(dialogContext);
-                    messenger.showSnackBar(
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Lead added successfully!'), backgroundColor: Colors.green),
+                      );
+                    }
                   },
                   child: const Text('Save Lead'),
                 ),
@@ -214,8 +194,6 @@ class _LeadsScreenState extends State<LeadsScreen> {
     final leadName = lead['name']?.toString() ?? 'Prospect';
     final leadPhone = lead['phone']?.toString() ?? '';
     final leadEmail = lead['email']?.toString() ?? '';
-    final propertyId = lead['property_id']?.toString() ?? '';
-    final propertyId = lead['property_id']?.toString() ?? '';
     final propertyId = lead['property_id']?.toString() ?? AppData.selectedPropertyId ?? '';
     final confirmed = await showDialog<bool>(
       context: context,
@@ -247,18 +225,15 @@ class _LeadsScreenState extends State<LeadsScreen> {
 
     if (confirmed == true) {
       final leadId = lead['id']?.toString();
-      if (leadId != null && leadId.isNotEmpty) {
-      if (leadId != null && leadId.isNotEmpty) {
       if (leadId != null && leadId.isNotEmpty && !leadId.startsWith('lead-')) {
-          await AdminApiService.updateLead(leadId, {'status': 'CONVERTED'});
-          await AdminApiService.updateLead(leadId, {'status': 'CONVERTED'});
+        try {
           await AdminApiService.convertLead(leadId, {
             if (propertyId.isNotEmpty) 'property_id': propertyId,
             'monthly_rent': 6000.0,
             'security_deposit': 6000.0,
           });
           _loadLeadsFromApi();
-          debugPrint('Error updating lead status: $e');
+        } catch (e) {
           debugPrint('Error updating lead status: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -266,13 +241,12 @@ class _LeadsScreenState extends State<LeadsScreen> {
             );
           }
           return;
+        }
       }
       setState(() {
-
         lead['status'] = 'Converted';
       });
 
-      try {
       try {
         await AdminApiService.onboardResident({
           'name': leadName,
@@ -286,6 +260,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
         debugPrint('Resident onboard bridge info: $e');
       }
 
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$leadName converted to Resident successfully!'),
@@ -310,9 +285,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
-          builder: (context, setModalState) {
-          builder: (context, setModalState) {
           builder: (modalCtx, setModalState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
             final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
             final textPri = isDark ? Colors.white : AppTheme.textDark;
 

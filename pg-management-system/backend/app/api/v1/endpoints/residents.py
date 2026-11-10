@@ -926,25 +926,58 @@ def update_resident_details(
         resident.room_id = update_dict["room_id"]
         update_dict.pop("room_id")
 
-    if "full_name" in update_dict and update_dict["full_name"]:
-        resident.full_name = update_dict["full_name"].strip()
+    full_name_val = update_dict.pop("full_name", None) or update_dict.pop("name", None)
+    if full_name_val and str(full_name_val).strip():
+        clean_name = str(full_name_val).strip()
+        resident.full_name = clean_name
         if user:
-            user.full_name = resident.full_name
-        update_dict.pop("full_name")
+            user.full_name = clean_name
 
-    if "phone" in update_dict and update_dict["phone"]:
-        clean_p = normalize_phone(update_dict["phone"])
+    phone_val = update_dict.pop("phone", None)
+    if phone_val and str(phone_val).strip():
+        clean_p = normalize_phone(str(phone_val))
         resident.phone = clean_p
         if user:
             user.phone = clean_p
-        update_dict.pop("phone")
 
-    if "email" in update_dict and update_dict["email"]:
-        clean_e = update_dict["email"].strip().lower()
+    email_val = update_dict.pop("email", None)
+    if email_val and str(email_val).strip():
+        clean_e = str(email_val).strip().lower()
         resident.email = clean_e
         if user:
             user.email = clean_e
-        update_dict.pop("email")
+
+    address_val = update_dict.pop("address", None)
+    if address_val and str(address_val).strip():
+        resident.street = str(address_val).strip()
+
+    em_val = update_dict.pop("emergency_contact", None)
+    if em_val and str(em_val).strip():
+        clean_em = str(em_val).strip()
+        resident.emergency_contact = clean_em
+        resident.emergency_contact_phone = clean_em
+
+    rent_val = update_dict.pop("rent", None)
+    if rent_val is not None:
+        resident.monthly_rent = float(rent_val)
+
+    deposit_val = update_dict.pop("deposit", None)
+    if deposit_val is not None:
+        resident.security_deposit = float(deposit_val)
+
+    dob_val = update_dict.pop("dob", None)
+    if dob_val and isinstance(dob_val, str) and dob_val.strip():
+        try:
+            if "/" in dob_val:
+                p = dob_val.split("/")
+                if len(p) == 3:
+                    resident.date_of_birth = date(int(p[2]), int(p[1]), int(p[0]))
+            elif "-" in dob_val:
+                p = dob_val.split("-")
+                if len(p) == 3:
+                    resident.date_of_birth = date(int(p[0]), int(p[1]), int(p[2]))
+        except Exception:
+            pass
 
     for f, v in update_dict.items():
         if hasattr(resident, f):

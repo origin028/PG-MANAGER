@@ -543,6 +543,556 @@ class ResidentsScreen extends StatefulWidget {
     );
   }
 
+  // Public static method to show Edit Resident Dialog from anywhere
+  static void showEditResidentDialog(
+    BuildContext context,
+    Map<String, dynamic> resident, {
+    VoidCallback? onComplete,
+  }) {
+    final nameController = TextEditingController(text: resident['name'] ?? resident['full_name'] ?? '');
+    final phoneController = TextEditingController(text: resident['phone'] ?? '');
+    final emailController = TextEditingController(text: resident['email'] ?? '');
+    final emergencyController = TextEditingController(text: resident['emergency_contact'] ?? resident['emergency_contact_phone'] ?? '');
+    final dobController = TextEditingController(text: resident['dob'] ?? resident['date_of_birth']?.toString() ?? '');
+    final occupationController = TextEditingController(text: resident['occupation'] ?? '');
+    final addressController = TextEditingController(text: resident['address'] ?? resident['permanent_address'] ?? '');
+    final pincodeController = TextEditingController(text: resident['pincode'] ?? '');
+    final rentController = TextEditingController(text: (resident['rent'] ?? resident['monthly_rent'] ?? 8000).toString());
+    final depositController = TextEditingController(text: (resident['deposit'] ?? resident['security_deposit'] ?? 16000).toString());
+
+    String selectedGender = resident['gender'] ?? 'Male';
+    if (!['Male', 'Female', 'Other'].contains(selectedGender)) {
+      selectedGender = 'Male';
+    }
+
+    String selectedStatus = resident['status'] ?? 'Active';
+    final validStatuses = ['Active', 'Pending', 'Notice Period', 'Checked Out'];
+    if (!validStatuses.contains(selectedStatus)) {
+      selectedStatus = 'Active';
+    }
+
+    String? localError;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final isDark = Theme.of(ctx).brightness == Brightness.dark;
+            final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
+            final textPri = isDark ? Colors.white : AppTheme.textDark;
+            final textSec = isDark ? const Color(0xFF94A3B8) : AppTheme.textGrey;
+            final fieldBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+            final borderCol = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
+
+            InputDecoration inputDeco({
+              required String label,
+              required String hint,
+              Widget? prefixIcon,
+              Widget? suffixIcon,
+              String? prefixText,
+            }) {
+              return InputDecoration(
+                labelText: label,
+                labelStyle: TextStyle(color: textSec, fontSize: 13, fontWeight: FontWeight.w500),
+                hintText: hint,
+                hintStyle: TextStyle(color: textSec.withValues(alpha: 0.6), fontSize: 13),
+                prefixIcon: prefixIcon,
+                suffixIcon: suffixIcon,
+                prefixText: prefixText,
+                prefixStyle: TextStyle(color: textPri, fontWeight: FontWeight.w600),
+                filled: true,
+                fillColor: fieldBg,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: borderCol),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: borderCol),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(10)),
+                  borderSide: BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                ),
+              );
+            }
+
+            return Dialog(
+              backgroundColor: cardBg,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: 640,
+                  maxHeight: MediaQuery.of(context).size.height * 0.9,
+                ),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Header
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: borderCol)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryBlue, size: 24),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Edit Resident Details',
+                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Edit name, phone number, stay financials, and address info',
+                                  style: TextStyle(fontSize: 12, color: textSec),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+                            icon: Icon(Icons.close, color: textSec, size: 20),
+                            tooltip: 'Close',
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Body
+                    Flexible(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (localError != null)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        localError!,
+                                        style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                            // Section 1: Personal Info & Phone
+                            _buildFormSectionHeader('Personal Information'),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: nameController,
+                                    style: TextStyle(color: textPri, fontSize: 14),
+                                    decoration: inputDeco(
+                                      label: 'Full Name *',
+                                      hint: 'e.g. Priya Sharma',
+                                      prefixIcon: const Icon(Icons.person_outline, size: 20, color: AppTheme.primaryBlue),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: TextField(
+                                    controller: phoneController,
+                                    keyboardType: TextInputType.phone,
+                                    style: TextStyle(color: textPri, fontSize: 14, fontWeight: FontWeight.w600),
+                                    decoration: inputDeco(
+                                      label: 'Mobile Number *',
+                                      hint: 'e.g. 9876543210',
+                                      prefixIcon: const Icon(Icons.phone_outlined, size: 20, color: AppTheme.primaryBlue),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: dobController,
+                                    style: TextStyle(color: textPri, fontSize: 14),
+                                    decoration: inputDeco(
+                                      label: 'Date of Birth',
+                                      hint: 'DD/MM/YYYY',
+                                      prefixIcon: const Icon(Icons.cake_outlined, size: 20, color: AppTheme.primaryBlue),
+                                      suffixIcon: IconButton(
+                                        icon: const Icon(Icons.calendar_month_outlined, size: 20, color: AppTheme.primaryBlue),
+                                        onPressed: () async {
+                                          final picked = await showDatePicker(
+                                            context: ctx,
+                                            initialDate: DateTime(2000, 1, 1),
+                                            firstDate: DateTime(1960),
+                                            lastDate: DateTime.now(),
+                                          );
+                                          if (picked != null) {
+                                            final d = picked.day.toString().padLeft(2, '0');
+                                            final m = picked.month.toString().padLeft(2, '0');
+                                            dobController.text = '$d/$m/${picked.year}';
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    initialValue: selectedGender,
+                                    dropdownColor: cardBg,
+                                    style: TextStyle(color: textPri, fontSize: 14),
+                                    decoration: inputDeco(
+                                      label: 'Gender',
+                                      hint: 'Select Gender',
+                                      prefixIcon: const Icon(Icons.wc_outlined, size: 20, color: AppTheme.primaryBlue),
+                                    ),
+                                    items: const [
+                                      DropdownMenuItem(value: 'Male', child: Text('Male')),
+                                      DropdownMenuItem(value: 'Female', child: Text('Female')),
+                                      DropdownMenuItem(value: 'Other', child: Text('Other')),
+                                    ],
+                                    onChanged: (val) {
+                                      if (val != null) {
+                                        setDialogState(() => selectedGender = val);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: occupationController,
+                              style: TextStyle(color: textPri, fontSize: 14),
+                              decoration: inputDeco(
+                                label: 'Occupation',
+                                hint: 'e.g. Software Engineer, Student',
+                                prefixIcon: const Icon(Icons.work_outline, size: 20, color: AppTheme.primaryBlue),
+                              ),
+                            ),
+
+                            const SizedBox(height: 22),
+                            // Section 2: Contact & Address
+                            _buildFormSectionHeader('Contact & Address'),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: emailController,
+                                    keyboardType: TextInputType.emailAddress,
+                                    style: TextStyle(color: textPri, fontSize: 14),
+                                    decoration: inputDeco(
+                                      label: 'Email Address',
+                                      hint: 'e.g. resident@example.com',
+                                      prefixIcon: const Icon(Icons.email_outlined, size: 20, color: AppTheme.primaryBlue),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: TextField(
+                                    controller: emergencyController,
+                                    keyboardType: TextInputType.phone,
+                                    style: TextStyle(color: textPri, fontSize: 14),
+                                    decoration: inputDeco(
+                                      label: 'Emergency Contact',
+                                      hint: 'e.g. 9876543299',
+                                      prefixIcon: const Icon(Icons.contact_phone_outlined, size: 20, color: AppTheme.primaryBlue),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: addressController,
+                              maxLines: 2,
+                              style: TextStyle(color: textPri, fontSize: 14),
+                              decoration: inputDeco(
+                                label: 'Permanent Address',
+                                hint: 'Door No, Street, Landmark, City, State',
+                                prefixIcon: const Icon(Icons.location_on_outlined, size: 20, color: AppTheme.primaryBlue),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            TextField(
+                              controller: pincodeController,
+                              keyboardType: TextInputType.number,
+                              style: TextStyle(color: textPri, fontSize: 14),
+                              decoration: inputDeco(
+                                label: 'Pincode',
+                                hint: 'e.g. 560001',
+                                prefixIcon: const Icon(Icons.pin_drop_outlined, size: 20, color: AppTheme.primaryBlue),
+                              ),
+                            ),
+
+                            const SizedBox(height: 22),
+                            // Section 3: Stay & Financials
+                            _buildFormSectionHeader('Stay & Financials'),
+                            const SizedBox(height: 12),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: rentController,
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(color: textPri, fontSize: 14, fontWeight: FontWeight.w600),
+                                    decoration: inputDeco(
+                                      label: 'Monthly Rent',
+                                      hint: '8000',
+                                      prefixText: '₹ ',
+                                      prefixIcon: const Icon(Icons.currency_rupee, size: 20, color: AppTheme.primaryBlue),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: TextField(
+                                    controller: depositController,
+                                    keyboardType: TextInputType.number,
+                                    style: TextStyle(color: textPri, fontSize: 14, fontWeight: FontWeight.w600),
+                                    decoration: inputDeco(
+                                      label: 'Security Deposit',
+                                      hint: '16000',
+                                      prefixText: '₹ ',
+                                      prefixIcon: const Icon(Icons.account_balance_wallet_outlined, size: 20, color: AppTheme.primaryBlue),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedStatus,
+                              dropdownColor: cardBg,
+                              style: TextStyle(color: textPri, fontSize: 14),
+                              decoration: inputDeco(
+                                label: 'Resident Status',
+                                hint: 'Select Status',
+                                prefixIcon: const Icon(Icons.verified_user_outlined, size: 20, color: AppTheme.primaryBlue),
+                              ),
+                              items: validStatuses.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setDialogState(() => selectedStatus = val);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Actions
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      decoration: BoxDecoration(
+                        border: Border(top: BorderSide(color: borderCol)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: textSec,
+                              side: BorderSide(color: borderCol),
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: isSaving
+                                ? null
+                                : () async {
+                                    final nameVal = nameController.text.trim();
+                                    final phoneVal = phoneController.text.trim();
+
+                                    if (nameVal.isEmpty) {
+                                      setDialogState(() => localError = 'Full Name cannot be empty.');
+                                      return;
+                                    }
+                                    if (phoneVal.isEmpty) {
+                                      setDialogState(() => localError = 'Mobile Number cannot be empty.');
+                                      return;
+                                    }
+                                    final cleanDigits = phoneVal.replaceAll(RegExp(r'\D'), '');
+                                    if (cleanDigits.length < 10) {
+                                      setDialogState(() => localError = 'Mobile Number must be at least 10 digits.');
+                                      return;
+                                    }
+
+                                    final messenger = ScaffoldMessenger.of(context);
+                                    final navigator = Navigator.of(dialogCtx);
+
+                                    setDialogState(() {
+                                      isSaving = true;
+                                      localError = null;
+                                    });
+
+                                    final rentVal = int.tryParse(rentController.text.trim()) ?? (resident['rent'] ?? 8000);
+                                    final depVal = int.tryParse(depositController.text.trim()) ?? (resident['deposit'] ?? 16000);
+                                    final emailVal = emailController.text.trim();
+                                    final emVal = emergencyController.text.trim();
+                                    final dobVal = dobController.text.trim();
+                                    final occVal = occupationController.text.trim();
+                                    final addrVal = addressController.text.trim();
+                                    final pinVal = pincodeController.text.trim();
+
+                                    // 1. Update in-memory resident object
+                                    resident['name'] = nameVal;
+                                    resident['full_name'] = nameVal;
+                                    resident['phone'] = phoneVal;
+                                    resident['email'] = emailVal;
+                                    resident['emergency_contact'] = emVal;
+                                    resident['dob'] = dobVal;
+                                    resident['gender'] = selectedGender;
+                                    resident['occupation'] = occVal;
+                                    resident['address'] = addrVal;
+                                    resident['permanent_address'] = addrVal;
+                                    resident['pincode'] = pinVal;
+                                    resident['rent'] = rentVal;
+                                    resident['monthly_rent'] = rentVal;
+                                    resident['deposit'] = depVal;
+                                    resident['security_deposit'] = depVal;
+                                    resident['status'] = selectedStatus;
+
+                                    // 2. Sync with AppData.residents
+                                    final resId = resident['id']?.toString();
+                                    for (var r in AppData.residents) {
+                                      if ((resId != null && resId.isNotEmpty && r['id']?.toString() == resId) ||
+                                          identical(r, resident)) {
+                                        r['name'] = nameVal;
+                                        r['full_name'] = nameVal;
+                                        r['phone'] = phoneVal;
+                                        r['email'] = emailVal;
+                                        r['emergency_contact'] = emVal;
+                                        r['dob'] = dobVal;
+                                        r['gender'] = selectedGender;
+                                        r['occupation'] = occVal;
+                                        r['address'] = addrVal;
+                                        r['permanent_address'] = addrVal;
+                                        r['pincode'] = pinVal;
+                                        r['rent'] = rentVal;
+                                        r['monthly_rent'] = rentVal;
+                                        r['deposit'] = depVal;
+                                        r['security_deposit'] = depVal;
+                                        r['status'] = selectedStatus;
+                                        break;
+                                      }
+                                    }
+                                    AppData.saveResidentsToStorage();
+
+                                    // 3. Sync to Backend API
+                                    if (resId != null && resId.isNotEmpty && !resId.startsWith('mock-') && !resId.startsWith('r-')) {
+                                      try {
+                                        final apiPayload = <String, dynamic>{
+                                          'full_name': nameVal,
+                                          'name': nameVal,
+                                          'phone': phoneVal,
+                                          'email': emailVal.isNotEmpty ? emailVal : null,
+                                          'emergency_contact': emVal,
+                                          'dob': dobVal,
+                                          'gender': selectedGender,
+                                          'occupation': occVal,
+                                          'address': addrVal,
+                                          'pincode': pinVal,
+                                          'monthly_rent': rentVal.toDouble(),
+                                          'rent': rentVal.toDouble(),
+                                          'security_deposit': depVal.toDouble(),
+                                          'deposit': depVal.toDouble(),
+                                          'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
+                                        };
+                                        await AdminApiService.updateResident(resId, apiPayload);
+                                      } catch (e) {
+                                        debugPrint('API updateResident error: $e');
+                                      }
+                                    }
+
+                                    navigator.pop();
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text('Resident profile for "$nameVal" updated successfully!'),
+                                        backgroundColor: const Color(0xFF10B981),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                    onComplete?.call();
+                                  },
+                            icon: isSaving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Icon(Icons.check_circle_outline, size: 18),
+                            label: Text(
+                              isSaving ? 'Saving...' : 'Save Changes',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              elevation: 0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // Public static method to show Resident Profile Modal from anywhere
   static void showResidentProfileModal(
     BuildContext context,
@@ -857,8 +1407,14 @@ class ResidentsScreen extends StatefulWidget {
                         flex: 2,
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Edit profile clicked')),
+                            Navigator.pop(dialogCtx);
+                            showEditResidentDialog(
+                              context,
+                              resident,
+                              onComplete: () {
+                                onStateChanged?.call();
+                                showResidentProfileModal(context, resident, onStateChanged: onStateChanged);
+                              },
                             );
                           },
                           icon: Icon(Icons.edit_outlined, size: 16, color: textPri),
@@ -2018,6 +2574,11 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
                                               setState(() {});
                                               _loadResidentsFromApi();
                                             });
+                                          } else if (action == 'edit') {
+                                            ResidentsScreen.showEditResidentDialog(context, res, onComplete: () {
+                                              setState(() {});
+                                              _loadResidentsFromApi();
+                                            });
                                           } else if (action == 'kyc') {
                                             _showKycModal(context, res, rIndex);
                                           } else if (action == 'transfer') {
@@ -2040,6 +2601,16 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
                                                 Icon(Icons.account_circle_outlined, size: 18, color: AppTheme.primaryBlue),
                                                 SizedBox(width: 8),
                                                 Text('View Profile', style: TextStyle(fontSize: 13)),
+                                              ],
+                                            ),
+                                          ),
+                                          const PopupMenuItem(
+                                            value: 'edit',
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryBlue),
+                                                SizedBox(width: 8),
+                                                Text('Edit Details', style: TextStyle(fontSize: 13)),
                                               ],
                                             ),
                                           ),

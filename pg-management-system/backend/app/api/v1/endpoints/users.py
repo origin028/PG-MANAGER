@@ -74,11 +74,23 @@ def update_current_user_profile(
     """Updates current authenticated user's profile details."""
     update_data = payload.model_dump(exclude_unset=True)
     if "full_name" in update_data and update_data["full_name"]:
-        current_user.full_name = update_data["full_name"].strip()
+        clean_name = update_data["full_name"].strip()
+        current_user.full_name = clean_name
+        from app.models.resident import Resident
+        import sqlalchemy as sa
+        resident = db.scalar(sa.select(Resident).where(Resident.user_id == current_user.id))
+        if resident:
+            resident.full_name = clean_name
     if "avatar_url" in update_data:
         current_user.avatar_url = update_data["avatar_url"]
     if "phone" in update_data and update_data["phone"]:
-        current_user.phone = update_data["phone"].strip()
+        clean_phone = update_data["phone"].strip()
+        current_user.phone = clean_phone
+        from app.models.resident import Resident
+        import sqlalchemy as sa
+        resident = db.scalar(sa.select(Resident).where(Resident.user_id == current_user.id))
+        if resident:
+            resident.phone = clean_phone
 
     db.commit()
     db.refresh(current_user)

@@ -1,6 +1,6 @@
 import builtins
 import uuid
-from datetime import date
+from datetime import date as py_date
 from typing import Optional
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -36,7 +36,7 @@ class Expense(Base, UUIDMixin, TimestampMixin):
     title: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     amount: Mapped[float] = mapped_column(sa.Numeric(10, 2), nullable=False)
     method: Mapped[str] = mapped_column(sa.String(50), default="UPI", nullable=False)
-    date: Mapped[date] = mapped_column(sa.Date, nullable=False)
+    date: Mapped[py_date] = mapped_column(sa.Date, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
 
     # Aliases / backward compatibility

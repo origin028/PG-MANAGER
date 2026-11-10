@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/data/app_data.dart';
+import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -163,25 +163,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Phone Field (Strictly Read-Only)
-                    Row(
-                      children: [
-                        Text('Phone Number', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textSec)),
-                        const SizedBox(width: 6),
-                        Text('(Read-only)', style: TextStyle(fontSize: 11, color: textSec, fontStyle: FontStyle.italic)),
-                      ],
-                    ),
+                    // Phone Field (Editable)
+                    Text('Phone Number', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPri)),
                     const SizedBox(height: 6),
                     TextFormField(
                       controller: phoneController,
-                      readOnly: true,
-                      enabled: false,
-                      style: TextStyle(color: textSec),
+                      keyboardType: TextInputType.phone,
+                      style: TextStyle(color: textPri),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return 'Please enter your phone number';
+                        }
+                        final digits = val.replaceAll(RegExp(r'\D'), '');
+                        if (digits.length < 10) {
+                          return 'Please enter a valid 10-digit mobile number';
+                        }
+                        return null;
+                      },
                       decoration: InputDecoration(
                         filled: true,
-                        fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                        prefixIcon: Icon(Icons.phone_iphone_rounded, color: textSec, size: 20),
-                        suffixIcon: Icon(Icons.lock_outline_rounded, color: textSec, size: 18),
+                        fillColor: isDark ? const Color(0xFF243247) : AppTheme.softGrey,
+                        prefixIcon: const Icon(Icons.phone_iphone_rounded, color: AppTheme.primaryBlue, size: 20),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
@@ -220,10 +222,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         onPressed: () {
                           if (formKey.currentState?.validate() ?? false) {
                             final newName = nameController.text.trim();
+                            final newPhone = phoneController.text.trim();
                             setState(() {
                               AppData.currentResident['name'] = newName;
+                              AppData.currentResident['phone'] = newPhone;
                             });
-                            ResidentApiService.updateProfile(fullName: newName).catchError((e) {
+                            ResidentApiService.updateProfile(fullName: newName, phone: newPhone).catchError((e) {
                               debugPrint('API updateProfile error: $e');
                               return <String, dynamic>{};
                             });
@@ -492,7 +496,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       _buildListTile(Icons.person_outline_rounded, 'Full Name', name),
                       Divider(height: 1, color: dividerCol),
-                      _buildListTile(Icons.phone_iphone_rounded, 'Phone Number (Read-only)', '+91 $phone', isReadOnly: true),
+                      _buildListTile(Icons.phone_iphone_rounded, 'Phone Number', '+91 $phone'),
                       Divider(height: 1, color: dividerCol),
                       _buildListTile(Icons.mail_outline_rounded, 'Email Address (Read-only)', email, isReadOnly: true),
                       Divider(height: 1, color: dividerCol),

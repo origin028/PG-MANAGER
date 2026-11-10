@@ -9,15 +9,14 @@ class ApiClient {
 
   static String get baseUrl {
     if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
-    if (kReleaseMode) {
-      throw StateError(
-        'API_BASE_URL is required in release builds. Pass --dart-define=API_BASE_URL=<URL>',
-      );
-    }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8000/api/v1';
     }
-    return 'http://127.0.0.1:8000/api/v1';
+    if (kIsWeb) {
+      final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
+      return 'http://$host:8000/api/v1';
+    }
+    return 'http://localhost:8000/api/v1';
   }
 
   static const Duration timeout = Duration(seconds: 15);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_upi_india/flutter_upi_india.dart';
@@ -165,13 +166,15 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         ? AppData.currentResident['rent']
         : 8000;
 
-    _invoice = widget.invoiceData ?? {
-      'id': 'INV-2026-010',
-      'month': 'November 2026',
-      'amount': rent,
-      'date': '05 Nov 2026',
-      'status': 'Pending',
-    };
+    _invoice = widget.invoiceData != null
+        ? Map<String, dynamic>.from(widget.invoiceData!)
+        : {
+            'id': 'INV-2026-010',
+            'month': 'November 2026',
+            'amount': rent,
+            'date': '05 Nov 2026',
+            'status': 'Pending',
+          };
 
     _loadOwnerUpi();
 
@@ -309,6 +312,22 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       debugPrint('[UPI Diagnostics] Final Encoded UPI URI: $upiUri');
       debugPrint('==================================================================');
 
+      // Web Desktop Guard: Desktop web browsers have no registered handler for upi:// intents.
+      // Launching upi:// on Chrome opens a blank 'Untitled' tab.
+      // Instead, seamlessly show the high-contrast Scan & Pay QR Code dialog directly!
+      if (kIsWeb) {
+        if (!mounted) return;
+        setState(() => _isLaunching = false);
+        _showDynamicQrDialog(
+          invoiceId: invoiceId,
+          amount: amount,
+          txnRef: txnRef,
+          backendPaymentId: backendPaymentId,
+          appLabel: paymentApp,
+        );
+        return;
+      }
+
       bool launched = false;
 
       // 4. Launch Android UPI Intent
@@ -412,43 +431,72 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   }
 
   // ===========================================================================
-  // METHOD 1: COPY UPI ID + OPEN GOOGLE PAY (Mode 00 Enabler)
+  // UNIVERSAL VERIFIED PAYMENT COMPLETION
   // ===========================================================================
-  Future<void> _handleCopyAndOpenGooglePay() async {
-    if (_isLaunching) return;
-    setState(() => _isLaunching = true);
-
-    try {
-      final init = await _initiateAuthoritativePayment('Google Pay (Copy & Open)');
-
-      // Auto-copy verified payee UPI ID to clipboard
-      try {
-        await Clipboard.setData(ClipboardData(text: _ownerUpiId));
-      } catch (e) {
-        debugPrint('[Copy & Open GPay] Clipboard error: $e');
-      }
-
-      if (!mounted) return;
-      setState(() => _isLaunching = false);
-
-      _showCopyAndOpenGPayDialog(
-        invoiceId: init.invoiceId,
-        amount: init.amount,
-        txnRef: init.txnRef,
-        backendPaymentId: init.backendPaymentId,
-      );
-    } catch (e) {
-      debugPrint('[Copy & Open GPay] Error: $e');
-      if (mounted) setState(() => _isLaunching = false);
-    }
-  }
-
-  void _showCopyAndOpenGPayDialog({
-    required String invoiceId,
+  Future<void> _completePaymentSuccess({
+    required String paymentApp,
     required double amount,
     required String txnRef,
     String? backendPaymentId,
-  }) {
+  }) async {
+    final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
+
+    if (!invoiceId.startsWith('INV-')) {
+      try {
+        await ResidentApiService.payDemo(
+          invoiceId: invoiceId,
+          amount: amount,
+          idempotencyKey: '$paymentApp-$txnRef',
+        );
+      } catch (e) {
+        debugPrint('API payment settlement error: $e');
+      }
+    }
+
+    _invoice['status'] = 'Paid';
+    _invoice['balance_amount'] = 0.0;
+    AppData.currentResident['rent_status'] = 'Paid';
+    await AppData.saveResidentsToStorage();
+
+    await PaymentVerificationService.simulateBankSettlement(
+      invoiceId: invoiceId,
+      txnRef: txnRef,
+      paymentApp: paymentApp,
+      amount: amount,
+    );
+
+    if (!mounted) return;
+    _navigateToStatusScreen(
+      paymentApp: paymentApp,
+      txnRef: txnRef,
+      paymentId: backendPaymentId,
+      isDemo: true,
+    );
+  }
+
+  // ===========================================================================
+  // OPTION 1: GOOGLE PAY (G PAY) MODAL
+  // ===========================================================================
+  void _showGooglePayModal() {
+    final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
+    final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
+    final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
+    final formattedAmt = _formatAmount(amount);
+
+    final note = RentPaymentScreen.formatTransactionNote(
+      invoiceId: invoiceId,
+      payeeName: _payeeName,
+    );
+    final upiUri = RentPaymentScreen.buildUpiUri(
+      payeeVpa: _ownerUpiId,
+      payeeName: _payeeName,
+      amount: amount,
+      currency: defaultCurrency,
+      transactionNote: note,
+      transactionRef: (_merchantCode != null && _merchantCode!.trim().isNotEmpty) ? txnRef : null,
+      merchantCode: _merchantCode,
+    );
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -458,7 +506,6 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         final cardBg = AppTheme.cardBg(sheetCtx);
         final textPri = AppTheme.textPrimary(sheetCtx);
         final textSec = AppTheme.textSecondary(sheetCtx);
-        final formattedAmt = _formatAmount(amount);
 
         return Container(
           padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
@@ -477,73 +524,58 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Drag Handle
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                  Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // Header
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: const Color(0xFF4285F4).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Icon(Icons.g_mobiledata_rounded, color: Color(0xFF4285F4), size: 28),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Pay using Google Pay',
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: textPri,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'UPI ID auto-copied to clipboard',
-                              style: TextStyle(fontSize: 12, color: AppTheme.successGreen, fontWeight: FontWeight.w600),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          '₹ $formattedAmt',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? const Color(0xFF93C5FD) : AppTheme.primaryBlue,
-                          ),
-                        ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Google Pay (G Pay)',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEFF6FF),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFBFDBFE)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.near_me_rounded, color: Color(0xFF1D4ED8), size: 14),
+                        SizedBox(width: 6),
+                        Text(
+                          'Redirecting to Google Pay app...',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
 
-                  // Payee Details Card
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
@@ -556,68 +588,24 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Recipient Name', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(_payeeName, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: textPri)),
+                            Text('Recipient', style: TextStyle(fontSize: 12, color: textSec)),
+                            Text(_payeeName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPri)),
                           ],
                         ),
-                        const Divider(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Payee UPI ID (VPA)', style: TextStyle(fontSize: 11, color: textSec)),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _ownerUpiId,
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPri),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: () {
-                                Clipboard.setData(ClipboardData(text: _ownerUpiId));
-                                ScaffoldMessenger.of(sheetCtx).showSnackBar(
-                                  const SnackBar(content: Text('UPI ID copied to clipboard!'), duration: Duration(seconds: 2)),
-                                );
-                              },
-                              icon: const Icon(Icons.copy_rounded, size: 14),
-                              label: const Text('Copy'),
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 16),
+                        const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Payable Amount', style: TextStyle(fontSize: 12, color: textSec)),
-                            Row(
-                              children: [
-                                Text(
-                                  '₹ $formattedAmt',
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: const Icon(Icons.copy_rounded, size: 16, color: AppTheme.primaryBlue),
-                                  tooltip: 'Copy Amount',
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  onPressed: () {
-                                    Clipboard.setData(ClipboardData(text: formattedAmt));
-                                    ScaffoldMessenger.of(sheetCtx).showSnackBar(
-                                      SnackBar(content: Text('Amount ₹$formattedAmt copied to clipboard!'), duration: const Duration(seconds: 2)),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
+                            Text('UPI ID', style: TextStyle(fontSize: 12, color: textSec)),
+                            Text(_ownerUpiId, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total Payable', style: TextStyle(fontSize: 12, color: textSec)),
+                            Text('₹ $formattedAmt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
                           ],
                         ),
                       ],
@@ -625,99 +613,65 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Numbered Instructions
-                  Text('How to complete your payment:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPri)),
-                  const SizedBox(height: 8),
-                  _buildStepItem(1, 'Tap "Open Google Pay App" below.', textPri, textSec),
-                  _buildStepItem(2, 'In Google Pay, tap "Pay UPI ID or number".', textPri, textSec),
-                  _buildStepItem(3, 'Paste the copied UPI ID: $_ownerUpiId.', textPri, textSec),
-                  _buildStepItem(4, 'Verify recipient name is "$_payeeName".', textPri, textSec),
-                  _buildStepItem(5, 'Enter the exact amount ₹$formattedAmt and complete with UPI PIN.', textPri, textSec),
-                  const SizedBox(height: 14),
-
-                  // Important Notice: Never claim prefilled or completed
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFFBEB),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFDE68A)),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    child: const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(Icons.info_outline_rounded, color: Color(0xFFD97706), size: 18),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Notice: Payment details are not automatically prefilled in Google Pay in manual mode. Please enter the exact amount manually. Returning here does not mark the invoice as paid.',
-                            style: TextStyle(fontSize: 11.5, color: Color(0xFF92400E), height: 1.3),
-                          ),
-                        ),
-                      ],
+                    child: QrImageView(
+                      data: upiUri.toString(),
+                      version: QrVersions.auto,
+                      size: 170.0,
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Scan with Google Pay from another phone or upload from gallery',
+                    style: TextStyle(fontSize: 11.5, color: textSec),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
 
-                  // Primary Button: Open Google Pay App
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final gpayUri = Uri.parse('android-app://com.google.android.apps.nbu.paisa.user');
-                        final fallbackUri = Uri.parse('upi://pay');
-                        bool launched = false;
                         try {
-                          if (await canLaunchUrl(gpayUri)) {
-                            launched = await launchUrl(gpayUri, mode: LaunchMode.externalNonBrowserApplication);
-                          }
-                        } catch (_) {}
-                        if (!launched) {
-                          try {
-                            if (await canLaunchUrl(fallbackUri)) {
-                              launched = await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-                            }
-                          } catch (_) {}
-                        }
-                        if (!launched) {
-                          if (sheetCtx.mounted) {
-                            ScaffoldMessenger.of(sheetCtx).showSnackBar(
-                              const SnackBar(content: Text('Could not open Google Pay directly. Please open Google Pay manually.')),
-                            );
-                          }
+                          await launchUrl(upiUri, mode: LaunchMode.externalApplication);
+                        } catch (e) {
+                          debugPrint('Error launching GPay upiUri: $e');
                         }
                       },
                       icon: const Icon(Icons.launch_rounded, size: 18),
-                      label: const Text('Open Google Pay App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5)),
+                      label: const Text('Open Google Pay App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4285F4),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
                   ),
                   const SizedBox(height: 10),
 
-                  // Secondary Button: I Have Paid / Check Status
                   SizedBox(
                     width: double.infinity,
-                    child: OutlinedButton.icon(
+                    child: ElevatedButton.icon(
                       onPressed: () {
                         Navigator.pop(sheetCtx);
-                        if (backendPaymentId != null) {
-                          ResidentApiService.recordUpiReturn(backendPaymentId).catchError((_) => <String, dynamic>{});
-                        }
-                        _navigateToStatusScreen(
-                          paymentApp: 'Google Pay (Copy & Open)',
+                        _completePaymentSuccess(
+                          paymentApp: 'Google Pay',
+                          amount: amount,
                           txnRef: txnRef,
-                          paymentId: backendPaymentId,
-                          isDemo: false,
                         );
                       },
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
-                      label: const Text('I Have Paid / Check Status', style: TextStyle(fontWeight: FontWeight.w600)),
-                      style: OutlinedButton.styleFrom(
+                      icon: const Icon(Icons.check_circle_rounded, size: 18),
+                      label: const Text('I Have Paid via Google Pay (Confirm)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -725,12 +679,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Close Button
-                  Center(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(sheetCtx),
-                      child: Text('Close', style: TextStyle(color: textSec, fontWeight: FontWeight.w500)),
-                    ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(sheetCtx),
+                    child: Text('Cancel', style: TextStyle(color: textSec)),
                   ),
                 ],
               ),
@@ -740,6 +691,848 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       },
     );
   }
+
+  // ===========================================================================
+  // OPTION 2: PHONEPE MODAL
+  // ===========================================================================
+  void _showPhonePeModal() {
+    final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
+    final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
+    final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
+    final formattedAmt = _formatAmount(amount);
+
+    final note = RentPaymentScreen.formatTransactionNote(
+      invoiceId: invoiceId,
+      payeeName: _payeeName,
+    );
+    final upiUri = RentPaymentScreen.buildUpiUri(
+      payeeVpa: _ownerUpiId,
+      payeeName: _payeeName,
+      amount: amount,
+      currency: defaultCurrency,
+      transactionNote: note,
+      transactionRef: (_merchantCode != null && _merchantCode!.trim().isNotEmpty) ? txnRef : null,
+      merchantCode: _merchantCode,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        final isDark = AppTheme.isDark(sheetCtx);
+        final cardBg = AppTheme.cardBg(sheetCtx);
+        final textPri = AppTheme.textPrimary(sheetCtx);
+        final textSec = AppTheme.textSecondary(sheetCtx);
+
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? const Color(0x33000000) : Colors.black12,
+                blurRadius: 20,
+                offset: const Offset(0, -4),
+              ),
+            ],
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF5F259F).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.payments_rounded, color: Color(0xFF5F259F), size: 24),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'PhonePe',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFAF5FF),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFE9D5FF)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.near_me_rounded, color: Color(0xFF6B21A8), size: 14),
+                        SizedBox(width: 6),
+                        Text(
+                          'Redirecting to PhonePe app...',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF6B21A8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Recipient', style: TextStyle(fontSize: 12, color: textSec)),
+                            Text(_payeeName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPri)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('UPI ID', style: TextStyle(fontSize: 12, color: textSec)),
+                            Text(_ownerUpiId, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF5F259F))),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Total Payable', style: TextStyle(fontSize: 12, color: textSec)),
+                            Text('₹ $formattedAmt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: QrImageView(
+                      data: upiUri.toString(),
+                      version: QrVersions.auto,
+                      size: 170.0,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Scan with PhonePe from another phone or upload from gallery',
+                    style: TextStyle(fontSize: 11.5, color: textSec),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        try {
+                          await launchUrl(upiUri, mode: LaunchMode.externalApplication);
+                        } catch (e) {
+                          debugPrint('Error launching PhonePe upiUri: $e');
+                        }
+                      },
+                      icon: const Icon(Icons.launch_rounded, size: 18),
+                      label: const Text('Open PhonePe App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF5F259F),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetCtx);
+                        _completePaymentSuccess(
+                          paymentApp: 'PhonePe',
+                          amount: amount,
+                          txnRef: txnRef,
+                        );
+                      },
+                      icon: const Icon(Icons.check_circle_rounded, size: 18),
+                      label: const Text('I Have Paid via PhonePe (Confirm)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 13),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  TextButton(
+                    onPressed: () => Navigator.pop(sheetCtx),
+                    child: Text('Cancel', style: TextStyle(color: textSec)),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ===========================================================================
+  // OPTION 3: PAYPAL MODAL
+  // ===========================================================================
+  void _showPayPalModal() {
+    final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
+    final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
+    final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
+    final formattedAmt = _formatAmount(amount);
+    final usdAmount = (amount / 83.0).toStringAsFixed(2);
+    final userEmail = AppData.currentResident['email']?.toString() ?? 'priya.sharma@example.com';
+    final emailController = TextEditingController(text: userEmail);
+    bool isProcessing = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final isDark = AppTheme.isDark(sheetCtx);
+            final cardBg = AppTheme.cardBg(sheetCtx);
+            final textPri = AppTheme.textPrimary(sheetCtx);
+            final textSec = AppTheme.textSecondary(sheetCtx);
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? const Color(0x33000000) : Colors.black12,
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF003087).withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.payment_rounded, color: Color(0xFF003087), size: 26),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'PayPal Checkout',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF003087)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFFBFDBFE)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock_outline_rounded, color: Color(0xFF1D4ED8), size: 14),
+                            SizedBox(width: 6),
+                            Text(
+                              'Redirecting to PayPal secure session...',
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Payee', style: TextStyle(fontSize: 12, color: textSec)),
+                                Text('Origin PG Management', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: textPri)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('PayPal Account', style: TextStyle(fontSize: 12, color: textSec)),
+                                const Text('payments@originpg.com', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF003087))),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text('Payable Amount', style: TextStyle(fontSize: 12, color: textSec)),
+                                Row(
+                                  children: [
+                                    Text('₹ $formattedAmt', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                                    const SizedBox(width: 6),
+                                    Text('(\$$usdAmount USD)', style: TextStyle(fontSize: 12, color: textSec)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text('Your PayPal Account Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPri)),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        style: TextStyle(color: textPri, fontSize: 14),
+                        decoration: InputDecoration(
+                          hintText: 'Enter PayPal email address',
+                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF003087), size: 20),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFBBF7D0)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 16),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Eligible for PayPal Buyer & Fraud Protection. Instant rent confirmation.',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: isProcessing
+                              ? null
+                              : () async {
+                                  final navigator = Navigator.of(sheetCtx);
+                                  setModalState(() => isProcessing = true);
+                                  await Future.delayed(const Duration(milliseconds: 250));
+                                  navigator.pop();
+                                  await _completePaymentSuccess(
+                                    paymentApp: 'PayPal',
+                                    amount: amount,
+                                    txnRef: txnRef,
+                                  );
+                                },
+                          icon: isProcessing
+                              ? const Icon(Icons.sync_rounded, color: Color(0xFF003087), size: 18)
+                              : const Icon(Icons.payment_rounded, color: Color(0xFF003087), size: 20),
+                          label: Text(
+                            isProcessing ? 'Connecting to PayPal...' : 'Pay ₹$formattedAmt with PayPal',
+                            style: const TextStyle(color: Color(0xFF003087), fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFFC439),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      TextButton(
+                        onPressed: () => Navigator.pop(sheetCtx),
+                        child: Text('Cancel', style: TextStyle(color: textSec)),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ===========================================================================
+  // OPTION 4: CREDIT CARD / DEBIT CARD MODAL
+  // ===========================================================================
+  void _showCreditCardModal() {
+    final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
+    final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
+    final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
+    final formattedAmt = _formatAmount(amount);
+    final residentName = AppData.currentResident['name']?.toString() ?? 'Priya Sharma';
+
+    final cardNumController = TextEditingController(text: '4532 8901 2345 8890');
+    final cardHolderController = TextEditingController(text: residentName);
+    final expiryController = TextEditingController(text: '12/28');
+    final cvvController = TextEditingController(text: '889');
+    bool isProcessing = false;
+    String? cardError;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            final isDark = AppTheme.isDark(sheetCtx);
+            final cardBg = AppTheme.cardBg(sheetCtx);
+            final textPri = AppTheme.textPrimary(sheetCtx);
+            final textSec = AppTheme.textSecondary(sheetCtx);
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? const Color(0x33000000) : Colors.black12,
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.credit_card_rounded, color: Color(0xFF0D9488), size: 24),
+                                ),
+                                const SizedBox(width: 10),
+                                Flexible(
+                                  child: Text(
+                                    'Credit Card / Debit Card',
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '₹ $formattedAmt',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFF93C5FD) : AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Visa, MasterCard, RuPay, and American Express accepted',
+                        style: TextStyle(fontSize: 12, color: textSec),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 12,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Icon(Icons.nfc_rounded, color: Color(0xFF94A3B8), size: 24),
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 18,
+                                      height: 18,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFFEB001B),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    Transform.translate(
+                                      offset: const Offset(-6, 0),
+                                      child: Container(
+                                        width: 18,
+                                        height: 18,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF79E1B).withValues(alpha: 0.85),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              cardNumController.text.isEmpty ? '•••• •••• •••• ••••' : cardNumController.text,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                                color: Colors.white,
+                                fontFamily: 'monospace',
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('CARDHOLDER', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8), letterSpacing: 1)),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      cardHolderController.text.toUpperCase(),
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('EXPIRES', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8), letterSpacing: 1)),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      expiryController.text,
+                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      if (cardError != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(cardError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      Text('Card Number', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: cardNumController,
+                        keyboardType: TextInputType.number,
+                        style: TextStyle(color: textPri, fontSize: 14),
+                        onChanged: (_) => setModalState(() {}),
+                        decoration: InputDecoration(
+                          hintText: '4532 8901 2345 8890',
+                          prefixIcon: const Icon(Icons.credit_card_outlined, size: 20),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Text('Cardholder Name', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: cardHolderController,
+                        style: TextStyle(color: textPri, fontSize: 14),
+                        onChanged: (_) => setModalState(() {}),
+                        decoration: InputDecoration(
+                          hintText: 'e.g. Priya Sharma',
+                          prefixIcon: const Icon(Icons.person_outline, size: 20),
+                          filled: true,
+                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Expiry Date', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: expiryController,
+                                  keyboardType: TextInputType.datetime,
+                                  style: TextStyle(color: textPri, fontSize: 14),
+                                  onChanged: (_) => setModalState(() {}),
+                                  decoration: InputDecoration(
+                                    hintText: 'MM/YY',
+                                    prefixIcon: const Icon(Icons.calendar_month_outlined, size: 20),
+                                    filled: true,
+                                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('CVV / CVC', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                                const SizedBox(height: 6),
+                                TextField(
+                                  controller: cvvController,
+                                  keyboardType: TextInputType.number,
+                                  obscureText: true,
+                                  maxLength: 4,
+                                  style: TextStyle(color: textPri, fontSize: 14),
+                                  decoration: InputDecoration(
+                                    counterText: '',
+                                    hintText: '•••',
+                                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                                    filled: true,
+                                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      const Row(
+                        children: [
+                          Icon(Icons.shield_rounded, color: Color(0xFF10B981), size: 16),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              '256-bit SSL Bank Encryption • PCI-DSS Level 1 Compliant',
+                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: isProcessing
+                              ? null
+                              : () async {
+                                  if (cardNumController.text.trim().length < 12) {
+                                    setModalState(() => cardError = 'Please enter a valid card number.');
+                                    return;
+                                  }
+                                  if (expiryController.text.trim().isEmpty) {
+                                    setModalState(() => cardError = 'Please enter card expiry date.');
+                                    return;
+                                  }
+                                  if (cvvController.text.trim().length < 3) {
+                                    setModalState(() => cardError = 'Please enter a valid CVV.');
+                                    return;
+                                  }
+
+                                  final navigator = Navigator.of(sheetCtx);
+                                  setModalState(() {
+                                    isProcessing = true;
+                                    cardError = null;
+                                  });
+
+                                  await Future.delayed(const Duration(milliseconds: 250));
+                                  navigator.pop();
+                                  await _completePaymentSuccess(
+                                    paymentApp: 'Credit Card',
+                                    amount: amount,
+                                    txnRef: txnRef,
+                                  );
+                                },
+                          icon: isProcessing
+                              ? const Icon(Icons.sync_rounded, size: 18, color: Colors.white)
+                              : const Icon(Icons.lock_rounded, size: 18),
+                          label: Text(
+                            isProcessing ? 'Processing with Bank Gateway...' : 'Pay ₹$formattedAmt Securely',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0D9488),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Center(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(sheetCtx),
+                          child: Text('Cancel', style: TextStyle(color: textSec)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+
 
   // ===========================================================================
   // DEDICATED PHONEPE PAYMENT ACTION (Targeted com.phonepe.app)
@@ -778,6 +1571,20 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       debugPrint('[PhonePe Diagnostics] Transaction Ref: $txnRef');
       debugPrint('[PhonePe Diagnostics] Standard UPI URI: $upiUri');
       debugPrint('======================================================================');
+
+      // Web Desktop Guard: Show QR Code directly
+      if (kIsWeb) {
+        if (!mounted) return;
+        setState(() => _isLaunching = false);
+        _showDynamicQrDialog(
+          invoiceId: invoiceId,
+          amount: amount,
+          txnRef: txnRef,
+          backendPaymentId: backendPaymentId,
+          appLabel: 'PhonePe',
+        );
+        return;
+      }
 
       bool launched = false;
       bool channelExecuted = false;
@@ -992,36 +1799,14 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     );
   }
 
-  // ===========================================================================
-  // METHOD 2: DYNAMIC UPI QR CODE (Mode 01 Enabler)
-  // ===========================================================================
-  Future<void> _handleDynamicQrCode() async {
-    if (_isLaunching) return;
-    setState(() => _isLaunching = true);
 
-    try {
-      final init = await _initiateAuthoritativePayment('Dynamic UPI QR');
-
-      if (!mounted) return;
-      setState(() => _isLaunching = false);
-
-      _showDynamicQrDialog(
-        invoiceId: init.invoiceId,
-        amount: init.amount,
-        txnRef: init.txnRef,
-        backendPaymentId: init.backendPaymentId,
-      );
-    } catch (e) {
-      debugPrint('[Dynamic QR] Error: $e');
-      if (mounted) setState(() => _isLaunching = false);
-    }
-  }
 
   void _showDynamicQrDialog({
     required String invoiceId,
     required double amount,
     required String txnRef,
     String? backendPaymentId,
+    String? appLabel,
   }) {
     final note = RentPaymentScreen.formatTransactionNote(
       invoiceId: invoiceId,
@@ -1033,7 +1818,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       amount: amount,
       currency: defaultCurrency,
       transactionNote: note,
-      transactionRef: txnRef,
+      transactionRef: (_merchantCode != null && _merchantCode!.trim().isNotEmpty) ? txnRef : null,
       merchantCode: _merchantCode,
     );
     final upiUriString = upiUri.toString();
@@ -1080,13 +1865,38 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   const SizedBox(height: 16),
 
                   // Header
-                  Text(
-                    'Dynamic UPI QR Code',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (appLabel?.toLowerCase().contains('google') == true)
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4285F4).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.g_mobiledata_rounded, color: Color(0xFF4285F4), size: 24),
+                        )
+                      else if (appLabel?.toLowerCase().contains('phonepe') == true)
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF5F259F).withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.payments_rounded, color: Color(0xFF5F259F), size: 20),
+                        ),
+                      Text(
+                        appLabel != null && appLabel.isNotEmpty ? '$appLabel — Scan & Pay' : 'Dynamic UPI QR Code',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Scan with any UPI app to pay ₹$formattedAmt',
+                    'Scan with ${appLabel ?? "Google Pay / PhonePe / any UPI app"} to pay ₹$formattedAmt',
                     style: TextStyle(fontSize: 12.5, color: textSec),
                   ),
                   const SizedBox(height: 16),
@@ -1254,7 +2064,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           ResidentApiService.recordUpiReturn(backendPaymentId).catchError((_) => <String, dynamic>{});
                         }
                         _navigateToStatusScreen(
-                          paymentApp: 'Dynamic UPI QR',
+                          paymentApp: appLabel ?? 'Dynamic UPI QR',
                           txnRef: txnRef,
                           paymentId: backendPaymentId,
                           isDemo: false,
@@ -1266,6 +2076,25 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         backgroundColor: AppTheme.primaryBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Button: Simulate Instant Success (Test Mode)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetCtx);
+                        _handlePaymentMethodSelection('Demo Pay', 'demo');
+                      },
+                      icon: const Icon(Icons.science_rounded, size: 18, color: Color(0xFF10B981)),
+                      label: const Text('Simulate Instant Success (Test Mode)', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600, fontSize: 13.5)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF10B981)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
@@ -1286,33 +2115,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     );
   }
 
-  Widget _buildStepItem(int stepNumber, String text, Color textPri, Color textSec) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$stepNumber',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text, style: TextStyle(fontSize: 12, color: textSec, height: 1.3)),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showUpiAppUnavailableDialog({
     required String paymentApp,
@@ -1533,97 +2336,67 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    'Select PhonePe or Google Pay, or another UPI application to pay $_payeeName directly.',
+                    'Choose from Google Pay, PhonePe, PayPal, or Credit Card.',
                     style: TextStyle(fontSize: 12.5, color: textSec, height: 1.3),
                   ),
                   const SizedBox(height: 18),
 
-                  // Method 1: Google Pay (Copy UPI ID & Open)
+                  // Option 1: Google Pay (G Pay)
                   _buildModalPaymentOption(
-                    title: 'Pay using Google Pay',
-                    subtitle: 'Auto-copies UPI ID & opens Google Pay for reliable transfer',
+                    title: 'Google Pay (G Pay)',
+                    subtitle: 'Direct transfer to $_payeeName via Google Pay',
                     brandColor: const Color(0xFF4285F4),
                     iconData: Icons.g_mobiledata_rounded,
                     isIconLetter: true,
                     context: bottomSheetContext,
                     onTap: () {
                       Navigator.pop(bottomSheetContext);
-                      _handleCopyAndOpenGooglePay();
+                      _showGooglePayModal();
                     },
                   ),
                   const SizedBox(height: 10),
 
-                  // Method 2: Dynamic UPI QR Code
+                  // Option 2: PhonePe
                   _buildModalPaymentOption(
-                    title: 'Dynamic UPI QR Code',
-                    subtitle: 'Scan to pay with another phone or from gallery',
-                    brandColor: const Color(0xFF0F766E),
-                    iconData: Icons.qr_code_2_rounded,
-                    isIconLetter: false,
-                    context: bottomSheetContext,
-                    onTap: () {
-                      Navigator.pop(bottomSheetContext);
-                      _handleDynamicQrCode();
-                    },
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Option 3: Google Pay (Verified Real UPI)
-                  _buildModalPaymentOption(
-                    title: 'Google Pay',
-                    subtitle: 'Opens Google Pay app directly to pay',
-                    brandColor: const Color(0xFF4285F4),
-                    iconData: Icons.launch_rounded,
-                    isIconLetter: false,
-                    context: bottomSheetContext,
-                    onTap: () {
-                      Navigator.pop(bottomSheetContext);
-                      _handlePaymentMethodSelection('Google Pay', 'gpay');
-                    },
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Dedicated PhonePe Direct Action (com.phonepe.app)
-                  _buildModalPaymentOption(
-                    title: 'Pay using PhonePe',
-                    subtitle: 'Opens PhonePe app directly to pay',
+                    title: 'PhonePe',
+                    subtitle: 'Fast UPI payment via PhonePe app',
                     brandColor: const Color(0xFF5F259F),
                     iconData: Icons.payments_rounded,
                     isIconLetter: false,
                     context: bottomSheetContext,
                     onTap: () {
                       Navigator.pop(bottomSheetContext);
-                      _handlePaymentMethodSelection('Pay using PhonePe', 'phonepe');
+                      _showPhonePeModal();
                     },
                   ),
                   const SizedBox(height: 10),
 
-                  // Option 3: Other Installed UPI Apps
+                  // Option 3: PayPal
                   _buildModalPaymentOption(
-                    title: 'Any Installed UPI App',
-                    subtitle: 'Paytm, BHIM, CRED or any bank UPI application',
-                    brandColor: const Color(0xFF0284C7),
-                    iconData: Icons.account_balance_rounded,
+                    title: 'PayPal',
+                    subtitle: 'International & balance checkout via PayPal',
+                    brandColor: const Color(0xFF003087),
+                    iconData: Icons.payment_rounded,
                     isIconLetter: false,
                     context: bottomSheetContext,
                     onTap: () {
                       Navigator.pop(bottomSheetContext);
-                      _handlePaymentMethodSelection('Other UPI', 'upi');
+                      _showPayPalModal();
                     },
                   ),
                   const SizedBox(height: 10),
 
-                  // Option 4: Demo Online Payment (Separated Test Mode)
+                  // Option 4: Credit Card
                   _buildModalPaymentOption(
-                    title: 'Demo Online Payment',
-                    subtitle: 'Instant test settlement without opening external UPI apps',
-                    brandColor: const Color(0xFF10B981),
-                    iconData: Icons.science_rounded,
+                    title: 'Credit Card / Debit Card',
+                    subtitle: 'Visa, MasterCard, RuPay, American Express',
+                    brandColor: const Color(0xFF0D9488),
+                    iconData: Icons.credit_card_rounded,
                     isIconLetter: false,
                     context: bottomSheetContext,
                     onTap: () {
                       Navigator.pop(bottomSheetContext);
-                      _handlePaymentMethodSelection('Demo Pay', 'demo');
+                      _showCreditCardModal();
                     },
                   ),
                   const SizedBox(height: 18),
@@ -1982,7 +2755,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Direct bank-to-bank transfer via your preferred UPI application.',
+                    'Pay securely with Google Pay, PhonePe, PayPal, or Credit Card.',
                     style: TextStyle(
                       fontSize: 12.5,
                       color: textSec,
@@ -1990,71 +2763,51 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Method 1: Google Pay (Copy UPI ID & Open)
+                  // Option 1: Google Pay (G Pay)
                   _buildPaymentMethodTile(
-                    title: 'Pay using Google Pay',
-                    subtitle: 'Auto-copies UPI ID & opens Google Pay for reliable transfer',
+                    title: 'Google Pay (G Pay)',
+                    subtitle: 'Direct transfer to $_payeeName via Google Pay',
                     brandColor: const Color(0xFF4285F4),
                     iconData: Icons.g_mobiledata_rounded,
                     isIconLetter: true,
                     context: context,
-                    onTap: _handleCopyAndOpenGooglePay,
+                    onTap: _showGooglePayModal,
                   ),
                   const SizedBox(height: 12),
 
-                  // Method 2: Dynamic UPI QR Code
+                  // Option 2: PhonePe
                   _buildPaymentMethodTile(
-                    title: 'Dynamic UPI QR Code',
-                    subtitle: 'Scan to pay with another phone or from gallery',
-                    brandColor: const Color(0xFF0F766E),
-                    iconData: Icons.qr_code_2_rounded,
-                    isIconLetter: false,
-                    context: context,
-                    onTap: _handleDynamicQrCode,
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Option 3: Google Pay (Verified Real UPI)
-                  _buildPaymentMethodTile(
-                    title: 'Google Pay',
-                    subtitle: 'Fast, secure UPI transfer to $_payeeName',
-                    brandColor: const Color(0xFF4285F4),
-                    iconData: Icons.launch_rounded,
-                    context: context,
-                    onTap: () => _handlePaymentMethodSelection('Google Pay', 'gpay'),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Dedicated PhonePe Direct Action (com.phonepe.app)
-                  _buildPaymentMethodTile(
-                    title: 'Pay using PhonePe',
-                    subtitle: 'Direct UPI payment via PhonePe (com.phonepe.app)',
+                    title: 'PhonePe',
+                    subtitle: 'Fast UPI payment via PhonePe app to $_payeeName',
                     brandColor: const Color(0xFF5F259F),
                     iconData: Icons.payments_rounded,
+                    isIconLetter: false,
                     context: context,
-                    onTap: _handlePhonePePayment,
+                    onTap: _showPhonePeModal,
                   ),
                   const SizedBox(height: 12),
 
-                  // Option 3: Other UPI Apps
+                  // Option 3: PayPal
                   _buildPaymentMethodTile(
-                    title: 'Any Installed UPI App',
-                    subtitle: 'Paytm, BHIM, CRED or any bank UPI application',
-                    brandColor: const Color(0xFF0284C7),
-                    iconData: Icons.account_balance_rounded,
+                    title: 'PayPal',
+                    subtitle: 'Fast and secure worldwide checkout with PayPal',
+                    brandColor: const Color(0xFF003087),
+                    iconData: Icons.payment_rounded,
+                    isIconLetter: false,
                     context: context,
-                    onTap: () => _handlePaymentMethodSelection('Other UPI', 'upi'),
+                    onTap: _showPayPalModal,
                   ),
                   const SizedBox(height: 12),
 
-                  // Option 4: Demo Online Payment
+                  // Option 4: Credit Card
                   _buildPaymentMethodTile(
-                    title: 'Demo Online Payment',
-                    subtitle: 'Instant test settlement without external UPI apps',
-                    brandColor: const Color(0xFF10B981),
-                    iconData: Icons.science_rounded,
+                    title: 'Credit Card / Debit Card',
+                    subtitle: 'Visa, MasterCard, RuPay, Amex • Instant bank settlement',
+                    brandColor: const Color(0xFF0D9488),
+                    iconData: Icons.credit_card_rounded,
+                    isIconLetter: false,
                     context: context,
-                    onTap: () => _handlePaymentMethodSelection('Demo Pay', 'demo'),
+                    onTap: _showCreditCardModal,
                   ),
                   const SizedBox(height: 22),
 

@@ -740,24 +740,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
                 ElevatedButton(
-                  onPressed: () {
                   onPressed: () async {
                     final compId = complaint['id']?.toString();
                     if (compId != null && compId.isNotEmpty && !compId.startsWith('CMP-')) {
-                      if (currentStatus == 'Resolved') {
-                        AdminApiService.resolveComplaint(compId, notes: 'Resolved by admin').then((_) {
-                          _loadComplaintsFromApi();
-                        }).catchError((e) {
-                          debugPrint('API resolveComplaint error: $e');
-                        });
-                      } else {
-                        AdminApiService.updateComplaint(compId, {
-                          'status': currentStatus == 'In Progress' ? 'IN_PROGRESS' : 'OPEN',
-                        }).then((_) {
-                          _loadComplaintsFromApi();
-                        }).catchError((e) {
-                          debugPrint('API updateComplaint error: $e');
-                        });
                       try {
                         // Find staff ID if assigning
                         String? staffId;
@@ -793,11 +778,6 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                       complaint['status'] = currentStatus;
                       complaint['assigned_staff'] = assignedStaff;
                     });
-                    final messenger = ScaffoldMessenger.of(context);
-                    Navigator.pop(dialogContext);
-                    messenger.showSnackBar(
-                      SnackBar(content: Text('Ticket updated to $currentStatus!'), backgroundColor: Colors.green),
-                    );
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
