@@ -172,8 +172,8 @@ class AppData {
     },
   ];
 
-  // Active logged-in resident session (defaults to Priya or Rohan Mehta)
-  static Map<String, dynamic> currentResident = residents.first;
+  // Active logged-in resident session (defaults to verified active resident)
+  static Map<String, dynamic> currentResident = residents[1];
 
   // Weekly Food Menu (Monday to Sunday)
   static List<Map<String, dynamic>> notices = [];
@@ -239,7 +239,12 @@ class AppData {
 
           if (loaded.isNotEmpty) {
             residents = loaded;
-            currentResident = residents.first;
+            currentResident = loaded.firstWhere(
+              (r) =>
+                  r['room_number'] != null &&
+                  (r['status']?.toString().toLowerCase() ?? '') != 'pending',
+              orElse: () => loaded.first,
+            );
           }
         }
       }

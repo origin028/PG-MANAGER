@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/data/app_data.dart';
 import 'core/theme/app_theme.dart';
 import 'core/router/app_router.dart';
 import 'core/network/token_storage.dart';
@@ -6,6 +7,10 @@ import 'core/network/token_storage.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await TokenStorage.init();
+  final savedProfile = TokenStorage.residentProfile;
+  if (savedProfile != null && savedProfile.isNotEmpty) {
+    AppData.currentResident = Map<String, dynamic>.from(savedProfile);
+  }
   await AppTheme.initTheme();
   runApp(const ResidentApp());
 }

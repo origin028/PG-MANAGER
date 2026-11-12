@@ -4,8 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/motion_wrappers.dart';
 
 class ReceiptScreen extends StatefulWidget {
   final Map<String, dynamic> receiptData;
@@ -208,43 +210,52 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
               child: Column(
                 children: [
                   // Receipt Paper Container
-                  Container(
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: borderCol),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark ? const Color(0x2A000000) : const Color(0x0F000000),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Top Header with verified badge
-                        Container(
-                          padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  MotionEntrance(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: borderCol),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? const Color(0x2A000000) : const Color(0x0F000000),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
                           ),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFDCFCE7),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: const Color(0xFF86EFAC), width: 2),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Top Header with verified badge
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                            ),
+                            child: Column(
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDCFCE7),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: const Color(0xFF86EFAC), width: 2),
+                                  ),
+                                  child: Center(
+                                    child: Lottie.asset(
+                                      'assets/animations/payment_success.json',
+                                      width: 42,
+                                      height: 42,
+                                      repeat: false,
+                                      animate: !(MediaQuery.maybeDisableAnimationsOf(context) ?? false),
+                                      errorBuilder: (context, error, stackTrace) =>
+                                          const Icon(Icons.check_rounded, color: Color(0xFF16A34A), size: 32),
+                                    ),
+                                  ),
                                 ),
-                                child: const Center(
-                                  child: Icon(Icons.check_rounded, color: Color(0xFF16A34A), size: 32),
-                                ),
-                              ),
                               const SizedBox(height: 14),
                               Text(
                                 propertyName,
@@ -377,56 +388,64 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                       ],
                     ),
                   ),
+                  ),
 
                   const SizedBox(height: 24),
 
                   // Action Buttons
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isDownloading
-                          ? null
-                          : () => _handleDownloadReceiptPdf(
-                                receiptNumber: receiptNumber,
-                                invoiceId: invoiceId,
-                                amount: amount,
-                                residentName: residentName,
-                                roomNumber: roomNumber,
-                                transactionRef: transactionRef,
-                              ),
-                      icon: _isDownloading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.download_rounded, size: 18),
-                      label: Text(_isDownloading ? 'Downloading PDF...' : 'Download Receipt PDF / Summary'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 90),
+                    child: TactilePress(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isDownloading
+                              ? null
+                              : () => _handleDownloadReceiptPdf(
+                                    receiptNumber: receiptNumber,
+                                    invoiceId: invoiceId,
+                                    amount: amount,
+                                    residentName: residentName,
+                                    roomNumber: roomNumber,
+                                    transactionRef: transactionRef,
+                                  ),
+                          icon: _isDownloading
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.download_rounded, size: 18),
+                          label: Text(_isDownloading ? 'Downloading PDF...' : 'Download Receipt PDF / Summary'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton(
-                      onPressed: () => context.go('/home'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: BorderSide(color: borderCol),
-                        backgroundColor: cardBg,
-                      ),
-                      child: Text(
-                        'Done (Return to Home)',
-                        style: TextStyle(color: textPri, fontWeight: FontWeight.bold),
+                  TactilePress(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton(
+                        onPressed: () => context.go('/home'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          side: BorderSide(color: borderCol),
+                          backgroundColor: cardBg,
+                        ),
+                        child: Text(
+                          'Done (Return to Home)',
+                          style: TextStyle(color: textPri, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ),

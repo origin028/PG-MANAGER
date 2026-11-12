@@ -24,9 +24,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify key widgets
-    expect(find.text('YOUR STAY'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Notices'), findsWidgets);
-    expect(find.text('Recent Payments'), findsNothing);
+    expect(find.text('Recent payments'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Payments'), findsOneWidget);
+    expect(find.text('Food'), findsOneWidget);
+    expect(find.text('Menu'), findsOneWidget);
 
     // Simulate mouse movements across the screen to test MouseTracker hit tests
     final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
@@ -52,8 +56,9 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.text('YOUR STAY'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Notices'), findsWidgets);
+    expect(find.text('Recent payments'), findsOneWidget);
   });
 
   testWidgets('FoodMenuScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {
@@ -83,7 +88,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Rent & Payments'), findsOneWidget);
-    expect(find.text('MONTHLY RENT'), findsOneWidget);
+    expect(find.text('CURRENT CYCLE'), findsOneWidget);
+    expect(find.text('Payment history & invoices'), findsOneWidget);
   });
 
   testWidgets('PropertyDetailsScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {

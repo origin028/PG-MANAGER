@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lottie/lottie.dart';
 import '../../core/services/payment_verification_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/motion_wrappers.dart';
 import 'receipt_screen.dart';
 
 class PaymentStatusScreen extends StatefulWidget {
@@ -201,7 +203,24 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
               constraints: const BoxConstraints(maxWidth: 550),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
-                child: _buildCurrentStateView(),
+                child: AnimatedSwitcher(
+                  duration: (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
+                      ? Duration.zero
+                      : const Duration(milliseconds: 280),
+                  switchInCurve: Curves.easeOutCubic,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.97, end: 1.0).animate(animation),
+                      child: child,
+                    ),
+                  ),
+                  child: KeyedSubtree(
+                    key: ValueKey(_currentState),
+                    child: _buildCurrentStateView(),
+                  ),
+                ),
               ),
             ),
           ),
@@ -313,33 +332,40 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         const SizedBox(height: 28),
 
         // Action Buttons
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: _isManualChecking ? null : () => _checkStatusWithBackend(isManual: true),
-            icon: _isManualChecking
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.refresh_rounded, size: 18),
-            label: Text(_isManualChecking ? 'Querying Backend...' : 'Refresh Status'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        MotionEntrance(
+          delay: const Duration(milliseconds: 90),
+          child: TactilePress(
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isManualChecking ? null : () => _checkStatusWithBackend(isManual: true),
+                icon: _isManualChecking
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.refresh_rounded, size: 18),
+                label: Text(_isManualChecking ? 'Querying Backend...' : 'Refresh Status'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => _simulateCancelledState(),
-            icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
-            label: const Text('Cancel Payment Attempt', style: TextStyle(color: Color(0xFF64748B))),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              side: const BorderSide(color: Color(0xFFCBD5E1)),
+        TactilePress(
+          child: SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _simulateCancelledState(),
+              icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
+              label: const Text('Cancel Payment Attempt', style: TextStyle(color: Color(0xFF64748B))),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                side: const BorderSide(color: Color(0xFFCBD5E1)),
+              ),
             ),
           ),
         ),
@@ -378,6 +404,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     final amount = _verificationResult?.amount ?? widget.paymentData['amount'] ?? 8000;
     final paymentApp = _verificationResult?.paymentApp ?? widget.paymentData['paymentApp'] ?? 'Google Pay';
     final approvalCode = _verificationResult?.bankApprovalCode ?? 'BANK-AUTH-88219';
+    final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -399,105 +426,140 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
               ),
             ],
           ),
-          child: const Center(
-            child: Icon(Icons.check_circle_rounded, color: Color(0xFF16A34A), size: 54),
+          child: Center(
+            child: Lottie.asset(
+              'assets/animations/payment_success.json',
+              width: 64,
+              height: 64,
+              repeat: false,
+              animate: !disableAnim,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.check_circle_rounded,
+                color: Color(0xFF16A34A),
+                size: 54,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 20),
 
-        const Text(
-          'Payment Successful!',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Confirmed and settled with Property Owner backend.',
-          style: TextStyle(fontSize: 13, color: Color(0xFF059669), fontWeight: FontWeight.w600),
-          textAlign: TextAlign.center,
+        MotionEntrance(
+          delay: const Duration(milliseconds: 80),
+          child: Column(
+            children: [
+              const Text(
+                'Payment Successful!',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Confirmed and settled with Property Owner backend.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 24),
 
         // Amount Badge
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF0FDF4),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFBBF7D0)),
-          ),
-          child: Text(
-            '₹ ${_formatAmount(amount)}',
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF15803D),
-              letterSpacing: -0.5,
+        MotionEntrance(
+          delay: const Duration(milliseconds: 140),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Text(
+              '₹ ${_formatAmount(amount)}',
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF15803D),
+                letterSpacing: -0.5,
+              ),
             ),
           ),
         ),
         const SizedBox(height: 24),
 
         // Details Card
-        _buildTransactionDetailsCard(
-          invoiceId: invoiceId,
-          txnRef: txnRef,
-          amount: amount,
-          paymentApp: paymentApp,
-          payeeName: PaymentVerificationService.verifiedPayeeName,
-          payeeUpiId: PaymentVerificationService.verifiedPayeeUpiId,
-          statusText: 'Verified & Settled',
-          statusColor: const Color(0xFF16A34A),
-          approvalCode: approvalCode,
+        MotionEntrance(
+          delay: const Duration(milliseconds: 190),
+          child: _buildTransactionDetailsCard(
+            invoiceId: invoiceId,
+            txnRef: txnRef,
+            amount: amount,
+            paymentApp: paymentApp,
+            payeeName: PaymentVerificationService.verifiedPayeeName,
+            payeeUpiId: PaymentVerificationService.verifiedPayeeUpiId,
+            statusText: 'Verified & Settled',
+            statusColor: const Color(0xFF16A34A),
+            approvalCode: approvalCode,
+          ),
         ),
         const SizedBox(height: 28),
 
         // Action Buttons
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (ctx) => ReceiptScreen(
-                    receiptData: _verificationResult?.receiptData ?? {
-                      'receiptNumber': 'REC-2026-11-0084',
-                      'invoiceId': invoiceId,
-                      'amount': amount,
-                      'paymentApp': paymentApp,
-                      'transactionRef': txnRef,
-                      'bankApprovalCode': approvalCode,
-                      'paidAt': DateTime.now().toIso8601String(),
-                      'residentName': 'Resident',
-                      'roomNumber': '101',
-                      'propertyName': 'BNR Luxury PG',
-                      'status': 'Verified & Settled',
+        MotionEntrance(
+          delay: const Duration(milliseconds: 240),
+          child: Column(
+            children: [
+              TactilePress(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => ReceiptScreen(
+                            receiptData: _verificationResult?.receiptData ?? {
+                              'receiptNumber': 'REC-2026-11-0084',
+                              'invoiceId': invoiceId,
+                              'amount': amount,
+                              'paymentApp': paymentApp,
+                              'transactionRef': txnRef,
+                              'bankApprovalCode': approvalCode,
+                              'paidAt': DateTime.now().toIso8601String(),
+                              'residentName': 'Resident',
+                              'roomNumber': '101',
+                              'propertyName': 'BNR Luxury PG',
+                              'status': 'Verified & Settled',
+                            },
+                          ),
+                        ),
+                      );
                     },
+                    icon: const Icon(Icons.receipt_long_rounded, size: 18),
+                    label: const Text('View Digital Receipt'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   ),
                 ),
-              );
-            },
-            icon: const Icon(Icons.receipt_long_rounded, size: 18),
-            label: const Text('View Digital Receipt'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: () => context.go('/home'),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              side: const BorderSide(color: Color(0xFFE2E8F0)),
-            ),
-            child: const Text('Back to Home Screen', style: TextStyle(color: AppTheme.textDark, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(height: 12),
+              TactilePress(
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => context.go('/home'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    child: const Text('Back to Home Screen', style: TextStyle(color: AppTheme.textDark, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -536,17 +598,22 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         ),
         const SizedBox(height: 28),
 
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.replay_rounded, size: 18),
-            label: const Text('Retry Payment'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        MotionEntrance(
+          delay: const Duration(milliseconds: 90),
+          child: TactilePress(
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.replay_rounded, size: 18),
+                label: const Text('Retry Payment'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ),
           ),
         ),
@@ -591,17 +658,22 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         ),
         const SizedBox(height: 28),
 
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back_rounded, size: 18),
-            label: const Text('Choose Another Payment Option'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        MotionEntrance(
+          delay: const Duration(milliseconds: 90),
+          child: TactilePress(
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                label: const Text('Choose Another Payment Option'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ),
           ),
         ),

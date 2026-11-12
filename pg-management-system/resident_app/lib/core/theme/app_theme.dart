@@ -213,3 +213,133 @@ class AppTheme {
     );
   }
 }
+
+/// Scoped Design System tokens matching Resident_app_template.html
+/// Used by the redesigned Home Screen & Bottom Navigation without altering
+/// existing global theme defaults for untouched screens.
+class HomeThemeTokens {
+  // Light Theme Palette (Pure white background matching reference screenshot)
+  static const Color lightBackground = Color(0xFFFFFFFF);
+  static const Color lightControlBg = Color(0xFFF3F4F6);
+  static const Color lightRadialTint = Color(0xFFDDEEEA);
+  static const Color lightCard = Color(0xFFFFFFFF);
+  static const Color lightTextPrimary = Color(0xFF0E1A1F);
+  static const Color lightTextSecondary = Color(0xFF56626B);
+  static const Color lightTeal = Color(0xFF0B6B63);
+  static const Color lightSoftTeal = Color(0xFFE2F0EE);
+  static const Color lightNavy = Color(0xFF0B2231);
+  static const Color lightNavyEnd = Color(0xFF12394A);
+  static const Color lightBorder = Color(0xFFE4E9E8);
+  static const Color lightSuccess = Color(0xFF0F6B4A);
+  static const Color lightSuccessBg = Color(0xFFDDF3E8);
+  static const Color lightWarning = Color(0xFF92400E);
+  static const Color lightWarningBg = Color(0xFFFEF3C7);
+  static const Color lightWarningDot = Color(0xFFD97706);
+  static const Color lightFoodBg = Color(0xFFE9EEFB);
+  static const Color lightFoodIcon = Color(0xFF2F3E9E);
+  static const Color lightBellDot = Color(0xFFC2410C);
+  static const Color lightError = Color(0xFFB42318);
+  static const Color lightErrorBg = Color(0xFFFEE4E2);
+
+  // Dark Theme Palette
+  static const Color darkBackground = Color(0xFF1B232A);
+  static const Color darkSurface = Color(0xFF2C3841);
+  static const Color darkCardSurface = Color(0xFF252F37);
+  static const Color darkControlBg = Color(0xFF202A32);
+  static const Color darkTextPrimary = Color(0xFFEAF1F0);
+  static const Color darkTextSecondary = Color(0xFF9AABB0);
+  static const Color darkTeal = Color(0xFF3CC3AF);
+  static const Color darkSoftTeal = Color(0xFF20504B);
+  static const Color darkNavy = Color(0xFF204C60);
+  static const Color darkNavyEnd = Color(0xFF2D6279);
+  static const Color darkBorder = Color(0xFF3A4852);
+  static const Color darkSuccess = Color(0xFF5FD6A2);
+  static const Color darkSuccessBg = Color(0xFF1E4838);
+  static const Color darkWarning = Color(0xFFF6B955);
+  static const Color darkWarningBg = Color(0xFF473A1B);
+  static const Color darkFoodBg = Color(0xFF2B3669);
+  static const Color darkFoodIcon = Color(0xFFA5B4FF);
+  static const Color darkBellDot = Color(0xFFFB923C);
+  static const Color darkError = Color(0xFFFF8F86);
+  static const Color darkErrorBg = Color(0xFF472B2B);
+
+  // Theme-aware color getters
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+
+  static Color bg(BuildContext context) =>
+      isDark(context) ? darkBackground : lightBackground;
+
+  static Color controlBg(BuildContext context) =>
+      isDark(context) ? darkControlBg : lightControlBg;
+
+  static Color cardBg(BuildContext context) =>
+      isDark(context) ? darkSurface : lightCard;
+
+  static Color navBg(BuildContext context) =>
+      isDark(context) ? darkSurface : Colors.white;
+
+  static Color textPrimary(BuildContext context) =>
+      isDark(context) ? darkTextPrimary : lightTextPrimary;
+
+  static Color textSecondary(BuildContext context) =>
+      isDark(context) ? darkTextSecondary : lightTextSecondary;
+
+  static Color teal(BuildContext context) =>
+      isDark(context) ? darkTeal : lightTeal;
+
+  static Color softTeal(BuildContext context) =>
+      isDark(context) ? darkSoftTeal : lightSoftTeal;
+
+  static Color border(BuildContext context) =>
+      isDark(context) ? darkBorder : lightBorder;
+
+  static Color success(BuildContext context) =>
+      isDark(context) ? darkSuccess : lightSuccess;
+
+  static Color successBg(BuildContext context) =>
+      isDark(context) ? darkSuccessBg : lightSuccessBg;
+
+  static Color warning(BuildContext context) =>
+      isDark(context) ? darkWarning : lightWarning;
+
+  static Color warningBg(BuildContext context) =>
+      isDark(context) ? darkWarningBg : lightWarningBg;
+
+  static Color foodBg(BuildContext context) =>
+      isDark(context) ? darkFoodBg : lightFoodBg;
+
+  static Color foodIcon(BuildContext context) =>
+      isDark(context) ? darkFoodIcon : lightFoodIcon;
+
+  static Color error(BuildContext context) =>
+      isDark(context) ? darkError : lightError;
+
+  static Color errorBg(BuildContext context) =>
+      isDark(context) ? darkErrorBg : lightErrorBg;
+
+  static LinearGradient heroGradient(BuildContext context) => LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: isDark(context)
+            ? const [darkNavy, darkNavyEnd]
+            : const [lightNavy, lightNavyEnd],
+      );
+
+  static TextStyle manrope({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+    List<FontFeature>? fontFeatures,
+  }) {
+    return GoogleFonts.manrope(
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      color: color,
+      letterSpacing: letterSpacing,
+      height: height,
+    ).copyWith(fontFeatures: fontFeatures);
+  }
+}

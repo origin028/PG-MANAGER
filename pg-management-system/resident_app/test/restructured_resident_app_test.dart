@@ -10,7 +10,7 @@ import 'package:resident_app/features/profile/rent_deposit_screen.dart';
 import 'package:resident_app/features/complaints/all_complaints_screen.dart';
 
 void main() {
-  testWidgets('MenuScreen displays all 6 requested menu items', (WidgetTester tester) async {
+  testWidgets('MenuScreen displays resident profile card and menu items without duplicate My Profile row', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -18,8 +18,8 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: MenuScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Menu'), findsOneWidget);
-    expect(find.text('My Profile'), findsOneWidget);
+    expect(find.text('Menu'), findsNothing);
+    expect(find.text('My Profile'), findsNothing);
     expect(find.text('Rent & Deposit Details'), findsOneWidget);
     expect(find.text('Property Details'), findsOneWidget);
     expect(find.text('Raise Complaint'), findsOneWidget);

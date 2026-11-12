@@ -25,48 +25,129 @@ class MainLayout extends StatelessWidget {
     if (location.startsWith('/food-menu')) currentIndex = 2;
     if (location.startsWith('/menu')) currentIndex = 3;
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = HomeThemeTokens.isDark(context);
+    final navBg = isDark
+        ? HomeThemeTokens.darkCardSurface.withValues(alpha: 0.96)
+        : Colors.white.withValues(alpha: 0.94);
+    final borderCol = HomeThemeTokens.border(context);
+    final activeColor = HomeThemeTokens.teal(context);
+    final activePillBg = HomeThemeTokens.softTeal(context);
+    final inactiveColor = HomeThemeTokens.textSecondary(context);
+    final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final animDuration = disableAnim ? Duration.zero : const Duration(milliseconds: 220);
+
+    final items = const [
+      (
+        icon: Icons.home_outlined,
+        activeIcon: Icons.home_rounded,
+        label: 'Home',
+        route: '/home',
+      ),
+      (
+        icon: Icons.credit_card_outlined,
+        activeIcon: Icons.credit_card_rounded,
+        label: 'Payments',
+        route: '/payments',
+      ),
+      (
+        icon: Icons.restaurant_outlined,
+        activeIcon: Icons.restaurant_rounded,
+        label: 'Food',
+        route: '/food-menu',
+      ),
+      (
+        icon: Icons.menu_rounded,
+        activeIcon: Icons.menu_rounded,
+        label: 'Menu',
+        route: '/menu',
+      ),
+    ];
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : Colors.white,
+      backgroundColor: HomeThemeTokens.bg(context),
       body: child,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: currentIndex,
-        onTap: (index) {
-          if (index == 0) context.go('/home');
-          if (index == 1) context.go('/payments');
-          if (index == 2) context.go('/food-menu');
-          if (index == 3) context.go('/menu');
-        },
-        backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
-        selectedItemColor: isDark ? AppTheme.primaryLightBlue : AppTheme.primaryBlue,
-        unselectedItemColor: isDark ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
-        type: BottomNavigationBarType.fixed,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+      bottomNavigationBar: DecoratedBox(
+        decoration: BoxDecoration(
+          color: navBg,
+          border: Border(
+            top: BorderSide(color: borderCol, width: 1.0),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.payment_outlined),
-            activeIcon: Icon(Icons.payment),
-            label: 'Payments',
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? const Color(0x33000000)
+                  : const Color(0x0A0E1A1F),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: Row(
+              children: List.generate(items.length, (index) {
+                final item = items[index];
+                final isSelected = index == currentIndex;
+                return Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => context.go(item.route),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedContainer(
+                              duration: animDuration,
+                              curve: Curves.easeOutCubic,
+                              width: 56,
+                              height: 30,
+                              decoration: BoxDecoration(
+                                color: isSelected ? activePillBg : Colors.transparent,
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: Center(
+                                child: AnimatedScale(
+                                  duration: animDuration,
+                                  curve: Curves.easeOutBack,
+                                  scale: isSelected ? 1.05 : 1.0,
+                                  child: Icon(
+                                    isSelected ? item.activeIcon : item.icon,
+                                    size: 22,
+                                    color: isSelected ? activeColor : inactiveColor,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            AnimatedDefaultTextStyle(
+                              duration: animDuration,
+                              curve: Curves.easeOutCubic,
+                              style: HomeThemeTokens.manrope(
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                color: isSelected ? activeColor : inactiveColor,
+                              ),
+                              child: Text(
+                                item.label,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant_menu_outlined),
-            activeIcon: Icon(Icons.restaurant_menu),
-            label: 'Food Menu',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.menu),
-            activeIcon: Icon(Icons.menu),
-            label: 'Menu',
-          ),
-        ],
+        ),
       ),
     );
   }

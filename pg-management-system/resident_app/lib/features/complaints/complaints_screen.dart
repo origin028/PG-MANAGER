@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/empty_state_widget.dart';
+import '../../core/widgets/empty_state_widget.dart';
+import '../../core/widgets/motion_wrappers.dart';
 import '../../core/services/resident_api_service.dart';
 
 class ComplaintsScreen extends StatefulWidget {
@@ -244,16 +245,18 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                               'My Tickets',
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                             ),
-                            ElevatedButton.icon(
-                              onPressed: _showRaiseComplaintModal,
-                              icon: const Icon(Icons.add_rounded, size: 18),
-                              label: const Text('Raise New'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryBlue,
-                                foregroundColor: Colors.white,
-                                minimumSize: const Size(120, 42),
-                                padding: const EdgeInsets.symmetric(horizontal: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            TactilePress(
+                              child: ElevatedButton.icon(
+                                onPressed: _showRaiseComplaintModal,
+                                icon: const Icon(Icons.add_rounded, size: 18),
+                                label: const Text('Raise New'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryBlue,
+                                  foregroundColor: Colors.white,
+                                  minimumSize: const Size(120, 42),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
                               ),
                             ),
                           ],
@@ -261,11 +264,17 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                         const SizedBox(height: 16),
 
                         // Complaint Items List
-                        ..._complaints.map((comp) {
+                        ..._complaints.asMap().entries.map((entry) {
+                          final idx = entry.key;
+                          final comp = entry.value;
                           final isResolved = comp['status'] == 'Resolved';
                           final isHigh = comp['priority'] == 'High';
 
-                          return Container(
+                          return MotionEntrance(
+                            delay: Duration(
+                              milliseconds: (idx * 55).clamp(0, 220),
+                            ),
+                            child: Container(
                             margin: const EdgeInsets.only(bottom: 16),
                             padding: const EdgeInsets.all(18),
                             decoration: BoxDecoration(
@@ -350,6 +359,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                   ],
                                 ),
                               ],
+                            ),
                             ),
                           );
                         }),

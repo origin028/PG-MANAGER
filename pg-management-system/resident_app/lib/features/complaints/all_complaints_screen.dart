@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/empty_state_widget.dart';
+import '../../core/widgets/motion_wrappers.dart';
 
 class AllComplaintsScreen extends StatefulWidget {
   const AllComplaintsScreen({super.key});
@@ -185,7 +186,11 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
                     itemCount: _complaints.length,
                     itemBuilder: (context, index) {
                       final item = _complaints[index];
-                      return Container(
+                      return MotionEntrance(
+                        delay: Duration(
+                          milliseconds: (index * 55).clamp(0, 220),
+                        ),
+                        child: Container(
                         margin: const EdgeInsets.only(bottom: 14),
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
@@ -308,6 +313,7 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
                             ),
                           ],
                         ),
+                      ),
                       );
                     },
                   ),

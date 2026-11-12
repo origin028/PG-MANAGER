@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/motion_wrappers.dart';
 
 class RentDepositScreen extends StatefulWidget {
   const RentDepositScreen({super.key});
@@ -106,16 +107,20 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Security Deposit',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: textPri,
+                        MotionEntrance(
+                          child: Text(
+                            'Security Deposit',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textPri,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 14),
-                        Container(
+                        MotionEntrance(
+                          delay: const Duration(milliseconds: 75),
+                          child: Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
@@ -277,6 +282,7 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
                             ],
                           ),
                         ),
+                      ),
                       ],
                     ),
                   ),

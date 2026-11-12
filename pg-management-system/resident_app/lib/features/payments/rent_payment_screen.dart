@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/data/app_data.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/motion_wrappers.dart';
 import '../../core/services/payment_verification_service.dart';
 import '../../core/services/resident_api_service.dart';
 
@@ -2588,157 +2589,162 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Rent Amount Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0x403F51B5),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
+                  MotionEntrance(
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(22),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'TOTAL RENT DUE',
-                              style: TextStyle(
-                                color: Color(0xFFA5B4FC),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.2,
-                              ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: const Color(0x26FFFFFF),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.white24),
-                              ),
-                              child: Text(
-                                month,
-                                style: const TextStyle(
-                                  color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0x403F51B5),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'TOTAL RENT DUE',
+                                style: TextStyle(
+                                  color: Color(0xFFA5B4FC),
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '₹ ${_formatAmount(amount)}',
-                          style: const TextStyle(
-                            fontSize: 34,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0x26FFFFFF),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white24),
+                                ),
+                                child: Text(
+                                  month,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        const Divider(height: 1, thickness: 1, color: Colors.white24),
-                        const SizedBox(height: 14),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Invoice ID', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
-                                const SizedBox(height: 2),
-                                Text(invoiceId, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                              ],
+                          const SizedBox(height: 12),
+                          Text(
+                            '₹ ${_formatAmount(amount)}',
+                            style: const TextStyle(
+                              fontSize: 34,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text('Due Date', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
-                                const SizedBox(height: 2),
-                                Text(dueDate, style: const TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.bold, fontSize: 13)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                          const SizedBox(height: 16),
+                          const Divider(height: 1, thickness: 1, color: Colors.white24),
+                          const SizedBox(height: 14),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Invoice ID', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
+                                  const SizedBox(height: 2),
+                                  Text(invoiceId, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text('Due Date', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
+                                  const SizedBox(height: 2),
+                                  Text(dueDate, style: const TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.bold, fontSize: 13)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 22),
 
                   // PG / Verified Owner Payee Details Card
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: borderCol),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark ? const Color(0x1A000000) : const Color(0x05000000),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(12),
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 55),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: borderCol),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isDark ? const Color(0x1A000000) : const Color(0x05000000),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
-                          child: const Icon(Icons.verified_user_rounded, color: AppTheme.primaryBlue, size: 22),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'PG Owner: $_payeeName',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
-                                  color: textPri,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'UPI ID: $_ownerUpiId',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: textSec,
-                                ),
-                              ),
-                            ],
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEEF2FF),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.verified_user_rounded, color: AppTheme.primaryBlue, size: 22),
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.primaryBlue),
-                          tooltip: 'Copy UPI ID',
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: _ownerUpiId));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Owner UPI ID copied!'), duration: Duration(seconds: 2)),
-                            );
-                          },
-                        ),
-                      ],
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'PG Owner: $_payeeName',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: textPri,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'UPI ID: $_ownerUpiId',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSec,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.primaryBlue),
+                            tooltip: 'Copy UPI ID',
+                            onPressed: () {
+                              Clipboard.setData(ClipboardData(text: _ownerUpiId));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Owner UPI ID copied!'), duration: Duration(seconds: 2)),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 26),
@@ -2764,98 +2770,118 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   const SizedBox(height: 16),
 
                   // Option 1: Google Pay (G Pay)
-                  _buildPaymentMethodTile(
-                    title: 'Google Pay (G Pay)',
-                    subtitle: 'Direct transfer to $_payeeName via Google Pay',
-                    brandColor: const Color(0xFF4285F4),
-                    iconData: Icons.g_mobiledata_rounded,
-                    isIconLetter: true,
-                    context: context,
-                    onTap: _showGooglePayModal,
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 100),
+                    child: _buildPaymentMethodTile(
+                      title: 'Google Pay (G Pay)',
+                      subtitle: 'Direct transfer to $_payeeName via Google Pay',
+                      brandColor: const Color(0xFF4285F4),
+                      iconData: Icons.g_mobiledata_rounded,
+                      isIconLetter: true,
+                      context: context,
+                      onTap: _showGooglePayModal,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
                   // Option 2: PhonePe
-                  _buildPaymentMethodTile(
-                    title: 'PhonePe',
-                    subtitle: 'Fast UPI payment via PhonePe app to $_payeeName',
-                    brandColor: const Color(0xFF5F259F),
-                    iconData: Icons.payments_rounded,
-                    isIconLetter: false,
-                    context: context,
-                    onTap: _showPhonePeModal,
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 145),
+                    child: _buildPaymentMethodTile(
+                      title: 'PhonePe',
+                      subtitle: 'Fast UPI payment via PhonePe app to $_payeeName',
+                      brandColor: const Color(0xFF5F259F),
+                      iconData: Icons.payments_rounded,
+                      isIconLetter: false,
+                      context: context,
+                      onTap: _showPhonePeModal,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
                   // Option 3: PayPal
-                  _buildPaymentMethodTile(
-                    title: 'PayPal',
-                    subtitle: 'Fast and secure worldwide checkout with PayPal',
-                    brandColor: const Color(0xFF003087),
-                    iconData: Icons.payment_rounded,
-                    isIconLetter: false,
-                    context: context,
-                    onTap: _showPayPalModal,
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 190),
+                    child: _buildPaymentMethodTile(
+                      title: 'PayPal',
+                      subtitle: 'Fast and secure worldwide checkout with PayPal',
+                      brandColor: const Color(0xFF003087),
+                      iconData: Icons.payment_rounded,
+                      isIconLetter: false,
+                      context: context,
+                      onTap: _showPayPalModal,
+                    ),
                   ),
                   const SizedBox(height: 12),
 
                   // Option 4: Credit Card
-                  _buildPaymentMethodTile(
-                    title: 'Credit Card / Debit Card',
-                    subtitle: 'Visa, MasterCard, RuPay, Amex • Instant bank settlement',
-                    brandColor: const Color(0xFF0D9488),
-                    iconData: Icons.credit_card_rounded,
-                    isIconLetter: false,
-                    context: context,
-                    onTap: _showCreditCardModal,
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 235),
+                    child: _buildPaymentMethodTile(
+                      title: 'Credit Card / Debit Card',
+                      subtitle: 'Visa, MasterCard, RuPay, Amex • Instant bank settlement',
+                      brandColor: const Color(0xFF0D9488),
+                      iconData: Icons.credit_card_rounded,
+                      isIconLetter: false,
+                      context: context,
+                      onTap: _showCreditCardModal,
+                    ),
                   ),
                   const SizedBox(height: 22),
 
                   // Open Payment Interface Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _showPaymentInterfaceModal,
-                      icon: const Icon(Icons.flash_on_rounded, size: 18),
-                      label: Text(
-                        'Pay ₹ ${_formatAmount(amount)} Now',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        elevation: 2,
-                        shadowColor: const Color(0x594F46E5),
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 270),
+                    child: TactilePress(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _showPaymentInterfaceModal,
+                          icon: const Icon(Icons.flash_on_rounded, size: 18),
+                          label: Text(
+                            'Pay ₹ ${_formatAmount(amount)} Now',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryBlue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 15),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            elevation: 2,
+                            shadowColor: const Color(0x594F46E5),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Security Assurance
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFFBBF7D0)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.shield_rounded, color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF16A34A), size: 20),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            '100% Encrypted & Bank-Verified. Recipient: $_payeeName ($defaultCurrency).',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF15803D),
-                              fontWeight: FontWeight.w500,
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 300),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFFBBF7D0)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.shield_rounded, color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF16A34A), size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '100% Encrypted & Bank-Verified. Recipient: $_payeeName ($defaultCurrency).',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF15803D),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -2883,74 +2909,76 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     final textPri = context != null ? AppTheme.textPrimary(context) : AppTheme.textDark;
     final textSec = context != null ? AppTheme.textSecondary(context) : AppTheme.textGrey;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderCol),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? const Color(0x1A000000) : const Color(0x08000000),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
+    return TactilePress(
+      child: Container(
+        decoration: BoxDecoration(
+          color: cardBg,
           borderRadius: BorderRadius.circular(18),
-          onTap: _isLaunching ? null : onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: brandColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: brandColor.withValues(alpha: 0.25)),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      iconData,
-                      size: isIconLetter ? 30 : 22,
-                      color: brandColor,
+          border: Border.all(color: borderCol),
+          boxShadow: [
+            BoxShadow(
+              color: isDark ? const Color(0x1A000000) : const Color(0x08000000),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: _isLaunching ? null : onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: brandColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: brandColor.withValues(alpha: 0.25)),
+                    ),
+                    child: Center(
+                      child: Icon(
+                        iconData,
+                        size: isIconLetter ? 30 : 22,
+                        color: brandColor,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: textPri,
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: textPri,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: textSec,
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: textSec,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 14,
-                  color: isDark ? AppTheme.darkTextSecondary : const Color(0xFF94A3B8),
-                ),
-              ],
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: 14,
+                    color: isDark ? AppTheme.darkTextSecondary : const Color(0xFF94A3B8),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

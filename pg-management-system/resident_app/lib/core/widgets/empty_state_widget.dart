@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import '../theme/app_theme.dart';
+import 'motion_wrappers.dart';
 
 class EmptyStateWidget extends StatelessWidget {
   final String title;
@@ -18,21 +19,24 @@ class EmptyStateWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Lottie Animation with fallback to soft pastel icon
-            SizedBox(
-              height: 160,
-              width: 160,
-              child: Lottie.asset(
-                'assets/animations/empty_box.json',
-                fit: BoxFit.contain,
+      child: MotionEntrance(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Lottie Animation with fallback to soft pastel icon
+              SizedBox(
+                height: 160,
+                width: 160,
+                child: Lottie.asset(
+                  'assets/animations/empty_box.json',
+                  animate: !disableAnim,
+                  fit: BoxFit.contain,
                 errorBuilder: (context, error, stackTrace) {
                   return Container(
                     decoration: BoxDecoration(
@@ -85,22 +89,25 @@ class EmptyStateWidget extends StatelessWidget {
 
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: onAction,
-                icon: const Icon(Icons.add_rounded, size: 20),
-                label: Text(actionLabel!),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(180, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+              TactilePress(
+                child: ElevatedButton.icon(
+                  onPressed: onAction,
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  label: Text(actionLabel!),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(180, 48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                 ),
               ),
             ],
           ],
         ),
+      ),
       ),
     );
   }

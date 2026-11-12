@@ -10,7 +10,7 @@ class ApiClient {
   static String get baseUrl {
     if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000/api/v1';
+      return 'http://10.10.5.135:8000/api/v1';
     }
     if (kIsWeb) {
       final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';

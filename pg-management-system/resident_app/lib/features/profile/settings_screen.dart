@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/services/resident_auth_service.dart';
+import '../../core/data/app_data.dart';
+import '../../core/network/token_storage.dart';
 import '../../core/services/resident_api_service.dart';
+import '../../core/services/resident_auth_service.dart';
+import '../../core/theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -11,18 +13,52 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen>
+    with SingleTickerProviderStateMixin {
   late bool _isDarkMode;
   String _selectedLanguage = 'English';
-  final List<String> _languages = ['English', 'Kannada', 'Hindi', 'Tamil', 'Telugu'];
+  final List<String> _languages = [
+    'English',
+    'Kannada',
+    'Hindi',
+    'Tamil',
+    'Telugu',
+  ];
   bool _rentReminders = true;
   bool _maintenanceAlerts = true;
+
+  late final AnimationController _entranceController;
+  bool _animationStarted = false;
 
   @override
   void initState() {
     super.initState();
     _isDarkMode = AppTheme.themeModeNotifier.value == ThemeMode.dark;
+    _entranceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 680),
+    );
     _loadSettingsFromApi();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_animationStarted) {
+      _animationStarted = true;
+      final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+      if (disableAnim) {
+        _entranceController.value = 1.0;
+      } else {
+        _entranceController.forward();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSettingsFromApi() async {
@@ -85,27 +121,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showLogoutDialog() {
-    final isDark = AppTheme.isDark(context);
+    final isDark = HomeThemeTokens.isDark(context);
+    final dialogBg =
+        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final textPri = HomeThemeTokens.textPrimary(context);
+    final textSec = HomeThemeTokens.textSecondary(context);
+    final borderCol = HomeThemeTokens.border(context);
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: isDark ? AppTheme.darkBorder : Colors.transparent),
+          side: BorderSide(color: borderCol),
         ),
         title: Text(
           'Confirm Logout',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
+          style: HomeThemeTokens.manrope(
+            fontWeight: FontWeight.w800,
             fontSize: 18,
-            color: isDark ? Colors.white : AppTheme.textDark,
+            color: textPri,
           ),
         ),
         content: Text(
           'Are you sure you want to log out of your resident account?',
-          style: TextStyle(
-            color: isDark ? AppTheme.darkTextSecondary : AppTheme.textGrey,
+          style: HomeThemeTokens.manrope(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w500,
+            color: textSec,
           ),
         ),
         actions: [
@@ -113,9 +157,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () => Navigator.pop(ctx),
             child: Text(
               'Cancel',
-              style: TextStyle(
-                color: isDark ? AppTheme.darkTextSecondary : AppTheme.textGrey,
-                fontWeight: FontWeight.w600,
+              style: HomeThemeTokens.manrope(
+                color: textSec,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -128,358 +172,1026 @@ class _SettingsScreenState extends State<SettingsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
+              backgroundColor: const Color(0xFFDC2626),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 0,
-              minimumSize: const Size(90, 42),
+              minimumSize: const Size(92, 42),
             ),
-            child: const Text('Log Out', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              'Log Out',
+              style: HomeThemeTokens.manrope(
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
+  void _handleBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else if (GoRouter.maybeOf(context) != null) {
+      context.go('/menu');
+    }
+  }
+
+  String _getInitials(String name) {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((s) => s.isNotEmpty)
+        .toList();
+    if (parts.length >= 2) return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    if (parts.isNotEmpty) return parts[0][0].toUpperCase();
+    return 'R';
+  }
+
+  Map<String, dynamic> _resolveResidentData() {
+    final savedProfile = TokenStorage.residentProfile;
+    if (savedProfile != null &&
+        savedProfile.isNotEmpty &&
+        AppData.currentResident['phone'] == AppData.residents.first['phone'] &&
+        AppData.currentResident['room_number'] == null) {
+      return savedProfile;
+    }
+    return AppData.currentResident;
+  }
+
+  Widget _staggeredEntrance({
+    required double begin,
+    required double end,
+    required Widget child,
+  }) {
+    final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    if (disableAnim) return child;
+    final anim = CurvedAnimation(
+      parent: _entranceController,
+      curve: Interval(
+        begin.clamp(0.0, 0.96),
+        end.clamp(0.05, 1.0),
+        curve: Curves.easeOutCubic,
+      ),
+    );
+    return AnimatedBuilder(
+      animation: anim,
+      child: child,
+      builder: (context, inner) {
+        final t = anim.value;
+        return Opacity(
+          opacity: t.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, 14 * (1 - t)),
+            child: inner,
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = HomeThemeTokens.isDark(context);
     _isDarkMode = isDark;
 
-    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
-    final borderCol = isDark ? AppTheme.darkBorder : const Color(0xFFEDF2F7);
-    final textPri = isDark ? Colors.white : AppTheme.textDark;
-    final textSec = isDark ? AppTheme.darkTextSecondary : AppTheme.textGrey;
-    final dividerCol = isDark ? AppTheme.darkBorder : const Color(0xFFF1F5F9);
+    final pageBg = HomeThemeTokens.bg(context);
+    final cardBg =
+        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final borderCol = HomeThemeTokens.border(context);
+    final textPri = HomeThemeTokens.textPrimary(context);
+    final textSec = HomeThemeTokens.textSecondary(context);
+    final tealCol = HomeThemeTokens.teal(context);
+    final softTealCol = HomeThemeTokens.softTeal(context);
+    final dividerCol =
+        isDark ? HomeThemeTokens.darkBorder : const Color(0xFFF0F4F3);
+
+    final resident = _resolveResidentData();
+    final residentInfo =
+        (resident['resident_info'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final stayDetails =
+        (resident['stay_details'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+    final kycDetails =
+        (resident['kyc_details'] as Map?)?.cast<String, dynamic>() ??
+        const <String, dynamic>{};
+
+    final rawName =
+        residentInfo['full_name'] ??
+        resident['full_name'] ??
+        resident['name'] ??
+        'Resident';
+    final name = rawName.toString().trim().isNotEmpty
+        ? rawName.toString().trim()
+        : 'Resident';
+
+    final rawProperty =
+        stayDetails['property_name'] ??
+        resident['property_name'] ??
+        resident['property'];
+    final propertyName =
+        (rawProperty != null && rawProperty.toString().trim().isNotEmpty)
+            ? rawProperty.toString().trim()
+            : 'BNR Luxury PG';
+
+    final rawRoom =
+        stayDetails['room_number'] ?? resident['room_number'] ?? resident['room'];
+    final room = (rawRoom != null && rawRoom.toString().trim().isNotEmpty)
+        ? rawRoom.toString().trim()
+        : '101';
+
+    final kycStr = (kycDetails['kyc_status'] ??
+            resident['kyc'] ??
+            resident['kyc_status'] ??
+            '')
+        .toString()
+        .trim()
+        .toLowerCase();
+    final isVerified = kycStr == 'verified' || kycStr == 'approved';
+
+    final cardShadow = <BoxShadow>[
+      BoxShadow(
+        color: isDark ? const Color(0x20000000) : const Color(0x0A0E1A1F),
+        blurRadius: 12,
+        offset: const Offset(0, 3),
+      ),
+    ];
+
+    final logoutBorderCol =
+        isDark ? const Color(0xFF6B3A37) : const Color(0xFFF8C9C4);
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundWhite,
-      appBar: AppBar(
-        title: Text(
-          'Settings',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: textPri,
-          ),
-        ),
-        backgroundColor: cardBg,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: IconThemeData(color: textPri),
-      ),
+      backgroundColor: pageBg,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 600),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // App Preferences Section
-                  Text(
-                    'App Preferences',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: textPri,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: borderCol),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark ? const Color(0x1F000000) : const Color(0x05000000),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
+        child: Column(
+          children: [
+            // ----------------------------------------------------------------
+            // 1. TOP HEADER BAR
+            // ----------------------------------------------------------------
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Row(
+                    children: [
+                      _InteractivePress(
+                        onTap: _handleBack,
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(13),
+                            border: Border.all(color: borderCol, width: 1),
+                            boxShadow: cardShadow,
+                          ),
+                          child: Icon(
+                            Icons.arrow_back_rounded,
+                            size: 20,
+                            color: textPri,
+                          ),
                         ),
-                      ],
-                    ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          'Settings',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: HomeThemeTokens.manrope(
+                            fontSize: 17.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                            color: textPri,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 42),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // ----------------------------------------------------------------
+            // 2. SCROLLABLE CONTENT
+            // ----------------------------------------------------------------
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // 1. Dark Mode Switch
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  isDark ? Icons.dark_mode_rounded : Icons.dark_mode_outlined,
-                                  color: isDark ? AppTheme.primaryLightBlue : AppTheme.textDark,
-                                  size: 20,
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Dark Mode', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: textPri), overflow: TextOverflow.ellipsis),
-                                    const SizedBox(height: 2),
-                                    Text('Switch to dark visual theme', style: TextStyle(fontSize: 12, color: textSec), overflow: TextOverflow.ellipsis),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Switch.adaptive(
-                                value: _isDarkMode,
-                                activeTrackColor: AppTheme.primaryBlue,
-                                onChanged: (val) {
-                                  setState(() => _isDarkMode = val);
-                                  AppTheme.toggleTheme(val);
-                                  _saveSettingsToApi();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(val ? 'Dark mode enabled' : 'Light mode enabled'),
-                                      duration: const Duration(milliseconds: 900),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        Divider(height: 1, color: dividerCol),
-
-                        // 2. Language Dropdown
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF312E81) : const Color(0xFFEFF6FF),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(Icons.language_rounded, color: isDark ? AppTheme.primaryLightBlue : AppTheme.primaryBlue, size: 20),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('App Language', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: textPri), overflow: TextOverflow.ellipsis),
-                                    const SizedBox(height: 2),
-                                    Text('Choose application display language', style: TextStyle(fontSize: 12, color: textSec), overflow: TextOverflow.ellipsis),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              DropdownButton<String>(
-                                value: _selectedLanguage,
-                                underline: const SizedBox(),
-                                borderRadius: BorderRadius.circular(14),
-                                dropdownColor: cardBg,
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isDark ? AppTheme.primaryLightBlue : AppTheme.primaryBlue),
-                                items: _languages.map((lang) {
-                                  return DropdownMenuItem<String>(
-                                    value: lang,
-                                    child: Text(lang, style: TextStyle(color: isDark ? Colors.white : AppTheme.primaryBlue)),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() => _selectedLanguage = val);
-                                    _saveSettingsToApi();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Language changed to $val'),
-                                        duration: const Duration(milliseconds: 900),
+                        // ----------------------------------------------------
+                        // COMPACT RESIDENT IDENTITY SUMMARY CARD
+                        // ----------------------------------------------------
+                        _staggeredEntrance(
+                          begin: 0.04,
+                          end: 0.42,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: borderCol, width: 1),
+                              boxShadow: cardShadow,
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 46,
+                                  height: 46,
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF2B5A72)
+                                        : HomeThemeTokens.lightNavy,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _getInitials(name),
+                                      style: HomeThemeTokens.manrope(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
                                       ),
-                                    );
-                                  }
-                                },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 13),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 15.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: textPri,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        '$propertyName · Room $room',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: textSec,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isVerified
+                                        ? HomeThemeTokens.successBg(context)
+                                        : HomeThemeTokens.warningBg(context),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isVerified
+                                            ? Icons.check_rounded
+                                            : Icons.hourglass_top_rounded,
+                                        size: 13,
+                                        color: isVerified
+                                            ? HomeThemeTokens.success(context)
+                                            : HomeThemeTokens.warning(context),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'KYC',
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isVerified
+                                              ? HomeThemeTokens.success(context)
+                                              : HomeThemeTokens.warning(
+                                                  context,
+                                                ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+
+                        // ----------------------------------------------------
+                        // APP PREFERENCES SECTION
+                        // ----------------------------------------------------
+                        _staggeredEntrance(
+                          begin: 0.14,
+                          end: 0.54,
+                          child: _buildSectionHeading(
+                            title: 'App Preferences',
+                            tealCol: tealCol,
+                            textSec: textSec,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        _staggeredEntrance(
+                          begin: 0.20,
+                          end: 0.66,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: borderCol, width: 1),
+                              boxShadow: cardShadow,
+                            ),
+                            child: Column(
+                              children: [
+                                // 1. Dark Mode Switch Row
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color:
+                                              HomeThemeTokens.foodBg(context),
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          isDark
+                                              ? Icons.dark_mode_rounded
+                                              : Icons.dark_mode_outlined,
+                                          color: HomeThemeTokens.foodIcon(
+                                            context,
+                                          ),
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Dark Mode',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: HomeThemeTokens.manrope(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14.5,
+                                                color: textPri,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Switch to dark visual theme',
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: HomeThemeTokens.manrope(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: textSec,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _buildSwitch(
+                                        value: _isDarkMode,
+                                        isDark: isDark,
+                                        tealCol: tealCol,
+                                        onChanged: (val) {
+                                          setState(() => _isDarkMode = val);
+                                          AppTheme.toggleTheme(val);
+                                          _saveSettingsToApi();
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                val
+                                                    ? 'Dark mode enabled'
+                                                    : 'Light mode enabled',
+                                              ),
+                                              duration: const Duration(
+                                                milliseconds: 900,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                _buildInsetDivider(dividerCol),
+
+                                // 2. App Language Selector Row
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        decoration: BoxDecoration(
+                                          color: softTealCol,
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          Icons.language_rounded,
+                                          color: tealCol,
+                                          size: 20,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'App Language',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: HomeThemeTokens.manrope(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14.5,
+                                                color: textPri,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              'Choose application display language',
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: HomeThemeTokens.manrope(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                                color: textSec,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 11,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              HomeThemeTokens.foodBg(context),
+                                          borderRadius:
+                                              BorderRadius.circular(999),
+                                        ),
+                                        child: DropdownButtonHideUnderline(
+                                          child: DropdownButton<String>(
+                                            value: _selectedLanguage,
+                                            isDense: true,
+                                            borderRadius:
+                                                BorderRadius.circular(14),
+                                            dropdownColor: cardBg,
+                                            icon: Icon(
+                                              Icons.keyboard_arrow_down_rounded,
+                                              size: 17,
+                                              color: HomeThemeTokens.foodIcon(
+                                                context,
+                                              ),
+                                            ),
+                                            style: HomeThemeTokens.manrope(
+                                              fontWeight: FontWeight.w700,
+                                              fontSize: 12.5,
+                                              color: HomeThemeTokens.foodIcon(
+                                                context,
+                                              ),
+                                            ),
+                                            items: _languages.map((lang) {
+                                              return DropdownMenuItem<String>(
+                                                value: lang,
+                                                child: Text(
+                                                  lang,
+                                                  style:
+                                                      HomeThemeTokens.manrope(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 13,
+                                                    color: textPri,
+                                                  ),
+                                                ),
+                                              );
+                                            }).toList(),
+                                            selectedItemBuilder: (context) {
+                                              return _languages.map((lang) {
+                                                return Center(
+                                                  child: Text(
+                                                    lang,
+                                                    style:
+                                                        HomeThemeTokens.manrope(
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                      fontSize: 12.5,
+                                                      color: HomeThemeTokens
+                                                          .foodIcon(context),
+                                                    ),
+                                                  ),
+                                                );
+                                              }).toList();
+                                            },
+                                            onChanged: (val) {
+                                              if (val != null) {
+                                                setState(
+                                                  () => _selectedLanguage = val,
+                                                );
+                                                _saveSettingsToApi();
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                    content: Text(
+                                                      'Language changed to $val',
+                                                    ),
+                                                    duration: const Duration(
+                                                      milliseconds: 900,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 22),
+
+                        // ----------------------------------------------------
+                        // PUSH NOTIFICATIONS SECTION
+                        // ----------------------------------------------------
+                        _staggeredEntrance(
+                          begin: 0.28,
+                          end: 0.72,
+                          child: _buildSectionHeading(
+                            title: 'Push Notifications',
+                            tealCol: tealCol,
+                            textSec: textSec,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        _staggeredEntrance(
+                          begin: 0.34,
+                          end: 0.80,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: borderCol, width: 1),
+                              boxShadow: cardShadow,
+                            ),
+                            child: Column(
+                              children: [
+                                _buildToggleRow(
+                                  icon: Icons.notifications_none_rounded,
+                                  iconBg: HomeThemeTokens.foodBg(context),
+                                  iconColor: HomeThemeTokens.foodIcon(context),
+                                  title: 'Rent Reminders',
+                                  subtitle: 'Receive alerts before rent due date',
+                                  value: _rentReminders,
+                                  isDark: isDark,
+                                  tealCol: tealCol,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                  onChanged: (val) {
+                                    setState(() => _rentReminders = val);
+                                    _saveSettingsToApi();
+                                  },
+                                ),
+                                _buildInsetDivider(dividerCol),
+                                _buildToggleRow(
+                                  icon: Icons.campaign_outlined,
+                                  iconBg: HomeThemeTokens.warningBg(context),
+                                  iconColor: HomeThemeTokens.warning(context),
+                                  title: 'Maintenance Alerts',
+                                  subtitle: 'Updates on complaint resolution',
+                                  value: _maintenanceAlerts,
+                                  isDark: isDark,
+                                  tealCol: tealCol,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                  onChanged: (val) {
+                                    setState(() => _maintenanceAlerts = val);
+                                    _saveSettingsToApi();
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+
+                        // ----------------------------------------------------
+                        // EXISTING PAYMENT EVALUATION POC TOOLS
+                        // ----------------------------------------------------
+                        _staggeredEntrance(
+                          begin: 0.42,
+                          end: 0.86,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: borderCol, width: 1),
+                              boxShadow: cardShadow,
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(19),
+                              child: Column(
+                                children: [
+                                  _buildNavRow(
+                                    icon: Icons.science_rounded,
+                                    iconBg: HomeThemeTokens.foodBg(context),
+                                    iconColor:
+                                        HomeThemeTokens.foodIcon(context),
+                                    title: 'UPI Package POC (flutter_upi_india)',
+                                    subtitle:
+                                        'Evaluate package-based ₹1 intent vs bank limits',
+                                    textPri: textPri,
+                                    textSec: textSec,
+                                    onTap: () =>
+                                        context.push('/poc-upi-india'),
+                                  ),
+                                  _buildInsetDivider(dividerCol),
+                                  _buildNavRow(
+                                    icon: Icons.biotech_rounded,
+                                    iconBg: softTealCol,
+                                    iconColor: tealCol,
+                                    title: 'UPI Pay Package POC (upi_pay)',
+                                    subtitle:
+                                        'Evaluate drenther/upi_pay with GPay, PhonePe & Navi',
+                                    textPri: textPri,
+                                    textSec: textSec,
+                                    onTap: () => context.push('/poc-upi-pay'),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        // ----------------------------------------------------
+                        // LOG OUT BUTTON (SOFT ROSE PILL)
+                        // ----------------------------------------------------
+                        _staggeredEntrance(
+                          begin: 0.48,
+                          end: 0.94,
+                          child: _InteractivePress(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: HomeThemeTokens.errorBg(context),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: logoutBorderCol,
+                                  width: 1,
+                                ),
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                borderRadius: BorderRadius.circular(15),
+                                child: InkWell(
+                                  onTap: _showLogoutDialog,
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14.5,
+                                      horizontal: 16,
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.logout_rounded,
+                                          size: 18.5,
+                                          color:
+                                              HomeThemeTokens.error(context),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Log Out',
+                                          style: HomeThemeTokens.manrope(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 15,
+                                            color:
+                                                HomeThemeTokens.error(context),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                  // Push Notifications Section
-                  Text(
-                    'Push Notifications',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: textPri,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: borderCol),
-                      boxShadow: [
-                        BoxShadow(
-                          color: isDark ? const Color(0x1F000000) : const Color(0x05000000),
-                          blurRadius: 10,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: Material(
-                      color: cardBg,
-                      borderRadius: BorderRadius.circular(22),
-                      child: Column(
-                        children: [
-                          SwitchListTile.adaptive(
-                            secondary: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF312E81) : const Color(0xFFEEF2FF),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Icon(
-                                Icons.notifications_active_outlined,
-                                color: isDark ? AppTheme.primaryLightBlue : AppTheme.primaryBlue,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(
-                              'Rent Reminders',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: textPri),
-                            ),
-                            subtitle: Text(
-                              'Receive alerts before rent due...',
-                              style: TextStyle(fontSize: 12, color: textSec),
-                            ),
-                            value: _rentReminders,
-                            activeTrackColor: AppTheme.primaryBlue,
-                            onChanged: (val) {
-                              setState(() => _rentReminders = val);
-                              _saveSettingsToApi();
-                            },
-                          ),
-                          Divider(height: 1, color: dividerCol),
-                          SwitchListTile.adaptive(
-                            secondary: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF451A03) : const Color(0xFFFEF3C7),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: const Icon(Icons.campaign_outlined, color: Color(0xFFD97706), size: 20),
-                            ),
-                            title: Text(
-                              'Maintenance Alerts',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.5, color: textPri),
-                            ),
-                            subtitle: Text(
-                              'Updates on complaint resolution...',
-                              style: TextStyle(fontSize: 12, color: textSec),
-                            ),
-                            value: _maintenanceAlerts,
-                            activeTrackColor: AppTheme.primaryBlue,
-                            onChanged: (val) {
-                              setState(() => _maintenanceAlerts = val);
-                              _saveSettingsToApi();
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // UPI Package POC Card
-                  Material(
-                    color: cardBg,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: borderCol),
-                    ),
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.science_rounded, color: AppTheme.primaryBlue, size: 20),
-                      ),
-                      title: Text(
-                        'UPI Package POC (flutter_upi_india)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textPri),
-                      ),
-                      subtitle: Text(
-                        'Evaluate package-based ₹1 intent vs bank limits',
-                        style: TextStyle(fontSize: 11.5, color: textSec),
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                      onTap: () => context.push('/poc-upi-india'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Material(
-                    color: cardBg,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: borderCol),
-                    ),
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0D9488).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.biotech_rounded, color: Color(0xFF0D9488), size: 20),
-                      ),
-                      title: Text(
-                        'UPI Pay Package POC (upi_pay)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textPri),
-                      ),
-                      subtitle: Text(
-                        'Evaluate drenther/upi_pay with GPay, PhonePe & Navi',
-                        style: TextStyle(fontSize: 11.5, color: textSec),
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14),
-                      onTap: () => context.push('/poc-upi-pay'),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Red Logout Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _showLogoutDialog,
-                      icon: const Icon(Icons.logout_rounded, size: 18),
-                      label: const Text(
-                        'Log Out',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEF4444),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 52),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
+  Widget _buildSectionHeading({
+    required String title,
+    required Color tealCol,
+    required Color textSec,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      child: Row(
+        children: [
+          Container(
+            width: 3,
+            height: 13,
+            decoration: BoxDecoration(
+              color: tealCol,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: HomeThemeTokens.manrope(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.25,
+                color: textSec,
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsetDivider(Color dividerCol) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 70),
+      child: Container(height: 1, color: dividerCol),
+    );
+  }
+
+  Widget _buildSwitch({
+    required bool value,
+    required bool isDark,
+    required Color tealCol,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Switch.adaptive(
+      value: value,
+      activeTrackColor: tealCol,
+      inactiveTrackColor:
+          isDark ? const Color(0xFF404F59) : const Color(0xFFD5DCDA),
+      thumbColor: WidgetStateProperty.all(Colors.white),
+      trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+      onChanged: onChanged,
+    );
+  }
+
+  Widget _buildToggleRow({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required bool isDark,
+    required Color tealCol,
+    required Color textPri,
+    required Color textSec,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => onChanged(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: HomeThemeTokens.manrope(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14.5,
+                        color: textPri,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: HomeThemeTokens.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: textSec,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildSwitch(
+                value: value,
+                isDark: isDark,
+                tealCol: tealCol,
+                onChanged: onChanged,
+              ),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildNavRow({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required Color textPri,
+    required Color textSec,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: HomeThemeTokens.manrope(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: textPri,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: HomeThemeTokens.manrope(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: textSec,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 19,
+                color: textSec,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tactile press scale feedback wrapper respecting reduced motion.
+class _InteractivePress extends StatefulWidget {
+  final VoidCallback? onTap;
+  final Widget child;
+
+  const _InteractivePress({
+    this.onTap,
+    required this.child,
+  });
+
+  @override
+  State<_InteractivePress> createState() => _InteractivePressState();
+}
+
+class _InteractivePressState extends State<_InteractivePress> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final scaled = AnimatedScale(
+      scale: (_pressed && !disableAnim) ? 0.97 : 1.0,
+      duration: disableAnim ? Duration.zero : const Duration(milliseconds: 110),
+      curve: Curves.easeOutCubic,
+      child: widget.child,
+    );
+
+    if (widget.onTap != null) {
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: scaled,
+      );
+    }
+
+    return Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: scaled,
     );
   }
 }
