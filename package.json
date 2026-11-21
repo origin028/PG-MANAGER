@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "install:frontend": "npm --prefix pg-management-system/frontend install",
+    "postinstall": "npm --prefix pg-management-system/frontend install",
     "build": "npm --prefix pg-management-system/frontend run build",
     "dev": "npm --prefix pg-management-system/frontend run dev",
     "test": "npm --prefix pg-management-system/frontend run test"
