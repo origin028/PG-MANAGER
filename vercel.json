@@ -1,3 +1,4 @@
+
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
@@ -40,17 +41,17 @@
       }
     },
     {
-      "source": "/admin/(?!.*\\.[a-zA-Z0-9_-]+$).*",
+      "source": "/admin/:path*",
       "destination": {
         "service": "frontend",
-        "path": "/admin/index.html"
+        "path": "/admin/:path*"
       }
     },
     {
-      "source": "/(?!api/|admin/|.*\\.[a-zA-Z0-9_-]+$).*",
+      "source": "/:path*",
       "destination": {
         "service": "frontend",
-        "path": "/index.html"
+        "path": "/:path*"
       }
     }
   ],
