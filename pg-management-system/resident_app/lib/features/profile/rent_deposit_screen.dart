@@ -235,7 +235,7 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          'Refund Status',
+                                          'Date Paid',
                                           style: TextStyle(
                                             fontSize: 12.5,
                                             fontWeight: FontWeight.w600,
@@ -244,7 +244,7 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
                                         ),
                                         const SizedBox(height: 4),
                                         Text(
-                                          '50% Refundable',
+                                          _datePaid,
                                           style: TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.bold,
@@ -252,29 +252,6 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
                                           ),
                                         ),
                                       ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Date Paid',
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? const Color(0xFF99F6E4) : const Color(0xFF047857),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    _datePaid,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: isDark ? Colors.white : const Color(0xFF065F46),
                                     ),
                                   ),
                                 ],

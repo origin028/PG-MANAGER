@@ -217,6 +217,7 @@ class TestUpiRentPaymentFlow:
 
     def test_initiate_requires_configured_payee_vpa(self, client, upi_test_context, monkeypatch):
         monkeypatch.setattr(settings, "UPI_PAYEE_VPA", "")
+        monkeypatch.setattr(settings, "UPI_MERCHANT_VPA", None)
         headers = make_token_header(upi_test_context["res1_user_id"], "RESIDENT", upi_test_context["company_id"])
 
         res = client.post(
@@ -229,8 +230,10 @@ class TestUpiRentPaymentFlow:
         assert "UPI_PAYEE_VPA" in err
 
     def test_initiate_success_and_correct_amount_and_upi_uri(self, client, upi_test_context, monkeypatch):
-        monkeypatch.setattr(settings, "UPI_PAYEE_VPA", "masisokatali90900@okaxis")
-        monkeypatch.setattr(settings, "UPI_PAYEE_NAME", "Saukatali Masi")
+        monkeypatch.setattr(settings, "UPI_PAYEE_VPA", "9886699258-3@ybl")
+        monkeypatch.setattr(settings, "UPI_PAYEE_NAME", "SMART GROUP PG'S")
+        monkeypatch.setattr(settings, "UPI_MERCHANT_VPA", "9886699258-3@ybl")
+        monkeypatch.setattr(settings, "UPI_MERCHANT_NAME", "SMART GROUP PG'S")
         monkeypatch.setattr(settings, "UPI_MERCHANT_CODE", "5411")
 
         headers = make_token_header(upi_test_context["res1_user_id"], "RESIDENT", upi_test_context["company_id"])
@@ -246,8 +249,8 @@ class TestUpiRentPaymentFlow:
         # 1. Amount verification (Calculated strictly from DB: 12000.00)
         assert data["amount"] == 12000.00
         assert data["currency"] == "INR"
-        assert data["payee_vpa"] == "masisokatali90900@okaxis"
-        assert data["payee_name"] == "Saukatali Masi"
+        assert data["payee_vpa"] == "9886699258-3@ybl"
+        assert data["payee_name"] == "SMART GROUP PG'S"
         assert data["status"] == "PENDING"
         assert data["transaction_ref"].startswith("TXN")
         assert data["payment_number"].startswith("PAY-UPI-")
@@ -258,8 +261,8 @@ class TestUpiRentPaymentFlow:
         parsed = urlparse(upi_uri)
         query = parse_qs(parsed.query)
 
-        assert query["pa"] == ["masisokatali90900@okaxis"]
-        assert query["pn"] == ["Saukatali Masi"]
+        assert query["pa"] == ["9886699258-3@ybl"]
+        assert query["pn"] == ["SMART GROUP PGS"]
         assert query["am"] == ["12000.00"]
         assert query["cu"] == ["INR"]
         assert query["tr"] == [data["transaction_ref"]]

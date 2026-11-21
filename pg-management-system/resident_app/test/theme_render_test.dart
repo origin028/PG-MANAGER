@@ -26,7 +26,7 @@ void main() {
     // Verify key widgets
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Notices'), findsWidgets);
-    expect(find.text('Recent payments'), findsOneWidget);
+    expect(find.text('Recent payments'), findsNothing);
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Payments'), findsOneWidget);
     expect(find.text('Food'), findsOneWidget);
@@ -58,7 +58,7 @@ void main() {
 
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Notices'), findsWidgets);
-    expect(find.text('Recent payments'), findsOneWidget);
+    expect(find.text('Recent payments'), findsNothing);
   });
 
   testWidgets('FoodMenuScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {

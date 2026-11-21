@@ -40,6 +40,27 @@ def test_admin_registration_valid_super_key(client: TestClient):
     assert "user" in data
 
 
+def test_admin_registration_without_business_name(client: TestClient):
+    """Admin registration without business_name succeeds and defaults company name."""
+    unique = secrets.token_hex(4)
+    email = f"owner_nobiz_{unique}@originpg.com"
+    super_key = settings.ADMIN_REGISTRATION_SUPER_KEY or "ORIGIN_PG_SUPER_KEY_2026"
+
+    response = client.post(
+        "/api/v1/auth/admin/register",
+        json={
+            "email": email,
+            "password": "ValidAdminPass@123",
+            "confirm_password": "ValidAdminPass@123",
+            "super_key": super_key,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()["data"]
+    assert data["email"] == email
+    assert data["company"]["name"] == f"Owner_nobiz_{unique} PG"
+
+
 def test_admin_registration_invalid_super_key(client: TestClient):
     """Registration with an invalid Super Key is rejected with 400 Bad Request."""
     unique = secrets.token_hex(4)

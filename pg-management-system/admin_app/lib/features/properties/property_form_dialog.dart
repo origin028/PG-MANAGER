@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/data/app_data.dart';
-
 import '../../core/services/admin_api_service.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/widgets/premium_dialogs.dart';
 
 Future<void> showAddEditPropertyDialog({
   required BuildContext context,
@@ -70,49 +72,49 @@ Future<void> showAddEditPropertyDialog({
       : 'Boys';
   if (!occupancyTypes.contains(occupancyType)) occupancyType = 'Boys';
 
-  InputDecoration propertyInputDecoration({String? hintText}) {
+  InputDecoration propertyInputDecoration({String? hintText, bool isDark = false}) {
     return InputDecoration(
       filled: true,
-      fillColor: Colors.white,
+      fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
       hintText: hintText,
-      hintStyle: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+      hintStyle: GoogleFonts.manrope(color: isDark ? AppTheme.secondaryTextDark : const Color(0xFF94A3B8), fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.0),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor, width: 1.0),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.0),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor, width: 1.0),
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 1.8),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+        borderSide: BorderSide(color: AppTheme.primaryTeal, width: 1.6),
       ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.0),
+      errorBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(10)),
+        borderSide: BorderSide(color: AppTheme.statusRed, width: 1.0),
       ),
     );
   }
 
-  Widget buildFieldLabel(String label, {bool isRequired = false}) {
+  Widget buildFieldLabel(String label, {bool isRequired = false, bool isDark = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6.0),
       child: RichText(
         text: TextSpan(
           text: label,
-          style: const TextStyle(
+          style: GoogleFonts.manrope(
             fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF0F172A),
+            fontWeight: FontWeight.w700,
+            color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
           ),
           children: [
             if (isRequired)
               const TextSpan(
                 text: ' *',
                 style: TextStyle(
-                  color: Color(0xFFDC2626),
+                  color: AppTheme.statusRed,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -127,21 +129,27 @@ Future<void> showAddEditPropertyDialog({
     required String value,
     required List<String> items,
     required ValueChanged<String?> onChanged,
+    bool isDark = false,
   }) {
     return Container(
       height: 48,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFCBD5E1), width: 1.0),
+        color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor, width: 1.0),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF64748B), size: 20),
-          style: const TextStyle(fontSize: 13.5, color: Color(0xFF1E293B), fontWeight: FontWeight.w500),
+          dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText, size: 20),
+          style: GoogleFonts.manrope(
+            fontSize: 13.5,
+            color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+            fontWeight: FontWeight.w600,
+          ),
           items: items.map((String item) {
             return DropdownMenuItem<String>(
               value: item,
@@ -155,142 +163,299 @@ Future<void> showAddEditPropertyDialog({
   }
 
   Widget buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.bold,
-        color: Color(0xFF4338CA),
-        letterSpacing: -0.2,
-      ),
-    );
+    return PremiumSectionTitle(title: title);
   }
 
   void showDeleteConfirmDialog(BuildContext parentContext, BuildContext dialogContext, Map<String, dynamic> prop) {
-    showDialog(
+    showPremiumConfirmDialog(
       context: parentContext,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Property?', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to permanently delete "${prop['name']}"? This action cannot be undone.'),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF374151),
-              side: const BorderSide(color: Color(0xFFD1D5DB)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      title: 'Delete Property',
+      message: 'Are you sure you want to permanently delete "${prop['name']}"? This action cannot be undone.',
+      confirmText: 'Delete Property',
+      cancelText: 'Cancel',
+      icon: Icons.delete_outline_rounded,
+      isDestructive: true,
+      onConfirmAsync: () async {
+        final pid = prop['id']?.toString() ?? '';
+        if (pid.isNotEmpty && !pid.startsWith('p')) {
+          await AdminApiService.deleteProperty(pid);
+        }
+        if (dialogContext.mounted) Navigator.pop(dialogContext);
+        AppData.properties.removeWhere((p) =>
+            (p['id'] != null && p['id'] == prop['id']) || p['name'] == prop['name']);
+        AppData.propertyNames.removeWhere((name) => name == prop['name']);
+        if (AppData.selectedProperty == prop['name'] && AppData.propertyNames.isNotEmpty) {
+          AppData.selectedProperty = AppData.propertyNames.first;
+        }
+        onDeleted?.call();
+        if (parentContext.mounted) {
+          ScaffoldMessenger.of(parentContext).showSnackBar(
+            SnackBar(
+              content: Text('${prop['name']} deleted successfully!'),
+              backgroundColor: AppTheme.statusRed,
             ),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final pid = prop['id']?.toString() ?? '';
-              if (pid.isNotEmpty && !pid.startsWith('p')) {
+          );
+        }
+      },
+    );
+  }
+
+  await showPremiumDialog(
+    context: context,
+    builder: (dialogContext) {
+      bool isSaving = false;
+      return StatefulBuilder(
+        builder: (context, setModalState) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          void onSavePressed() async {
+            final name = nameController.text.trim();
+            final address = addressController.text.trim();
+            final city = cityController.text.trim();
+            final pincode = pincodeController.text.trim();
+            final ownerName = ownerNameController.text.trim();
+            final ownerContact = ownerContactController.text.trim();
+            final ownerEmail = ownerEmailController.text.trim();
+            final managerName = managerNameController.text.trim();
+            final managerContact = managerContactController.text.trim();
+
+            final floors = int.tryParse(floorsController.text.trim()) ?? 1;
+            final rooms = int.tryParse(roomsController.text.trim()) ?? 10;
+            final beds = int.tryParse(bedsController.text.trim()) ?? 18;
+
+            // Required field validations
+            if (name.isEmpty) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                const SnackBar(content: Text('Please enter Property Name'), backgroundColor: Colors.red),
+              );
+              return;
+            }
+            if (address.isEmpty) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                const SnackBar(content: Text('Please enter Property Address'), backgroundColor: Colors.red),
+              );
+              return;
+            }
+            if (city.isEmpty) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                const SnackBar(content: Text('Please enter City'), backgroundColor: Colors.red),
+              );
+              return;
+            }
+            if (ownerName.isEmpty) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                const SnackBar(content: Text('Please enter Owner Name'), backgroundColor: Colors.red),
+              );
+              return;
+            }
+            if (ownerContact.isEmpty) {
+              ScaffoldMessenger.of(dialogContext).showSnackBar(
+                const SnackBar(content: Text('Please enter Owner Contact Number'), backgroundColor: Colors.red),
+              );
+              return;
+            }
+
+            setModalState(() => isSaving = true);
+
+            if (property != null) {
+              final pid = property['id']?.toString() ?? propertyId;
+              if (!pid.startsWith('p')) {
                 try {
-                  await AdminApiService.deleteProperty(pid);
+                  await AdminApiService.updateProperty(pid, {
+                    'name': name,
+                    'code': property['code'] ?? 'PROP_${name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase()}',
+                    'address_line1': address,
+                    'address': address,
+                    'city': city,
+                    'pincode': pincode,
+                    'total_floors': floors,
+                    'description': propertyType,
+                    'property_type': occupancyType == 'Girls' ? 'GIRLS' : (occupancyType == 'Boys' ? 'BOYS' : 'CO_LIVING'),
+                  });
                 } catch (e) {
-                  if (parentContext.mounted) {
-                    ScaffoldMessenger.of(parentContext).showSnackBar(
-                      SnackBar(content: Text('Failed to delete property: $e'), backgroundColor: Colors.red),
+                  setModalState(() => isSaving = false);
+                  if (dialogContext.mounted) {
+                    ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      SnackBar(content: Text('Failed to update property: $e'), backgroundColor: Colors.red),
                     );
                   }
                   return;
                 }
               }
-              if (ctx.mounted) Navigator.pop(ctx);
+
+              // Update in-memory property
+              property['name'] = name;
+              property['address'] = address;
+              property['city'] = city;
+              property['pincode'] = pincode;
+              property['propertyType'] = propertyType;
+              property['occupancyType'] = occupancyType;
+              property['type'] = occupancyType;
+              property['ownerName'] = ownerName;
+              property['ownerContact'] = ownerContact;
+              property['ownerEmail'] = ownerEmail;
+              property['managerName'] = managerName;
+              property['managerContact'] = managerContact;
+              property['floors'] = floors;
+              property['rooms'] = rooms;
+              property['beds'] = beds;
+              property['amenities'] = List<String>.from(selectedAmenities);
+
+              onSaved?.call();
               if (dialogContext.mounted) Navigator.pop(dialogContext);
-              AppData.properties.removeWhere((p) =>
-                  (p['id'] != null && p['id'] == prop['id']) || p['name'] == prop['name']);
-              AppData.propertyNames.removeWhere((name) => name == prop['name']);
-              if (AppData.selectedProperty == prop['name'] && AppData.propertyNames.isNotEmpty) {
-                AppData.selectedProperty = AppData.propertyNames.first;
-              }
-              onDeleted?.call();
-              if (parentContext.mounted) {
-                ScaffoldMessenger.of(parentContext).showSnackBar(
-                  SnackBar(
-                    content: Text('${prop['name']} deleted successfully!'),
-                    backgroundColor: const Color(0xFFEF4444),
-                  ),
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Property Updated Successfully!'), backgroundColor: Colors.green),
                 );
               }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Delete Property', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
+            } else {
+              // Check for duplicate name
+              if (AppData.properties.any((p) => p['name'].toString().toLowerCase() == name.toLowerCase())) {
+                setModalState(() => isSaving = false);
+                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                  const SnackBar(content: Text('A property with this name already exists!'), backgroundColor: Colors.red),
+                );
+                return;
+              }
 
-  await showDialog(
-    context: context,
-    builder: (dialogContext) {
-      return StatefulBuilder(
-        builder: (context, setModalState) {
-          return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            backgroundColor: Colors.white,
-            clipBehavior: Clip.antiAlias,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 760, maxHeight: 850),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header Row with Title and Close Icon
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(28, 20, 20, 14),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            isEdit ? 'Edit Property Details' : 'Add New Property',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
-                          onPressed: () => Navigator.pop(dialogContext),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          tooltip: 'Close',
-                        ),
-                      ],
+              Map<String, dynamic> created = {};
+              try {
+                created = await AdminApiService.createProperty({
+                  'name': name,
+                  'code': 'PROP_${name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase()}',
+                  'address_line1': address,
+                  'address': address,
+                  'city': city,
+                  'pincode': pincode,
+                  'total_floors': floors,
+                  'description': propertyType,
+                  'property_type': occupancyType == 'Girls' ? 'GIRLS' : (occupancyType == 'Boys' ? 'BOYS' : 'CO_LIVING'),
+                });
+              } catch (e) {
+                setModalState(() => isSaving = false);
+                if (dialogContext.mounted) {
+                  ScaffoldMessenger.of(dialogContext).showSnackBar(
+                    SnackBar(content: Text('Failed to add property: $e'), backgroundColor: Colors.red),
+                  );
+                }
+                return;
+              }
+
+              final newProp = {
+                'id': created['id']?.toString() ?? propertyId,
+                'code': created['code']?.toString() ?? 'PROP_${name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase()}',
+                'name': name,
+                'propertyType': propertyType,
+                'address': address,
+                'city': city,
+                'pincode': pincode,
+                'occupancyType': occupancyType,
+                'type': occupancyType,
+                'ownerName': ownerName,
+                'ownerContact': ownerContact,
+                'ownerEmail': ownerEmail,
+                'managerName': managerName,
+                'managerContact': managerContact,
+                'floors': floors,
+                'rooms': rooms,
+                'beds': beds,
+                'status': 'Active',
+                'amenities': List<String>.from(selectedAmenities),
+              };
+              AppData.properties.add(newProp);
+
+              if (!AppData.propertyNames.contains(name)) {
+                AppData.propertyNames.add(name);
+              }
+              AppData.selectedProperty = name;
+
+              onSaved?.call();
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Property Added Successfully!'), backgroundColor: Colors.green),
+                );
+              }
+            }
+          }
+
+          return PremiumDialog(
+            maxWidth: 780,
+            icon: Icons.apartment_rounded,
+            title: isEdit ? 'Edit Property Details' : 'Add New Property',
+            subtitle: 'Configure building units, amenities, and contact information',
+            contentPadding: const EdgeInsets.fromLTRB(24, 18, 24, 20),
+            actions: [
+              if (isEdit) ...[
+                OutlinedButton.icon(
+                  onPressed: isSaving ? null : () => showDeleteConfirmDialog(context, dialogContext, property),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 16, color: AppTheme.statusRed),
+                  label: const Text('Delete Property'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.statusRed,
+                    side: BorderSide(color: AppTheme.statusRed.withValues(alpha: 0.4)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const Spacer(),
+              ],
+              OutlinedButton(
+                onPressed: isSaving ? null : () => Navigator.pop(dialogContext),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                  side: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13.5)),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: isSaving ? null : onSavePressed,
+                icon: isSaving
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Icon(isEdit ? Icons.save_rounded : Icons.add_business_rounded, size: 17),
+                label: Text(
+                  isSaving
+                      ? 'Saving...'
+                      : (isEdit ? 'Save Changes' : 'Add Property'),
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w800, fontSize: 13.5),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryTeal,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 0,
+                ),
+              ),
+            ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Property ID small grey text
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+                  ),
+                  child: Text(
+                    'Property ID: $propertyId',
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
-
-                  // Scrollable Form Content
-                  Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(28, 18, 28, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Property ID small grey text
-                          Text(
-                            'Property ID: $propertyId',
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFF64748B),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 18),
+                ),
+                const SizedBox(height: 18),
 
                           // ========================================================
                           // SECTION 1: BASIC PROPERTY INFORMATION
@@ -641,334 +806,30 @@ Future<void> showAddEditPropertyDialog({
                                     }
                                   });
                                 },
-                                selectedColor: const Color(0xFF4F46E5).withValues(alpha: 0.15),
-                                checkmarkColor: const Color(0xFF4F46E5),
-                                labelStyle: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                  color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFF334155),
+                                selectedColor: AppTheme.primaryTeal.withValues(alpha: 0.15),
+                                checkmarkColor: AppTheme.primaryTeal,
+                                labelStyle: GoogleFonts.manrope(
+                                  fontSize: 12.5,
+                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                  color: isSelected ? AppTheme.primaryTeal : (isDark ? AppTheme.primaryTextDark : AppTheme.primaryText),
                                 ),
-                                backgroundColor: Colors.white,
+                                backgroundColor: isDark ? AppTheme.cardBackgroundDark : Colors.white,
                                 side: BorderSide(
-                                  color: isSelected ? const Color(0xFF4F46E5) : const Color(0xFFCBD5E1),
+                                  color: isSelected ? AppTheme.primaryTeal : (isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
                                   width: isSelected ? 1.5 : 1.0,
                                 ),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                               );
                             }).toList(),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-
-                  const Divider(height: 1, thickness: 1, color: Color(0xFFF1F5F9)),
-
-                  // ========================================================
-                  // PINNED FOOTER / ACTION BUTTONS (Matches Screenshot)
-                  // ========================================================
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                    child: LayoutBuilder(
-                      builder: (context, footerConstraints) {
-                        final isNarrow = footerConstraints.maxWidth < 440;
-
-                        void onSavePressed() async {
-                          final name = nameController.text.trim();
-                          final address = addressController.text.trim();
-                          final city = cityController.text.trim();
-                          final pincode = pincodeController.text.trim();
-                          final ownerName = ownerNameController.text.trim();
-                          final ownerContact = ownerContactController.text.trim();
-                          final ownerEmail = ownerEmailController.text.trim();
-                          final managerName = managerNameController.text.trim();
-                          final managerContact = managerContactController.text.trim();
-
-                          final floors = int.tryParse(floorsController.text.trim()) ?? 1;
-                          final rooms = int.tryParse(roomsController.text.trim()) ?? 10;
-                          final beds = int.tryParse(bedsController.text.trim()) ?? 18;
-
-                          // Required field validations
-                          if (name.isEmpty) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please enter Property Name'), backgroundColor: Colors.red),
-                            );
-                            return;
-                          }
-                          if (address.isEmpty) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please enter Property Address'), backgroundColor: Colors.red),
-                            );
-                            return;
-                          }
-                          if (city.isEmpty) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please enter City'), backgroundColor: Colors.red),
-                            );
-                            return;
-                          }
-                          if (ownerName.isEmpty) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please enter Owner Name'), backgroundColor: Colors.red),
-                            );
-                            return;
-                          }
-                          if (ownerContact.isEmpty) {
-                            ScaffoldMessenger.of(dialogContext).showSnackBar(
-                              const SnackBar(content: Text('Please enter Owner Contact Number'), backgroundColor: Colors.red),
-                            );
-                            return;
-                          }
-
-                          if (property != null) {
-                            final pid = property['id']?.toString() ?? propertyId;
-                            if (!pid.startsWith('p')) {
-                              try {
-                                await AdminApiService.updateProperty(pid, {
-                                  'name': name,
-                                  'code': property['code'] ?? 'PROP_${name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase()}',
-                                  'address_line1': address,
-                                  'address': address,
-                                  'city': city,
-                                  'pincode': pincode,
-                                  'total_floors': floors,
-                                });
-                              } catch (e) {
-                                if (dialogContext.mounted) {
-                                  ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                    SnackBar(content: Text('Failed to update property: $e'), backgroundColor: Colors.red),
-                                  );
-                                }
-                                return;
-                              }
-                            }
-                            property['name'] = name;
-                            property['propertyType'] = propertyType;
-                            property['address'] = address;
-                            property['city'] = city;
-                            property['pincode'] = pincode;
-                            property['occupancyType'] = occupancyType;
-                            property['type'] = occupancyType;
-                            property['ownerName'] = ownerName;
-                            property['ownerContact'] = ownerContact;
-                            property['ownerEmail'] = ownerEmail;
-                            property['managerName'] = managerName;
-                            property['managerContact'] = managerContact;
-                            property['floors'] = floors;
-                            property['rooms'] = rooms;
-                            property['beds'] = beds;
-                            property['amenities'] = List<String>.from(selectedAmenities);
-
-                            if (!AppData.propertyNames.contains(name)) {
-                              AppData.propertyNames.add(name);
-                            }
-                            AppData.selectedProperty = name;
-
-                            onSaved?.call();
-                            if (dialogContext.mounted) Navigator.pop(dialogContext);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('$name updated successfully!'), backgroundColor: Colors.green),
-                              );
-                            }
-                          } else {
-                            // Check for duplicate name
-                            if (AppData.properties.any((p) => p['name'].toString().toLowerCase() == name.toLowerCase())) {
-                              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                const SnackBar(content: Text('A property with this name already exists!'), backgroundColor: Colors.red),
-                              );
-                              return;
-                            }
-
-                            Map<String, dynamic> created = {};
-                            try {
-                              created = await AdminApiService.createProperty({
-                                'name': name,
-                                'code': 'PROP_${name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase()}',
-                                'address_line1': address,
-                                'address': address,
-                                'city': city,
-                                'pincode': pincode,
-                                'total_floors': floors,
-                                'description': propertyType,
-                                'property_type': occupancyType == 'Girls' ? 'GIRLS' : (occupancyType == 'Boys' ? 'BOYS' : 'CO_LIVING'),
-                              });
-                            } catch (e) {
-                              if (dialogContext.mounted) {
-                                ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                  SnackBar(content: Text('Failed to add property: $e'), backgroundColor: Colors.red),
-                                );
-                              }
-                              return;
-                            }
-
-                            final newProp = {
-                              'id': created['id']?.toString() ?? propertyId,
-                              'code': created['code']?.toString() ?? 'PROP_${name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').toUpperCase()}',
-                              'name': name,
-                              'propertyType': propertyType,
-                              'address': address,
-                              'city': city,
-                              'pincode': pincode,
-                              'occupancyType': occupancyType,
-                              'type': occupancyType,
-                              'ownerName': ownerName,
-                              'ownerContact': ownerContact,
-                              'ownerEmail': ownerEmail,
-                              'managerName': managerName,
-                              'managerContact': managerContact,
-                              'floors': floors,
-                              'rooms': rooms,
-                              'beds': beds,
-                              'status': 'Active',
-                              'amenities': List<String>.from(selectedAmenities),
-                            };
-                            AppData.properties.add(newProp);
-
-                            if (!AppData.propertyNames.contains(name)) {
-                              AppData.propertyNames.add(name);
-                            }
-                            AppData.selectedProperty = name;
-
-                            onSaved?.call();
-                            if (dialogContext.mounted) Navigator.pop(dialogContext);
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Property Added Successfully!'), backgroundColor: Colors.green),
-                              );
-                            }
-                          }
-                        }
-
-                        if (isNarrow) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () => Navigator.pop(dialogContext),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: const Color(0xFF374151),
-                                        side: const BorderSide(color: Color(0xFFD1D5DB)),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      child: const Text(
-                                        'Cancel',
-                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: onSavePressed,
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF4F46E5),
-                                        foregroundColor: Colors.white,
-                                        elevation: 0,
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                      ),
-                                      child: Text(
-                                        isEdit ? 'Save Changes' : 'Add Property',
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              if (isEdit) ...[
-                                const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: () => showDeleteConfirmDialog(context, dialogContext, property),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFFEF4444),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  child: const Text(
-                                    'Delete Property',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          );
-                        }
-
-                        return Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            if (isEdit)
-                              ElevatedButton(
-                                onPressed: () => showDeleteConfirmDialog(context, dialogContext, property),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFEF4444),
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                                child: const Text(
-                                  'Delete Property',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                ),
-                              )
-                            else
-                              const SizedBox.shrink(),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                OutlinedButton(
-                                  onPressed: () => Navigator.pop(dialogContext),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF374151),
-                                    side: const BorderSide(color: Color(0xFFD1D5DB)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  child: const Text(
-                                    'Cancel',
-                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                ElevatedButton(
-                                  onPressed: onSavePressed,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF4F46E5),
-                                    foregroundColor: Colors.white,
-                                    elevation: 0,
-                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                  ),
-                                  child: Text(
-                                    isEdit ? 'Save Changes' : 'Add Property',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
+                    );
+                  },
+                );
+              },
+            );
 
   nameController.dispose();
   addressController.dispose();

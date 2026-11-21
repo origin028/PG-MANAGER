@@ -70,7 +70,7 @@ The automated end-to-end test suite (`backend/tests/test_e2e_complete_phase4.py`
 - Direct UPI payment initiation (`POST /api/v1/payments/upi/initiate`).
 - Standard NPCI UPI URI generation:
   ```
-  upi://pay?pa=masisokatali90900@okaxis&pn=Saukatali%20Masi&am=1.00&cu=INR&tn=Rent%20Payment%20-%20<INV_ID>%20-%20Saukatali%20Masi&tr=UPI-...
+  upi://pay?pa=9886699258-3@ybl&pn=SMART%20GROUP%20PGS&mc=5411&am=1.00&cu=INR&tn=Rent%20Payment%20<INV_ID>%20SMART%20GROUP%20PGS&tr=UPI...
   ```
 - Strict adherence to NPCI standard and RFC 3986 percent-encoding (`%20` for spaces).
 
@@ -181,14 +181,14 @@ The Resident App was audited across all mobile workflows:
    - PhonePe (Direct Intent targeting `com.phonepe.app`)
    - Navi (Direct Intent targeting `com.navi.finance`)
    - Other UPI Apps (Generic NPCI chooser)
-   - Copy UPI ID (`masisokatali90900@okaxis`)
+   - Copy UPI ID (`9886699258-3@ybl`)
    - Dynamic UPI QR Code (Inline SVG/QR rendering)
    - Demo Online Payment (Staging/demo workflow)
 2. **Payee Credentials Verified**:
-   - Payee VPA: `masisokatali90900@okaxis`
-   - Payee Name: `Saukatali Masi`
+   - Payee VPA: `9886699258-3@ybl`
+   - Payee Name: `SMART GROUP PG'S`
 3. **Transaction Note Encoding**:
-   - Generated as: `Rent Payment - <INVOICE_ID> - Saukatali Masi`
+   - Generated as: `Rent Payment <INVOICE_ID> SMART GROUP PGS`
    - RFC 3986 UTF-8 percent-encoded with `%20` (never replaced with `+`).
 4. **Test Invoice Rule**:
    - ₹1.00 TEST invoice used exclusively in automated test suites.

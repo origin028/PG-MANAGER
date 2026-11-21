@@ -3,8 +3,8 @@ import hmac
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import List, Optional
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
+from typing import Any, Dict, List, Optional
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 import sqlalchemy as sa
 
@@ -15,7 +15,7 @@ from app.dependencies import (
     require_roles,
     verify_property_access,
 )
-from app.models.user import User
+from app.models.user import User, UserPropertyAccess
 from app.models.invoice import Invoice
 from app.models.property import Property
 from app.models.receipt import Receipt
@@ -36,11 +36,13 @@ from app.schemas.payment import (
     PaymentLinkCreate,
     PaymentLinkRead,
     PublicPaymentCheckoutDetails,
+    UpiAdminReconcileRequest,
     UpiAdminSettleRequest,
     UpiClientVerifyRequest,
     UpiClientVerifyResponse,
     UpiPaymentInitiateRead,
     UpiPaymentInitiateRequest,
+    UpiPaymentResponseRequest,
     UpiPaymentStatusRead,
     ManualPaymentCreate,
     ManualPaymentRead,
@@ -49,10 +51,15 @@ from app.schemas.payment import (
     RentCollectionCreate,
     RentCollectionRead,
     PaymentDetailRead,
+    PaymentHistoryItemRead,
 )
 from app.services.settlement_service import WebhookSettlementService
 from app.services.payment_link_service import PaymentLinkService
-from app.services.upi_payment_service import UpiPaymentService
+from app.services.upi_payment_service import (
+    UpiPaymentService,
+    compute_reconciliation_status,
+    parse_upi_client_metadata,
+)
 
 router = APIRouter()
 
@@ -106,7 +113,7 @@ def get_public_checkout_details(
     )
 
 
-@router.post("/links/{link_id}/whatsapp", response_model=APIResponse[dict], status_code=status.HTTP_200_OK)
+@router.post("/links/{link_id}/whatsapp", response_model=APIResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
 def send_payment_link_whatsapp(
     link_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
@@ -216,7 +223,7 @@ async def handle_razorpay_webhook(
 
         if not order_id or not provider_payment_id or amount is None:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Incomplete payment entity in webhook payload.",
             )
 
@@ -241,7 +248,7 @@ async def handle_razorpay_webhook(
             try:
                 from app.services.receipt_delivery_service import ReceiptDeliveryService
                 delivery_service = ReceiptDeliveryService(db)
-                delivery_service.deliver_receipt(receipt.id)
+                delivery_service.deliver_receipt(str(receipt.id))
             except Exception:
                 pass  # Delivery failures never roll back settled payments
 
@@ -299,7 +306,7 @@ def create_payment_request(payload: PaymentRequestCreate, current_user: User = D
             data=PaymentRequestRead(
                 payment_id=existing.id,
                 payment_number=existing.payment_number,
-                gateway_order_id=existing.gateway_order_id,
+                gateway_order_id=existing.gateway_order_id or "",
                 amount=existing.amount,
                 amount_paise=int(Decimal(str(existing.amount)) * 100),
                 key_id=settings.RAZORPAY_KEY_ID,
@@ -338,7 +345,7 @@ def create_payment_request(payload: PaymentRequestCreate, current_user: User = D
         data=PaymentRequestRead(
             payment_id=payment.id,
             payment_number=payment.payment_number,
-            gateway_order_id=payment.gateway_order_id,
+            gateway_order_id=payment.gateway_order_id or "",
             amount=payment.amount,
             amount_paise=int(payload.amount * 100),
             key_id=gateway_key_id,
@@ -374,6 +381,7 @@ def get_payment_status(
     receipt = db.scalar(
         sa.select(Receipt).where(Receipt.payment_id == payment.id)
     )
+    meta = parse_upi_client_metadata(payment.gateway_signature)
 
     return APIResponse(
         success=True,
@@ -384,9 +392,13 @@ def get_payment_status(
             invoice_id=payment.invoice_id,
             amount=float(payment.amount),
             status=payment.status,
+            reconciliation_status=compute_reconciliation_status(payment.status),
             payment_mode=payment.payment_mode,
             gateway_order_id=payment.gateway_order_id,
             gateway_payment_id=payment.gateway_payment_id,
+            transaction_ref=payment.gateway_order_id,
+            bank_reference=payment.gateway_payment_id,
+            client_upi_txn_id=meta.get("client_upi_txn_id"),
             paid_at=payment.paid_at,
             is_settled=(payment.status in ("SUCCESS", "PAID")),
             receipt_id=receipt.id if receipt else None,
@@ -467,7 +479,7 @@ def verify_payment_checkout(
     else:
         try:
             import razorpay
-            rzp_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+            rzp_client: Any = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
             rzp_payment = rzp_client.payment.fetch(payload.razorpay_payment_id)
             if (
                 rzp_payment.get("order_id") == payload.razorpay_order_id
@@ -553,6 +565,146 @@ def get_my_payments(
     )
 
 
+def _build_upi_status_read(
+    db: Session, payment: Payment, receipt: Optional[Receipt] = None
+) -> UpiPaymentStatusRead:
+    if receipt is None:
+        receipt = db.scalar(sa.select(Receipt).where(Receipt.payment_id == payment.id))
+    invoice = db.get(Invoice, payment.invoice_id)
+    meta = parse_upi_client_metadata(payment.gateway_signature)
+    return UpiPaymentStatusRead(
+        payment_id=payment.id,
+        payment_number=payment.payment_number,
+        invoice_id=payment.invoice_id,
+        invoice_number=invoice.invoice_number if invoice else None,
+        amount=float(payment.amount),
+        status=payment.status,
+        reconciliation_status=compute_reconciliation_status(payment.status),
+        payment_mode=payment.payment_mode,
+        transaction_ref=payment.gateway_order_id,
+        bank_reference=payment.gateway_payment_id,
+        client_upi_txn_id=meta.get("client_upi_txn_id"),
+        app_package=meta.get("app_package"),
+        response_code=meta.get("response_code"),
+        is_settled=(payment.status in ("SUCCESS", "PAID")),
+        paid_at=payment.paid_at,
+        receipt_id=receipt.id if receipt else None,
+        receipt_number=receipt.receipt_number if receipt else None,
+    )
+
+
+@router.get("/history", response_model=APIResponse[List[PaymentHistoryItemRead]], status_code=status.HTTP_200_OK)
+def get_payment_history(
+    property_id: Optional[uuid.UUID] = Query(None, description="Optional property filter for admins"),
+    status_filter: Optional[str] = Query(None, alias="status", description="Optional status filter"),
+    payment_mode: Optional[str] = Query(None, description="Optional payment mode filter (e.g. UPI)"),
+    invoice_id: Optional[uuid.UUID] = Query(None, description="Optional invoice filter"),
+    search: Optional[str] = Query(None, description="Search by resident, invoice, txn_ref, or UTR"),
+    limit: int = Query(100, ge=1, le=250),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieves detailed payment & UPI reconciliation history scoped by caller role:
+    - RESIDENT: strictly own payment records.
+    - SUPER_ADMIN / PROPERTY_MANAGER: property-authorized records across tenants.
+    """
+    stmt = (
+        sa.select(Payment, Invoice, Resident, User, Receipt)
+        .join(Invoice, Payment.invoice_id == Invoice.id)
+        .join(Resident, Payment.resident_id == Resident.id)
+        .join(User, Resident.user_id == User.id)
+        .outerjoin(Receipt, Receipt.payment_id == Payment.id)
+    )
+
+    if current_user.role.name == "RESIDENT":
+        resident = db.scalar(sa.select(Resident).where(Resident.user_id == current_user.id))
+        if not resident:
+            raise PermissionDeniedError("Resident profile not found for this account.")
+        if getattr(current_user, "approval_status", "APPROVED") != "APPROVED" or resident.status != "ACTIVE":
+            raise PermissionDeniedError("Resident account is pending admin approval or inactive.")
+        stmt = stmt.where(Payment.resident_id == resident.id)
+    else:
+        if property_id:
+            verify_property_access(property_id, current_user, db)
+            stmt = stmt.where(Payment.property_id == property_id)
+        elif current_user.role.name == "SUPER_ADMIN":
+            stmt = stmt.join(Property, Payment.property_id == Property.id).where(
+                Property.company_id == current_user.company_id
+            )
+        else:
+            assigned_ids = list(
+                db.scalars(
+                    sa.select(UserPropertyAccess.property_id).where(
+                        UserPropertyAccess.user_id == current_user.id
+                    )
+                ).all()
+            )
+            if assigned_ids:
+                stmt = stmt.where(Payment.property_id.in_(assigned_ids))
+            else:
+                stmt = stmt.join(Property, Payment.property_id == Property.id).where(
+                    Property.company_id == current_user.company_id
+                )
+
+    if status_filter and status_filter.strip().upper() != "ALL":
+        stmt = stmt.where(Payment.status == status_filter.strip().upper())
+    if payment_mode and payment_mode.strip().upper() != "ALL":
+        stmt = stmt.where(Payment.payment_mode == payment_mode.strip().upper())
+    if invoice_id:
+        stmt = stmt.where(Payment.invoice_id == invoice_id)
+    if search and search.strip():
+        pattern = f"%{search.strip()}%"
+        stmt = stmt.where(
+            sa.or_(
+                Invoice.invoice_number.ilike(pattern),
+                User.full_name.ilike(pattern),
+                Payment.payment_number.ilike(pattern),
+                Payment.gateway_order_id.ilike(pattern),
+                Payment.gateway_payment_id.ilike(pattern),
+            )
+        )
+
+    rows = db.execute(stmt.order_by(Payment.created_at.desc()).limit(limit)).all()
+    items: List[PaymentHistoryItemRead] = []
+    for pay, inv, _res, res_user, rec in rows:
+        meta = parse_upi_client_metadata(pay.gateway_signature)
+        items.append(
+            PaymentHistoryItemRead(
+                id=pay.id,
+                payment_id=pay.id,
+                payment_number=pay.payment_number,
+                property_id=pay.property_id,
+                invoice_id=pay.invoice_id,
+                invoice_number=inv.invoice_number,
+                billing_month=inv.billing_month,
+                due_date=inv.due_date.isoformat() if inv.due_date else None,
+                resident_id=pay.resident_id,
+                resident_name=res_user.full_name if res_user else None,
+                resident_phone=res_user.phone if res_user else None,
+                amount=float(pay.amount),
+                payment_mode=pay.payment_mode,
+                status=pay.status,
+                reconciliation_status=compute_reconciliation_status(pay.status),
+                transaction_ref=pay.gateway_order_id,
+                bank_reference=pay.gateway_payment_id,
+                client_upi_txn_id=meta.get("client_upi_txn_id"),
+                app_package=meta.get("app_package"),
+                response_code=meta.get("response_code"),
+                receipt_id=rec.id if rec else None,
+                receipt_number=rec.receipt_number if rec else None,
+                paid_at=pay.paid_at,
+                created_at=pay.created_at,
+            )
+        )
+
+    return APIResponse(
+        success=True,
+        message=f"Retrieved {len(items)} payment history records.",
+        data=items,
+    )
+
+
 @router.get("", response_model=APIResponse[PaginatedData[PaymentSummary]], status_code=status.HTTP_200_OK)
 def list_payments(
     property_id: uuid.UUID = Query(..., description="Property ID filter"),
@@ -583,6 +735,29 @@ def list_payments(
 
 # --- DIRECT UPI RENT PAYMENT FLOW (GOOGLE PAY & PHONEPE) ---
 
+@router.get("/upi/config", response_model=APIResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
+def get_upi_payee_config(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Returns the official PG Management business UPI configuration for resident payments.
+    Allows Flutter client to dynamically obtain merchant details without hardcoding.
+    """
+    payee_vpa = (settings.UPI_MERCHANT_VPA or settings.UPI_PAYEE_VPA or "9886699258-3@ybl").strip()
+    payee_name = (settings.UPI_MERCHANT_NAME or settings.UPI_PAYEE_NAME or "SMART GROUP PG'S").strip()
+    merchant_code = (settings.UPI_MERCHANT_CODE or "5411").strip()
+    return APIResponse(
+        success=True,
+        message="UPI payee configuration fetched successfully.",
+        data={
+            "payee_vpa": payee_vpa,
+            "payee_name": payee_name,
+            "merchant_code": merchant_code,
+            "currency": "INR",
+        },
+    )
+
+
 @router.post("/upi/initiate", response_model=APIResponse[UpiPaymentInitiateRead], status_code=status.HTTP_201_CREATED)
 def initiate_upi_rent_payment(
     payload: UpiPaymentInitiateRequest,
@@ -599,11 +774,47 @@ def initiate_upi_rent_payment(
         resident=active_resident,
         invoice_id=payload.invoice_id,
         idempotency_key=payload.idempotency_key,
+        app_name=payload.app_name,
+        package_name=payload.package_name,
     )
     return APIResponse(
         success=True,
         message="UPI payment attempt initiated successfully.",
         data=UpiPaymentInitiateRead(**intent_data),
+    )
+
+
+@router.post("/upi/response", response_model=APIResponse[UpiPaymentStatusRead], status_code=status.HTTP_200_OK)
+def record_upi_intent_response(
+    payload: UpiPaymentResponseRequest,
+    active_resident: Resident = Depends(get_current_active_resident),
+    db: Session = Depends(get_db),
+):
+    """
+    Records the callback result returned by the resident's UPI app via Android Intent.
+    Security rule: Never marks payment PAID from client callback parameters alone.
+    Client-reported SUCCESS/SUBMITTED/PENDING transitions payment to PENDING_VERIFICATION.
+    """
+    service = UpiPaymentService(db)
+    payment = service.record_upi_response(
+        payment_id=payload.payment_id,
+        resident=active_resident,
+        status_str=payload.status,
+        txn_ref=payload.txn_ref,
+        upi_txn_id=payload.upi_txn_id,
+        approval_ref_no=payload.approval_ref_no,
+        response_code=payload.response_code,
+        raw_response=payload.raw_response,
+        app_package=payload.app_package,
+    )
+    return APIResponse(
+        success=True,
+        message=(
+            "UPI response recorded. Payment is awaiting bank/admin verification."
+            if payment.status == "PENDING_VERIFICATION"
+            else f"UPI response recorded with status '{payment.status}'."
+        ),
+        data=_build_upi_status_read(db, payment),
     )
 
 
@@ -620,24 +831,10 @@ def return_from_upi_app(
     """
     service = UpiPaymentService(db)
     payment = service.record_app_return(payment_id=payment_id, resident=active_resident)
-    receipt = db.scalar(sa.select(Receipt).where(Receipt.payment_id == payment.id))
     return APIResponse(
         success=True,
         message="Returned from UPI app. Payment is pending authoritative verification.",
-        data=UpiPaymentStatusRead(
-            payment_id=payment.id,
-            payment_number=payment.payment_number,
-            invoice_id=payment.invoice_id,
-            amount=float(payment.amount),
-            status=payment.status,
-            payment_mode=payment.payment_mode,
-            transaction_ref=payment.gateway_order_id,
-            bank_reference=payment.gateway_payment_id,
-            is_settled=(payment.status in ("SUCCESS", "PAID")),
-            paid_at=payment.paid_at,
-            receipt_id=receipt.id if receipt else None,
-            receipt_number=receipt.receipt_number if receipt else None,
-        ),
+        data=_build_upi_status_read(db, payment),
     )
 
 
@@ -650,24 +847,10 @@ def cancel_upi_payment(
     """Cancels a pending UPI payment attempt."""
     service = UpiPaymentService(db)
     payment = service.cancel_payment(payment_id=payment_id, resident=active_resident)
-    receipt = db.scalar(sa.select(Receipt).where(Receipt.payment_id == payment.id))
     return APIResponse(
         success=True,
         message="Payment attempt cancelled.",
-        data=UpiPaymentStatusRead(
-            payment_id=payment.id,
-            payment_number=payment.payment_number,
-            invoice_id=payment.invoice_id,
-            amount=float(payment.amount),
-            status=payment.status,
-            payment_mode=payment.payment_mode,
-            transaction_ref=payment.gateway_order_id,
-            bank_reference=payment.gateway_payment_id,
-            is_settled=(payment.status in ("SUCCESS", "PAID")),
-            paid_at=payment.paid_at,
-            receipt_id=receipt.id if receipt else None,
-            receipt_number=receipt.receipt_number if receipt else None,
-        ),
+        data=_build_upi_status_read(db, payment),
     )
 
 
@@ -691,20 +874,7 @@ def get_upi_payment_status(
     return APIResponse(
         success=True,
         message="Payment status retrieved.",
-        data=UpiPaymentStatusRead(
-            payment_id=payment.id,
-            payment_number=payment.payment_number,
-            invoice_id=payment.invoice_id,
-            amount=float(payment.amount),
-            status=payment.status,
-            payment_mode=payment.payment_mode,
-            transaction_ref=payment.gateway_order_id,
-            bank_reference=payment.gateway_payment_id,
-            is_settled=(payment.status in ("SUCCESS", "PAID")),
-            paid_at=payment.paid_at,
-            receipt_id=receipt.id if receipt else None,
-            receipt_number=receipt.receipt_number if receipt else None,
-        ),
+        data=_build_upi_status_read(db, payment, receipt),
     )
 
 
@@ -755,6 +925,7 @@ def admin_settle_upi_payment(
         payment_id=payment.id,
         bank_reference=payload.bank_reference,
         admin_user=current_user,
+        notes=payload.notes,
     )
 
     # Trigger immediate inline delivery attempt for the new receipt if WhatsApp is configured
@@ -762,7 +933,7 @@ def admin_settle_upi_payment(
         try:
             from app.services.receipt_delivery_service import ReceiptDeliveryService
             delivery_service = ReceiptDeliveryService(db)
-            delivery_service.deliver_receipt(receipt.id)
+            delivery_service.deliver_receipt(str(receipt.id))
         except Exception:
             pass  # Delivery failures never roll back settled payments
 
@@ -770,20 +941,64 @@ def admin_settle_upi_payment(
     return APIResponse(
         success=True,
         message=msg,
-        data=UpiPaymentStatusRead(
+        data=_build_upi_status_read(db, payment, receipt),
+    )
+
+
+@router.post("/upi/{payment_id}/reconcile", response_model=APIResponse[UpiPaymentStatusRead], status_code=status.HTTP_200_OK)
+def admin_reconcile_upi_payment(
+    payment_id: uuid.UUID,
+    payload: UpiAdminReconcileRequest,
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER")),
+    db: Session = Depends(get_db),
+):
+    """
+    Admin UPI reconciliation endpoint:
+    - APPROVE: verifies bank credit UTR/RRN, settles invoice atomically, and issues receipt.
+    - REJECT: marks unverified/pending payment as FAILED with audit trail if no bank credit exists.
+    """
+    payment = db.get(Payment, payment_id)
+    if not payment:
+        raise NotFoundError("Payment not found.")
+
+    verify_property_access(payment.property_id, current_user, db)
+    service = UpiPaymentService(db)
+
+    if payload.action == "REJECT":
+        updated = service.reject_pending_payment(
             payment_id=payment.id,
-            payment_number=payment.payment_number,
-            invoice_id=payment.invoice_id,
-            amount=float(payment.amount),
-            status=payment.status,
-            payment_mode=payment.payment_mode,
-            transaction_ref=payment.gateway_order_id,
-            bank_reference=payment.gateway_payment_id,
-            is_settled=(payment.status in ("SUCCESS", "PAID")),
-            paid_at=payment.paid_at,
-            receipt_id=receipt.id if receipt else None,
-            receipt_number=receipt.receipt_number if receipt else None,
-        ),
+            admin_user=current_user,
+            notes=payload.notes,
+        )
+        return APIResponse(
+            success=True,
+            message="Pending UPI payment marked as failed after reconciliation review.",
+            data=_build_upi_status_read(db, updated),
+        )
+
+    clean_ref = (payload.bank_reference or "").strip()
+    if not clean_ref:
+        raise BadRequestError("Verified bank_reference (UTR / RRN) is required to approve payment.")
+
+    payment, receipt, newly_settled = service.settle_trusted_payment(
+        payment_id=payment.id,
+        bank_reference=clean_ref,
+        admin_user=current_user,
+        notes=payload.notes,
+    )
+    if receipt and settings.WHATSAPP_PHONE_NUMBER_ID and settings.WHATSAPP_ACCESS_TOKEN:
+        try:
+            from app.services.receipt_delivery_service import ReceiptDeliveryService
+            delivery_service = ReceiptDeliveryService(db)
+            delivery_service.deliver_receipt(str(receipt.id))
+        except Exception:
+            pass
+
+    msg = "Payment verified and invoice settled." if newly_settled else "Payment already settled (idempotent)."
+    return APIResponse(
+        success=True,
+        message=msg,
+        data=_build_upi_status_read(db, payment, receipt),
     )
 
 
@@ -839,7 +1054,7 @@ async def bank_direct_upi_webhook(
     event_id = payload.get("event_id") or f"upi_bank_{txn_ref}_{bank_utr}"
 
     if not txn_ref:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Missing transaction_ref.")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail="Missing transaction_ref.")
 
     # Replay protection: check ProcessedWebhookEvent table
     existing_event = db.scalar(
@@ -862,19 +1077,19 @@ async def bank_direct_upi_webhook(
             paid_amount = Decimal(str(payload_amount))
             if paid_amount != Decimal(str(payment.amount)):
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail=f"Amount mismatch: received {paid_amount}, expected {payment.amount}.",
                 )
         except (ValueError, TypeError, ArithmeticError):
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail="Invalid amount format in bank webhook payload.",
             )
 
     currency = payload.get("currency") or payload.get("cu")
     if currency and str(currency).upper() != "INR":
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Unsupported currency '{currency}'. Only INR is accepted.",
         )
 
@@ -901,7 +1116,7 @@ async def bank_direct_upi_webhook(
         try:
             from app.services.receipt_delivery_service import ReceiptDeliveryService
             delivery_service = ReceiptDeliveryService(db)
-            delivery_service.deliver_receipt(receipt.id)
+            delivery_service.deliver_receipt(str(receipt.id))
         except Exception:
             pass  # Delivery failures never roll back settled payments
 
@@ -950,7 +1165,7 @@ def record_manual_payment(
     db.flush()
 
     new_paid = Decimal(str(invoice.paid_amount)) + payload.amount
-    invoice.paid_amount = new_paid
+    invoice.paid_amount = float(new_paid)
     if new_paid >= Decimal(str(invoice.amount)):
         invoice.status = "PAID"
     elif new_paid > Decimal("0.00"):
@@ -1005,7 +1220,7 @@ def record_manual_payment(
             amount=float(payment.amount),
             payment_mode=payment.payment_mode,
             status=payment.status,
-            paid_at=payment.paid_at,
+            paid_at=payment.paid_at or now,
             receipt_id=receipt.id,
             receipt_number=receipt.receipt_number,
             invoice_status=invoice.status,
@@ -1113,7 +1328,7 @@ def process_demo_payment(
                     invoice_id=existing.invoice_id,
                     amount=float(existing.amount),
                     status=existing.status,
-                    paid_at=existing.paid_at,
+                    paid_at=existing.paid_at or existing.created_at,
                     receipt_id=existing_receipt.id if existing_receipt else None,
                     receipt_number=existing_receipt.receipt_number if existing_receipt else None,
                     invoice_status=invoice.status,
@@ -1158,7 +1373,7 @@ def process_demo_payment(
     db.flush()
 
     new_paid = Decimal(str(invoice.paid_amount)) + pay_amount
-    invoice.paid_amount = new_paid
+    invoice.paid_amount = float(new_paid)
     if new_paid >= Decimal(str(invoice.amount)):
         invoice.status = "PAID"
     elif new_paid > Decimal("0.00"):
@@ -1211,7 +1426,7 @@ def process_demo_payment(
             invoice_id=invoice.id,
             amount=float(pay_amount),
             status=payment.status,
-            paid_at=payment.paid_at,
+            paid_at=payment.paid_at or now,
             receipt_id=receipt.id,
             receipt_number=receipt.receipt_number,
             invoice_status=invoice.status,
@@ -1274,7 +1489,7 @@ def collect_rent(
     db.flush()
 
     new_paid = Decimal(str(invoice.paid_amount)) + payload.collect_amount
-    invoice.paid_amount = new_paid
+    invoice.paid_amount = float(new_paid)
     if new_paid >= Decimal(str(invoice.amount)):
         invoice.status = "PAID"
     elif new_paid > Decimal("0.00"):
@@ -1331,7 +1546,7 @@ def collect_rent(
             amount=float(payload.collect_amount),
             payment_mode=payment.payment_mode,
             status=payment.status,
-            paid_at=payment.paid_at,
+            paid_at=payment.paid_at or now,
             receipt_id=receipt.id,
             receipt_number=receipt.receipt_number,
             invoice_status=invoice.status,
@@ -1396,7 +1611,7 @@ def get_payment_detail(
 
 @router.get(
     "/{payment_id}/receipt",
-    response_model=APIResponse[dict],
+    response_model=APIResponse[Dict[str, Any]],
     status_code=status.HTTP_200_OK,
     summary="Get Payment Receipt",
 )

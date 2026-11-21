@@ -4,6 +4,7 @@ import '../../core/data/app_data.dart';
 import '../../core/services/admin_api_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/premium_dialogs.dart';
 import '../../core/widgets/table_components.dart';
 import 'property_form_dialog.dart';
 
@@ -40,19 +41,33 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
   Future<void> _deletePropertyFromTable(Map<String, dynamic> prop) async {
     final propId = prop['id']?.toString();
     final propName = prop['name']?.toString() ?? 'Property';
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showPremiumConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete $propName'),
-        content: const Text('Are you sure you want to delete this property? This action cannot be undone.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
-          ),
-        ],
+      title: 'Delete Property',
+      message: 'Are you sure you want to permanently delete "$propName"? This action cannot be undone and will remove all associated rooms and beds.',
+      confirmText: 'Delete Property',
+      cancelText: 'Cancel',
+      icon: Icons.delete_outline_rounded,
+      isDestructive: true,
+      detailsWidget: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.statusRedSoft,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppTheme.statusRed.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.apartment_rounded, size: 18, color: AppTheme.statusRed),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                propName,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.statusRed),
+              ),
+            ),
+          ],
+        ),
       ),
     );
     if (confirmed == true) {
@@ -103,7 +118,7 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
     final totalBeds = _properties.fold<int>(0, (sum, p) => sum + ((p['beds'] as int?) ?? 0));
     final activeProperties = _properties.where((p) => p['status'] == 'Active').length;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -156,9 +171,8 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
           const SizedBox(height: 20),
           
           // 2. Data Table
-          Expanded(
-            child: Container(
-              decoration: modernTableDecoration,
+          Container(
+            decoration: modernTableDecoration,
               child: _properties.isEmpty
                   ? EmptyState(
                       icon: Icons.business,
@@ -269,7 +283,6 @@ class _PropertiesScreenState extends State<PropertiesScreen> {
                       },
                     ),
             ),
-          ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:resident_app/core/data/app_data.dart';
+import 'package:resident_app/core/services/direct_upi_service.dart';
 import 'package:resident_app/core/services/payment_verification_service.dart';
 import 'package:resident_app/features/payments/rent_payment_screen.dart';
 import 'package:resident_app/features/payments/payment_status_screen.dart';
@@ -65,8 +66,8 @@ void main() {
     });
 
     test('verify payee constants match verified payee details', () {
-      expect(PaymentVerificationService.verifiedPayeeUpiId, 'masisokatali90900@okaxis');
-      expect(PaymentVerificationService.verifiedPayeeName, "Saukatali Masi");
+      expect(PaymentVerificationService.verifiedPayeeUpiId, '9886699258-3@ybl');
+      expect(PaymentVerificationService.verifiedPayeeName, "SMART GROUP PG'S");
       expect(PaymentVerificationService.verifiedCurrency, 'INR');
     });
 
@@ -117,7 +118,7 @@ void main() {
       expect(result.state, PaymentVerificationState.successful);
       expect(result.receiptData, isNotNull);
       expect(result.receiptData!['status'], 'Verified & Settled');
-      expect(result.receiptData!['propertyName'], "Saukatali Masi");
+      expect(result.receiptData!['propertyName'], "SMART GROUP PG'S");
     });
 
     test('verifyWithBackend supports forceFail and forceCancel states', () async {
@@ -318,12 +319,12 @@ void main() {
 
     test('buildUpiUri constructs compliant NPCI URI for ₹1.00 test invoice with verified parameters', () {
       final uri = RentPaymentScreen.buildUpiUri(
-        payeeVpa: 'masisokatali90900@okaxis',
-        payeeName: "Saukatali Masi",
+        payeeVpa: '9886699258-3@ybl',
+        payeeName: "SMART GROUP PG'S",
         amount: 1.0,
         currency: 'INR',
-        transactionNote: "Rent Payment INV-2026-TEST - Saukatali Masi",
-        transactionRef: 'UPI-20261105-998877',
+        transactionNote: "Rent Payment INV2026TEST SMART GROUP PGS",
+        transactionRef: 'UPI20261105998877',
       );
 
       // Verify Scheme & Host
@@ -331,12 +332,12 @@ void main() {
       expect(uri.host, 'pay');
 
       // Verify Query Parameters
-      expect(uri.queryParameters['pa'], 'masisokatali90900@okaxis');
-      expect(uri.queryParameters['pn'], "Saukatali Masi");
+      expect(uri.queryParameters['pa'], '9886699258-3@ybl');
+      expect(uri.queryParameters['pn'], "SMART GROUP PGS");
       expect(uri.queryParameters['am'], '1.00');
       expect(uri.queryParameters['cu'], 'INR');
-      expect(uri.queryParameters['tn'], "Rent Payment INV-2026-TEST - Saukatali Masi");
-      expect(uri.queryParameters['tr'], 'UPI-20261105-998877');
+      expect(uri.queryParameters['tn'], "Rent Payment INV2026TEST SMART GROUP PGS");
+      expect(uri.queryParameters['tr'], 'UPI20261105998877');
 
       // Verify absence of non-standard package query pollution
       expect(uri.queryParameters.containsKey('package'), isFalse, reason: 'package must not pollute URI query');
@@ -344,53 +345,53 @@ void main() {
       // Verify URI string formatting
       final uriString = uri.toString();
       expect(uriString, startsWith('upi://pay?'));
-      expect(uriString, contains('pa=masisokatali90900%40okaxis'));
+      expect(uriString, contains('pa=9886699258-3%40ybl'));
       expect(uriString, contains('am=1.00'));
       expect(uriString, contains('cu=INR'));
-      expect(uriString, contains('tr=UPI-20261105-998877'));
-      expect(uriString, contains('tn=Rent%20Payment%20INV-2026-TEST%20-%20Saukatali%20Masi'));
+      expect(uriString, contains('tr=UPI20261105998877'));
+      expect(uriString, contains('tn=Rent%20Payment%20INV2026TEST%20SMART%20GROUP%20PGS'));
       expect(uriString.contains('Rent+Payment'), isFalse, reason: 'Must not use literal + signs for spaces in note');
       expect(uriString.startsWith('tez://'), isFalse, reason: 'Must not use tez:// proprietary scheme');
     });
 
     test('buildUpiUri constructs compliant NPCI URI for ₹8000.00 regular invoice', () {
       final uri = RentPaymentScreen.buildUpiUri(
-        payeeVpa: 'masisokatali90900@okaxis',
-        payeeName: "Saukatali Masi",
+        payeeVpa: '9886699258-3@ybl',
+        payeeName: "SMART GROUP PG'S",
         amount: 8000.0,
         currency: 'INR',
-        transactionNote: "Rent Payment INV-2026-010 - Saukatali Masi",
-        transactionRef: 'UPI-20261105-887766',
+        transactionNote: "Rent Payment INV2026010 SMART GROUP PGS",
+        transactionRef: 'UPI20261105887766',
       );
 
       expect(uri.scheme, 'upi');
       expect(uri.host, 'pay');
-      expect(uri.queryParameters['pa'], 'masisokatali90900@okaxis');
-      expect(uri.queryParameters['pn'], "Saukatali Masi");
+      expect(uri.queryParameters['pa'], '9886699258-3@ybl');
+      expect(uri.queryParameters['pn'], "SMART GROUP PGS");
       expect(uri.queryParameters['am'], '8000.00');
       expect(uri.queryParameters['cu'], 'INR');
-      expect(uri.queryParameters['tn'], "Rent Payment INV-2026-010 - Saukatali Masi");
-      expect(uri.queryParameters['tr'], 'UPI-20261105-887766');
+      expect(uri.queryParameters['tn'], "Rent Payment INV2026010 SMART GROUP PGS");
+      expect(uri.queryParameters['tr'], 'UPI20261105887766');
     });
 
     test('buildUpiUri trims whitespace safely and handles optional merchant code', () {
       final uri = RentPaymentScreen.buildUpiUri(
-        payeeVpa: '  masisokatali90900@okaxis  ',
-        payeeName: "  Saukatali Masi  ",
+        payeeVpa: '  9886699258-3@ybl  ',
+        payeeName: "  SMART GROUP PG'S  ",
         amount: 1.00,
         currency: ' INR ',
         transactionNote: '  Rent Payment Test  ',
-        transactionRef: '  UPI-REF-001  ',
-        merchantCode: ' 6513 ',
+        transactionRef: '  UPIREF001  ',
+        merchantCode: ' 5411 ',
       );
 
-      expect(uri.queryParameters['pa'], 'masisokatali90900@okaxis');
-      expect(uri.queryParameters['pn'], "Saukatali Masi");
+      expect(uri.queryParameters['pa'], '9886699258-3@ybl');
+      expect(uri.queryParameters['pn'], "SMART GROUP PGS");
       expect(uri.queryParameters['am'], '1.00');
       expect(uri.queryParameters['cu'], 'INR');
       expect(uri.queryParameters['tn'], 'Rent Payment Test');
-      expect(uri.queryParameters['tr'], 'UPI-REF-001');
-      expect(uri.queryParameters['mc'], '6513');
+      expect(uri.queryParameters['tr'], 'UPIREF001');
+      expect(uri.queryParameters['mc'], '5411');
     });
 
     test('buildUpiUri handles bank merchant VPA with real MCC 6513 for Direct BoB Intent', () {
@@ -407,10 +408,10 @@ void main() {
       expect(uri.scheme, 'upi');
       expect(uri.host, 'pay');
       expect(uri.queryParameters['pa'], 'smartgrouppg@barodampay');
-      expect(uri.queryParameters['pn'], "SMART GROUP PG'S");
+      expect(uri.queryParameters['pn'], "SMART GROUP PGS");
       expect(uri.queryParameters['am'], '8000.00');
       expect(uri.queryParameters['cu'], 'INR');
-      expect(uri.queryParameters['tr'], 'TXN-BOB-20261105-001');
+      expect(uri.queryParameters['tr'], 'TXNBOB20261105001');
       expect(uri.queryParameters['mc'], '6513');
 
       // URI formatting
@@ -418,70 +419,70 @@ void main() {
       expect(uriStr, contains('pa=smartgrouppg%40barodampay'));
       expect(uriStr, contains('am=8000.00'));
       expect(uriStr, contains('mc=6513'));
-      expect(uriStr, contains('tr=TXN-BOB-20261105-001'));
+      expect(uriStr, contains('tr=TXNBOB20261105001'));
     });
 
     test('formatTransactionNote formats full UUID into readable 8-character prefix format', () {
       final note = RentPaymentScreen.formatTransactionNote(
         invoiceId: '08bd684a-57b1-4c67-b50a-9d044f51e0ff',
-        payeeName: 'Saukatali Masi',
+        payeeName: "SMART GROUP PG'S",
       );
-      expect(note, 'Rent Payment - 08bd684a - Saukatali Masi');
+      expect(note, 'Rent Payment 08bd684a SMART GROUP PGS');
     });
 
     test('formatTransactionNote formats INV-prefixed invoice into readable text', () {
       final note = RentPaymentScreen.formatTransactionNote(
         invoiceId: 'INV-2026-TEST',
-        payeeName: 'Saukatali Masi',
+        payeeName: "SMART GROUP PG'S",
       );
-      expect(note, 'Rent Payment - INV-2026-TEST - Saukatali Masi');
+      expect(note, 'Rent Payment INV2026TEST SMART GROUP PGS');
     });
 
     test('buildUpiUri encodes tn with UTF-8 percent-encoding (%20) ensuring receiving UPI apps decode readable text', () {
       final note = RentPaymentScreen.formatTransactionNote(
         invoiceId: '08bd684a-57b1-4c67-b50a-9d044f51e0ff',
-        payeeName: 'Saukatali Masi',
+        payeeName: "SMART GROUP PG'S",
       );
       final uri = RentPaymentScreen.buildUpiUri(
-        payeeVpa: 'masisokatali90900@okaxis',
-        payeeName: 'Saukatali Masi',
+        payeeVpa: '9886699258-3@ybl',
+        payeeName: "SMART GROUP PG'S",
         amount: 1.00,
         transactionNote: note,
-        transactionRef: 'UPI-20261106-08BD684A',
+        transactionRef: 'UPI2026110608BD684A',
       );
 
       final uriString = uri.toString();
       // Must contain %20 URL encoding and no '+' literal spaces
-      expect(uriString, contains('tn=Rent%20Payment%20-%2008bd684a%20-%20Saukatali%20Masi'));
+      expect(uriString, contains('tn=Rent%20Payment%2008bd684a%20SMART%20GROUP%20PGS'));
       expect(uriString.contains('+'), isFalse, reason: 'No query parameter should contain form-urlencoded + for spaces');
 
       // Receiving UPI app decoding simulation (standard RFC 3986 percent decoding)
-      expect(uri.queryParameters['tn'], 'Rent Payment - 08bd684a - Saukatali Masi');
-      expect(Uri.decodeComponent(uri.queryParameters['tn']!), 'Rent Payment - 08bd684a - Saukatali Masi');
+      expect(uri.queryParameters['tn'], 'Rent Payment 08bd684a SMART GROUP PGS');
+      expect(Uri.decodeComponent(uri.queryParameters['tn']!), 'Rent Payment 08bd684a SMART GROUP PGS');
     });
 
     test('buildUpiUri with ₹1 TEST invoice produces valid URI with readable decoded note', () {
       final note = RentPaymentScreen.formatTransactionNote(
         invoiceId: 'INV-2026-TEST',
-        payeeName: 'Saukatali Masi',
+        payeeName: "SMART GROUP PG'S",
       );
       final uri = RentPaymentScreen.buildUpiUri(
-        payeeVpa: 'masisokatali90900@okaxis',
-        payeeName: 'Saukatali Masi',
+        payeeVpa: '9886699258-3@ybl',
+        payeeName: "SMART GROUP PG'S",
         amount: 1.00,
         currency: 'INR',
         transactionNote: note,
-        transactionRef: 'UPI-TEST-1INR',
+        transactionRef: 'UPITEST1INR',
       );
 
       expect(uri.queryParameters['am'], '1.00');
       expect(uri.queryParameters['cu'], 'INR');
-      expect(uri.queryParameters['pa'], 'masisokatali90900@okaxis');
-      expect(uri.queryParameters['pn'], 'Saukatali Masi');
-      expect(uri.queryParameters['tn'], 'Rent Payment - INV-2026-TEST - Saukatali Masi');
+      expect(uri.queryParameters['pa'], '9886699258-3@ybl');
+      expect(uri.queryParameters['pn'], 'SMART GROUP PGS');
+      expect(uri.queryParameters['tn'], 'Rent Payment INV2026TEST SMART GROUP PGS');
 
       final rawUri = uri.toString();
-      expect(rawUri, contains('tn=Rent%20Payment%20-%20INV-2026-TEST%20-%20Saukatali%20Masi'));
+      expect(rawUri, contains('tn=Rent%20Payment%20INV2026TEST%20SMART%20GROUP%20PGS'));
       expect(rawUri.contains('+'), isFalse);
     });
   });
@@ -528,10 +529,15 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('Tapping Google Pay opens redirect modal with QR, app open button, and instant confirm', (WidgetTester tester) async {
+    testWidgets('Tapping Google Pay triggers Direct UPI Intent and keeps payment PENDING_VERIFICATION (never auto-settled)', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
+      final previousGateway = DirectUpiService.gateway;
+      addTearDown(() => DirectUpiService.gateway = previousGateway);
+
+      final fakeGateway = _InlineMockUpiGateway();
+      DirectUpiService.gateway = fakeGateway;
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -546,31 +552,37 @@ void main() {
           ),
         ),
       );
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Google Pay (G Pay)'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
 
-      expect(find.text('Redirecting to Google Pay app...'), findsOneWidget);
-      expect(find.text('Open Google Pay App'), findsOneWidget);
-      expect(find.text('I Have Paid via Google Pay (Confirm)'), findsOneWidget);
-
-      // Confirm payment instant settlement
-      await tester.tap(find.text('I Have Paid via Google Pay (Confirm)'));
-      await tester.pumpAndSettle();
+      expect(fakeGateway.lastPackageName, 'com.google.android.apps.nbu.paisa.user');
+      expect(find.text('Payment Pending Verification'), findsOneWidget);
+      expect(
+        find.text('Payment initiated. Waiting for confirmation. Please do not pay again.'),
+        findsOneWidget,
+      );
 
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('pg_payment_tx_INV-TEST-GPAY');
       expect(raw, isNotNull);
       final json = jsonDecode(raw!) as Map<String, dynamic>;
-      expect(json['state'], 'successful');
+      expect(json['state'], 'pendingVerification');
       expect(json['paymentApp'], 'Google Pay');
+      await tester.pumpWidget(const SizedBox.shrink());
     });
 
-    testWidgets('Tapping PhonePe opens redirect modal with QR, app open button, and instant confirm', (WidgetTester tester) async {
+    testWidgets('Tapping PhonePe triggers Direct UPI Intent and keeps payment PENDING_VERIFICATION', (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() => tester.view.resetPhysicalSize());
+      final previousGateway = DirectUpiService.gateway;
+      addTearDown(() => DirectUpiService.gateway = previousGateway);
+
+      final fakeGateway = _InlineMockUpiGateway();
+      DirectUpiService.gateway = fakeGateway;
 
       await tester.pumpWidget(
         const MaterialApp(
@@ -585,24 +597,22 @@ void main() {
           ),
         ),
       );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('PhonePe').last);
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
 
-      await tester.tap(find.text('PhonePe'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Redirecting to PhonePe app...'), findsOneWidget);
-      expect(find.text('Open PhonePe App'), findsOneWidget);
-      expect(find.text('I Have Paid via PhonePe (Confirm)'), findsOneWidget);
-
-      await tester.tap(find.text('I Have Paid via PhonePe (Confirm)'));
-      await tester.pumpAndSettle();
+      expect(fakeGateway.lastPackageName, 'com.phonepe.app');
+      expect(find.text('Payment Pending Verification'), findsOneWidget);
 
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString('pg_payment_tx_INV-TEST-PHONEPE');
       expect(raw, isNotNull);
       final json = jsonDecode(raw!) as Map<String, dynamic>;
-      expect(json['state'], 'successful');
+      expect(json['state'], 'pendingVerification');
       expect(json['paymentApp'], 'PhonePe');
+      await tester.pumpWidget(const SizedBox.shrink());
     });
 
     testWidgets('Tapping PayPal opens PayPal checkout modal and settles successfully', (WidgetTester tester) async {
@@ -682,4 +692,76 @@ void main() {
       expect(json['paymentApp'], 'Credit Card');
     });
   });
+}
+
+class _InlineMockUpiGateway implements DirectUpiGateway {
+  String? lastPackageName;
+
+  @override
+  Future<List<InstalledUpiApp>> getInstalledApps() async => const [
+        InstalledUpiApp(
+          name: 'Google Pay',
+          packageName: 'com.google.android.apps.nbu.paisa.user',
+        ),
+        InstalledUpiApp(
+          name: 'PhonePe',
+          packageName: 'com.phonepe.app',
+        ),
+      ];
+
+  @override
+  Future<Map<String, dynamic>> initiateBackendPayment({
+    required String invoiceId,
+    String? idempotencyKey,
+    String? appName,
+    String? packageName,
+  }) async =>
+      {
+        'payment_id': 'pay-mock-uuid',
+        'payment_number': 'PAY-UPI-MOCK123',
+        'transaction_ref': 'TXNMOCK123456',
+        'amount': 8000,
+        'payee_vpa': '9886699258-3@ybl',
+        'payee_name': "SMART GROUP PG'S",
+        'upi_uri':
+            'upi://pay?pa=9886699258-3%40ybl&pn=SMART%20GROUP%20PGS&am=8000.00&cu=INR&tr=TXNMOCK123456&tn=Rent%20payment',
+      };
+
+  @override
+  Future<Map<String, dynamic>> launchUpiIntent({
+    required String uri,
+    String? packageName,
+  }) async {
+    lastPackageName = packageName;
+    return {
+      'status': 'SUCCESS',
+      'txnId': 'UPI99887766',
+      'responseCode': '00',
+      'rawResponse': 'txnId=UPI99887766&responseCode=00&Status=SUCCESS',
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> recordBackendResponse({
+    required String paymentId,
+    required String status,
+    String? txnRef,
+    String? upiTxnId,
+    String? approvalRefNo,
+    String? responseCode,
+    String? rawResponse,
+    String? appPackage,
+  }) async =>
+      {
+        'payment_id': paymentId,
+        'status': 'PENDING_VERIFICATION',
+        'is_settled': false,
+      };
+
+  @override
+  Future<Map<String, dynamic>> cancelBackendPayment(String paymentId) async => {
+        'payment_id': paymentId,
+        'status': 'CANCELLED',
+        'is_settled': false,
+      };
 }

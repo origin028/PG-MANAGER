@@ -230,7 +230,6 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
-    final softTealCol = HomeThemeTokens.softTeal(context);
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     final cardShadow = <BoxShadow>[
@@ -434,35 +433,18 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                             ),
                                           ),
 
-                                          // Architectural building vector illustration
-                                          Positioned(
-                                            right: 18,
-                                            top: 46,
-                                            child: IgnorePointer(
-                                              child: _HeroBuildingGraphic(
-                                                highlightFloorColor:
-                                                    const Color(0xFF2FB8A3),
-                                              ),
-                                            ),
-                                          ),
-
                                           Padding(
                                             padding: const EdgeInsets.all(20),
                                             child: Column(
                                               crossAxisAlignment:
                                                   CrossAxisAlignment.start,
                                               children: [
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                    right: 82,
-                                                  ),
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .start,
-                                                    children: [
-                                                      // Occupancy Type Pill
+                                                Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment
+                                                          .start,
+                                                  children: [
+                                                    // Occupancy Type Pill
                                                       Container(
                                                         padding:
                                                             const EdgeInsets
@@ -537,72 +519,8 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                                           height: 1.35,
                                                         ),
                                                       ),
-                                                      const SizedBox(
-                                                        height: 12,
-                                                      ),
-                                                      // Verification Chip
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 11,
-                                                          vertical: 5,
-                                                        ),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: HomeThemeTokens
-                                                              .successBg(
-                                                            context,
-                                                          ),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            999,
-                                                          ),
-                                                        ),
-                                                        child: Row(
-                                                          mainAxisSize:
-                                                              MainAxisSize.min,
-                                                          children: [
-                                                            Icon(
-                                                              Icons
-                                                                  .check_rounded,
-                                                              size: 13.5,
-                                                              color: HomeThemeTokens
-                                                                  .success(
-                                                                context,
-                                                              ),
-                                                            ),
-                                                            const SizedBox(
-                                                              width: 5,
-                                                            ),
-                                                            Flexible(
-                                                              child: Text(
-                                                                'Verified PG',
-                                                                maxLines: 1,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                                style:
-                                                                    HomeThemeTokens
-                                                                        .manrope(
-                                                                  color: HomeThemeTokens
-                                                                      .success(
-                                                                    context,
-                                                                  ),
-                                                                  fontSize: 11.5,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w700,
-                                                                ),
-                                                              ),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
                                                     ],
                                                   ),
-                                                ),
                                                 const SizedBox(height: 16),
 
                                                 // Room & Floor Translucent Stat Tiles
@@ -693,34 +611,6 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                                   fontWeight: FontWeight.w800,
                                                   letterSpacing: -0.1,
                                                   color: textPri,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            _InteractivePress(
-                                              child: Tooltip(
-                                                message: 'Copy Address',
-                                                child: Material(
-                                                  color: softTealCol,
-                                                  borderRadius:
-                                                      BorderRadius.circular(13),
-                                                  child: InkWell(
-                                                    onTap:
-                                                        copyAddressToClipboard,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                      13,
-                                                    ),
-                                                    child: SizedBox(
-                                                      width: 42,
-                                                      height: 42,
-                                                      child: Icon(
-                                                        Icons.copy_rounded,
-                                                        color: tealCol,
-                                                        size: 18,
-                                                      ),
-                                                    ),
-                                                  ),
                                                 ),
                                               ),
                                             ),
@@ -1103,87 +993,6 @@ class _HeroDotGridPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-/// Clean vector building graphic rendered inside the Property hero card.
-class _HeroBuildingGraphic extends StatelessWidget {
-  final Color highlightFloorColor;
-
-  const _HeroBuildingGraphic({required this.highlightFloorColor});
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: const Size(68, 84),
-      painter: _HeroBuildingPainter(highlightFloorColor: highlightFloorColor),
-    );
-  }
-}
-
-class _HeroBuildingPainter extends CustomPainter {
-  final Color highlightFloorColor;
-
-  const _HeroBuildingPainter({required this.highlightFloorColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final outerRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(4, 2, w - 8, h - 4),
-      const Radius.circular(8),
-    );
-    final outlinePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.24)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4;
-    canvas.drawRRect(outerRect, outlinePaint);
-
-    final dimFloorPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.11)
-      ..style = PaintingStyle.fill;
-
-    final activeFloorPaint = Paint()
-      ..color = highlightFloorColor
-      ..style = PaintingStyle.fill;
-
-    final doorPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.18)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(12, 10, w - 24, 12),
-        const Radius.circular(4),
-      ),
-      dimFloorPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(12, 27, w - 24, 12),
-        const Radius.circular(4),
-      ),
-      activeFloorPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(12, 44, w - 24, 12),
-        const Radius.circular(4),
-      ),
-      dimFloorPaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(12, 62, 16, h - 66),
-        const Radius.circular(3.5),
-      ),
-      doorPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _HeroBuildingPainter oldDelegate) =>
-      oldDelegate.highlightFloorColor != highlightFloorColor;
 }
 
 /// Tactile press scale feedback wrapper respecting reduced motion.

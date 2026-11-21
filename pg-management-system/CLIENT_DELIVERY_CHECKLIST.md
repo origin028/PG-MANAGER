@@ -15,7 +15,7 @@
 - [x] **Role-Based Access Control (RBAC):** `SUPER_ADMIN`, `ADMIN`, `OWNER`, `PROPERTY_MANAGER`, `STAFF`, `RESIDENT`.
 - [x] **Authentication & Tokens:** JWT access tokens (15m expiry), refresh tokens (7d expiry), Super Key registration guard.
 - [x] **Complete CRUD APIs:** Properties, Rooms, Beds, Residents, Invoices, Payments, Expenses, Complaints, Leads, Staff, Food Menus, Notices, Notifications, Reports.
-- [x] **Safe UPI Payment Flow:** Standard NPCI URI generation (`upi://pay?pa=masisokatali90900@okaxis...`), RFC 3986 `%20` space encoding, app-return verification guard (`PENDING_VERIFICATION`), admin settlement endpoint with bank UTR reference, and direct bank webhook with constant-time HMAC validation.
+- [x] **Safe UPI Payment Flow:** Standard NPCI URI generation (`upi://pay?pa=9886699258-3@ybl...`), RFC 3986 `%20` space encoding, app-return verification guard (`PENDING_VERIFICATION`), admin settlement endpoint with bank UTR reference, and direct bank webhook with constant-time HMAC validation.
 - [x] **Receipt PDF Generation:** On-the-fly PDF generation with cross-resident access control (403 Forbidden).
 - [x] **Comprehensive Test Suite:** 299 passed out of 299 tests (100% pass rate).
 
@@ -34,7 +34,7 @@
   2. PhonePe
   3. Navi
   4. Other UPI Apps
-  5. Copy UPI ID (`masisokatali90900@okaxis`)
+  5. Copy UPI ID (`9886699258-3@ybl`)
   6. Dynamic UPI QR Code
   7. Demo Online Payment
 - [x] **Clean Dependency State:** Incompatible `upi_india: ^3.0.1` cleanly removed; native Android Intent integration operational.

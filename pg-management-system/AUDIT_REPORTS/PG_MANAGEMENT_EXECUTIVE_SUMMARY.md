@@ -54,7 +54,7 @@ Admin authentication (Super Key 2FA, email/password login, token storage, logout
 **82.0% completed.**  
 - Self-service resident registration with multipart KYC documents (Aadhaar, PAN, selfie) and email OTP verification is 100% connected to real APIs.
 - Resident login with phone number and email OTP verification is 100% connected to real APIs.
-- Rent payment flow (all 7 payment options: Google Pay, PhonePe, Navi, Other UPI, Copy UPI ID, Dynamic QR, Demo Payment) is 100% integrated with verified payee details (`masisokatali90900@okaxis`, `Saukatali Masi`) and readable UTF-8 note encoding (`%20`).
+- Rent payment flow (all 7 payment options: Google Pay, PhonePe, Navi, Other UPI, Copy UPI ID, Dynamic QR, Demo Payment) is 100% integrated with verified payee details (`9886699258-3@ybl`, `SMART GROUP PG'S`) and readable UTF-8 note encoding (`%20`).
 - Payment status polling, payment cancellation, complaints ticketing, food menu, notices, and profile view are wired to real endpoints.
 - Android debug APK compiles cleanly (`180 MB`) with 0 errors and 77/77 passing Flutter tests.
 
@@ -87,7 +87,7 @@ Admin authentication (Super Key 2FA, email/password login, token storage, logout
 
 ### 11. What are the biggest technical risks?
 1. **Frontend-to-Backend Route Mismatches (P0)**: 4 Admin App API calls fail with 404 because of mismatched route paths (`/residents/onboard`, `/rooms/property/{id}/floors`, `/food-menus/property/{id}/weekly`).
-2. **Bank of Baroda Daily UPI Intent Limit (`U16`)**: Personal VPAs (`@okaxis`) are restricted by bank CBS limits to ~₹2,000–₹10,000 daily external app intent volume. For rent amounts of ₹8,000+, direct UPI intent can trigger `U16`. Our gateway-free fallback options (Dynamic UPI QR Code and Copy UPI ID) are critical for production rent collection.
+2. **Merchant UPI Intent Limit & NPCI Tiering**: Merchant VPAs (`9886699258-3@ybl`) support higher commercial limits. Our gateway-free fallback options (Dynamic UPI QR Code and Copy UPI ID) are available for production rent collection.
 3. **Data Desynchronization in Admin App**: Admin App's reliance on in-memory `AppData` lists means if two admins use the app simultaneously, local state does not reflect server state until a full refresh.
 
 ### 12. What exactly should I work on next?

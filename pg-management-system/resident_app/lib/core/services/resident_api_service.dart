@@ -73,19 +73,72 @@ class ResidentApiService {
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
+  /// Fetches official merchant UPI configuration dynamically from the backend
+  static Future<Map<String, dynamic>> getUpiConfig() async {
+    final res = await ApiClient.get('/payments/upi/config');
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
   /// Initiates direct UPI payment intent on backend (authoritative calculation)
   static Future<Map<String, dynamic>> initiateDirectUpiPayment({
     required String invoiceId,
     String? idempotencyKey,
+    String? appName,
+    String? packageName,
   }) async {
     final res = await ApiClient.post(
       '/payments/upi/initiate',
       body: {
         'invoice_id': invoiceId,
         if (idempotencyKey != null && idempotencyKey.isNotEmpty) 'idempotency_key': idempotencyKey,
+        if (appName != null && appName.isNotEmpty) 'app_name': appName,
+        if (packageName != null && packageName.isNotEmpty) 'package_name': packageName,
       },
     );
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  /// Records the response returned by a UPI app via Android Intent (never settles client-side)
+  static Future<Map<String, dynamic>> recordUpiIntentResponse({
+    required String paymentId,
+    required String status,
+    String? txnRef,
+    String? upiTxnId,
+    String? approvalRefNo,
+    String? responseCode,
+    String? rawResponse,
+    String? appPackage,
+  }) async {
+    final res = await ApiClient.post(
+      '/payments/upi/response',
+      body: {
+        'payment_id': paymentId,
+        'status': status,
+        if (txnRef != null && txnRef.isNotEmpty) 'txn_ref': txnRef,
+        if (upiTxnId != null && upiTxnId.isNotEmpty) 'upi_txn_id': upiTxnId,
+        if (approvalRefNo != null && approvalRefNo.isNotEmpty) 'approval_ref_no': approvalRefNo,
+        if (responseCode != null && responseCode.isNotEmpty) 'response_code': responseCode,
+        if (rawResponse != null && rawResponse.isNotEmpty) 'raw_response': rawResponse,
+        if (appPackage != null && appPackage.isNotEmpty) 'app_package': appPackage,
+      },
+    );
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  /// Retrieves detailed resident payment history (verified + pending_verification + failed)
+  static Future<List<Map<String, dynamic>>> getPaymentHistory({
+    String? invoiceId,
+    String? status,
+  }) async {
+    final query = <String, dynamic>{
+      if (invoiceId != null && invoiceId.isNotEmpty) 'invoice_id': invoiceId,
+      if (status != null && status.isNotEmpty) 'status': status,
+    };
+    final res = await ApiClient.get('/payments/history', queryParameters: query);
+    if (res is List) {
+      return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return [];
   }
 
   /// Records return from UPI app (sets state to PENDING_VERIFICATION)

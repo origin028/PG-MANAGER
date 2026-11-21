@@ -40,7 +40,8 @@ void main() {
       expect(find.text('Property Owner'), findsOneWidget);
       expect(find.text('RK'), findsOneWidget);
       expect(find.text('Rajesh Kumar'), findsOneWidget);
-      expect(find.text('PG Owner • Available 8 AM - 10 PM'), findsOneWidget);
+      expect(find.text('PG Owner'), findsOneWidget);
+      expect(find.textContaining('Available 8 AM'), findsNothing);
       expect(find.text('Manager phone · tap to call'), findsOneWidget);
       expect(find.text('+91 9876543210'), findsNWidgets(2));
       expect(find.text('Call'), findsOneWidget);

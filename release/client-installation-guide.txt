@@ -1,0 +1,66 @@
+================================================================================
+SMART GROUP PG MANAGEMENT SYSTEM — CLIENT INSTALLATION & OPERATIONS GUIDE
+================================================================================
+
+Welcome to the Smart Group PG Management System! This guide outlines the steps
+to install, configure, and operate the Admin Web, Admin Android App, and Resident App.
+
+--------------------------------------------------------------------------------
+1. ADMIN WEB PORTAL (Browser Access)
+--------------------------------------------------------------------------------
+- URL: Accessible via any modern web browser (Chrome, Edge, Safari, Firefox).
+- Recommended: Bookmark the URL on desktop/tablet for daily property management.
+- Initial Login:
+    1. Navigate to the Admin Web URL.
+    2. Enter your registered Administrator Email and Password.
+    3. Click "Sign In" to access the real-time PG Management Dashboard.
+    4. If registering for the first time, click "Register as PG Owner" and enter
+       the authorized Company Super Key provided during onboarding.
+
+--------------------------------------------------------------------------------
+2. ADMIN ANDROID APPLICATION (APK Installation)
+--------------------------------------------------------------------------------
+- File Location: release/admin-app.apk
+- Installation Steps:
+    1. Transfer 'admin-app.apk' to your Android smartphone or tablet.
+    2. Open the file on your device (via File Manager or Downloads).
+    3. If prompted with "Install unknown apps", tap "Settings" and toggle
+       "Allow from this source".
+    4. Tap "Install" and wait for completion.
+    5. Tap "Open" to launch PG Management Admin.
+    6. Sign in with your Administrator credentials.
+
+--------------------------------------------------------------------------------
+3. RESIDENT ANDROID APPLICATION (APK Installation)
+--------------------------------------------------------------------------------
+- File Location: release/resident-app.apk
+- Target Audience: PG Residents and Tenants.
+- Installation Steps:
+    1. Share 'resident-app.apk' with residents via WhatsApp, Email, or Drive.
+    2. Residents install the APK by tapping "Install".
+    3. Upon launch, residents enter their registered Mobile Number or Email.
+    4. Tap "Get OTP" to receive a 6-digit verification code.
+    5. Enter the OTP to instantly access:
+        - Monthly rent amount and due dates.
+        - Room and floor details.
+        - Direct 1-tap UPI payments (GPay, PhonePe, Paytm, BHIM).
+        - Property food menus and daily meals.
+        - Maintenance and service ticket requests.
+        - Notice board announcements.
+
+--------------------------------------------------------------------------------
+4. INITIAL SETUP CHECKLIST FOR PROPERTY OWNERS
+--------------------------------------------------------------------------------
+Step 1: Properties -> Add your PG Building details (Name, Address, Total Floors).
+Step 2: Rooms & Beds -> Define rooms per floor, bed sharing, and monthly rent rates.
+Step 3: Residents -> Add residents with their contact info and allocate beds.
+Step 4: Invoices & Rent -> Generate monthly rent invoices or create test payments.
+Step 5: Staff -> Register housekeeping and maintenance staff.
+
+--------------------------------------------------------------------------------
+5. SUPPORT & RECOVERY
+--------------------------------------------------------------------------------
+- For technical support, backend maintenance, or database backups, contact:
+  Origin Company Technical Operations
+================================================================================
+

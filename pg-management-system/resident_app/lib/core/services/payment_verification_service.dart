@@ -76,17 +76,18 @@ class PaymentVerificationService {
   static const String _storageKeyPrefix = 'pg_payment_tx_';
   static const String _verifiedReceiptsKey = 'pg_verified_receipts';
 
-  /// Verified default payee details
-  static const String verifiedPayeeUpiId = 'masisokatali90900@okaxis';
-  static const String verifiedPayeeName = "Saukatali Masi";
+  /// Verified official PG Management merchant payee details
+  static const String verifiedPayeeUpiId = '9886699258-3@ybl';
+  static const String verifiedPayeeName = "SMART GROUP PG'S";
   static const String verifiedCurrency = 'INR';
 
   /// Generates a unique transaction reference for UPI intent
+  /// NPCI Strict Rule: Must be strictly alphanumeric (no hyphens, no underscores, max 35 chars).
   static String generateTxnReference(String invoiceId) {
     final rand = Random().nextInt(899999) + 100000;
     final now = DateTime.now();
     final dateStr = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-    return 'UPI-$dateStr-$rand';
+    return 'UPI$dateStr$rand';
   }
 
   /// Initiates payment and sets state to Pending Verification
@@ -127,9 +128,6 @@ class PaymentVerificationService {
     bool forceCancel = false,
     bool forceSuccess = false,
   }) async {
-    // Brief network latency simulation
-    await Future.delayed(const Duration(milliseconds: 1200));
-
     final prefs = await SharedPreferences.getInstance();
 
     if (forceCancel) {

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../data/app_data.dart';
 import '../theme/app_theme.dart';
 import '../services/admin_api_service.dart';
 import '../services/admin_auth_service.dart';
 import 'app_dropdown.dart';
+import 'premium_dialogs.dart';
 import '../../features/properties/property_form_dialog.dart';
 
 class AdminLayout extends StatefulWidget {
@@ -48,12 +50,30 @@ class _AdminLayoutState extends State<AdminLayout> {
     );
   }
 
+  void _showLogoutConfirmDialog(BuildContext context) {
+    showPremiumConfirmDialog(
+      context: context,
+      title: 'Confirm Logout',
+      message: 'Are you sure you want to log out of PG Owner? You will need to sign in again to access the admin portal.',
+      confirmText: 'Log Out',
+      cancelText: 'Cancel',
+      icon: Icons.logout_rounded,
+      isDestructive: true,
+      onConfirmAsync: () async {
+        await AdminAuthService.logout();
+        if (context.mounted) {
+          context.go('/login');
+        }
+      },
+    );
+  }
+
   void _showNotificationsModal(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final borderCol = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
-    final textPri = isDark ? Colors.white : AppTheme.textDark;
-    final textSec = isDark ? const Color(0xFF94A3B8) : AppTheme.textGrey;
+    final cardBg = isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground;
+    final borderCol = isDark ? AppTheme.borderColorDark : AppTheme.borderColor;
+    final textPri = isDark ? AppTheme.primaryTextDark : AppTheme.primaryText;
+    final textSec = isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText;
 
     showModalBottomSheet(
       context: context,
@@ -68,32 +88,49 @@ class _AdminLayoutState extends State<AdminLayout> {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 540),
                 child: Container(
-                  height: MediaQuery.of(context).size.height * 0.75,
+                  height: MediaQuery.of(context).size.height * 0.78,
                   decoration: BoxDecoration(
                     color: cardBg,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    border: Border(
+                      top: BorderSide(color: borderCol, width: 1.2),
+                      left: BorderSide(color: borderCol, width: 1.2),
+                      right: BorderSide(color: borderCol, width: 1.2),
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, -4),
+                        color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.14),
+                        blurRadius: 30,
+                        offset: const Offset(0, -8),
                       ),
                     ],
                   ),
                   child: Column(
                     children: [
+                      // Modern Drag Handle
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 4.5,
+                          margin: const EdgeInsets.only(top: 12, bottom: 4),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
                       // Header
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 16, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(20, 12, 16, 16),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: AppTheme.primaryBlue.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
+                                color: AppTheme.primaryTeal.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.notifications_active_rounded, color: AppTheme.primaryBlue, size: 20),
+                              child: const Icon(Icons.notifications_active_rounded, color: AppTheme.primaryTeal, size: 20),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -107,8 +144,8 @@ class _AdminLayoutState extends State<AdminLayout> {
                                     children: [
                                       Text(
                                         'Notifications',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                        style: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.w800,
                                           fontSize: 17,
                                           color: textPri,
                                         ),
@@ -122,7 +159,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                           ),
                                           child: Text(
                                             '${notifs.length} new',
-                                            style: const TextStyle(
+                                            style: GoogleFonts.manrope(
                                               color: Colors.white,
                                               fontSize: 11,
                                               fontWeight: FontWeight.bold,
@@ -136,7 +173,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                     notifs.isEmpty
                                         ? 'No new notifications'
                                         : 'Alerts and resident registrations',
-                                    style: TextStyle(fontSize: 12, color: textSec),
+                                    style: GoogleFonts.manrope(fontSize: 12, color: textSec, fontWeight: FontWeight.w500),
                                   ),
                                 ],
                               ),
@@ -149,9 +186,9 @@ class _AdminLayoutState extends State<AdminLayout> {
                                   });
                                   setModalState(() {});
                                 },
-                                child: const Text(
+                                child: Text(
                                   'Clear All',
-                                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+                                  style: GoogleFonts.manrope(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
                                 ),
                               ),
                             IconButton(
@@ -177,16 +214,16 @@ class _AdminLayoutState extends State<AdminLayout> {
                                       Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                                          color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
                                           shape: BoxShape.circle,
                                         ),
-                                        child: Icon(Icons.done_all_rounded, color: isDark ? const Color(0xFF94A3B8) : AppTheme.textGrey, size: 36),
+                                        child: Icon(Icons.done_all_rounded, color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText, size: 36),
                                       ),
                                       const SizedBox(height: 14),
                                       Text(
                                         "You're All Caught Up!",
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                        style: GoogleFonts.manrope(
+                                          fontWeight: FontWeight.w800,
                                           fontSize: 16,
                                           color: textPri,
                                         ),
@@ -194,7 +231,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                       const SizedBox(height: 4),
                                       Text(
                                         'No unread notifications at the moment.',
-                                        style: TextStyle(fontSize: 13, color: textSec),
+                                        style: GoogleFonts.manrope(fontSize: 13, color: textSec),
                                       ),
                                     ],
                                   ),
@@ -213,7 +250,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                   return Container(
                                     padding: const EdgeInsets.all(14),
                                     decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                                      color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(color: borderCol),
                                     ),
@@ -223,10 +260,10 @@ class _AdminLayoutState extends State<AdminLayout> {
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                            color: AppTheme.primaryBlue.withValues(alpha: 0.12),
+                                            color: AppTheme.primaryTeal.withValues(alpha: 0.12),
                                             shape: BoxShape.circle,
                                           ),
-                                          child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.primaryBlue, size: 18),
+                                          child: const Icon(Icons.person_add_alt_1_rounded, color: AppTheme.primaryTeal, size: 18),
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(
@@ -239,8 +276,8 @@ class _AdminLayoutState extends State<AdminLayout> {
                                                   Expanded(
                                                     child: Text(
                                                       title,
-                                                      style: TextStyle(
-                                                        fontWeight: FontWeight.bold,
+                                                      style: GoogleFonts.manrope(
+                                                        fontWeight: FontWeight.w800,
                                                         fontSize: 13.5,
                                                         color: textPri,
                                                       ),
@@ -250,14 +287,14 @@ class _AdminLayoutState extends State<AdminLayout> {
                                                   const SizedBox(width: 8),
                                                   Text(
                                                     time,
-                                                    style: TextStyle(fontSize: 11, color: textSec),
+                                                    style: GoogleFonts.manrope(fontSize: 11, color: textSec),
                                                   ),
                                                 ],
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
                                                 message,
-                                                style: TextStyle(fontSize: 12.5, color: textSec, height: 1.35),
+                                                style: GoogleFonts.manrope(fontSize: 12.5, color: textSec, height: 1.35),
                                               ),
                                               const SizedBox(height: 8),
                                               InkWell(
@@ -266,24 +303,24 @@ class _AdminLayoutState extends State<AdminLayout> {
                                                   context.go('/residents');
                                                 },
                                                 borderRadius: BorderRadius.circular(6),
-                                                child: const Padding(
-                                                  padding: EdgeInsets.symmetric(vertical: 2),
+                                                child: Padding(
+                                                  padding: const EdgeInsets.symmetric(vertical: 2),
                                                   child: Row(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: [
                                                       Flexible(
                                                         child: Text(
                                                           'View in Residents',
-                                                          style: TextStyle(
+                                                          style: GoogleFonts.manrope(
                                                             fontSize: 12,
-                                                            color: AppTheme.primaryBlue,
-                                                            fontWeight: FontWeight.bold,
+                                                            color: AppTheme.primaryTeal,
+                                                            fontWeight: FontWeight.w700,
                                                           ),
                                                           overflow: TextOverflow.ellipsis,
                                                         ),
                                                       ),
-                                                      SizedBox(width: 4),
-                                                      Icon(Icons.arrow_forward_rounded, size: 12, color: AppTheme.primaryBlue),
+                                                      const SizedBox(width: 4),
+                                                      const Icon(Icons.arrow_forward_rounded, size: 12, color: AppTheme.primaryTeal),
                                                     ],
                                                   ),
                                                 ),
@@ -311,6 +348,10 @@ class _AdminLayoutState extends State<AdminLayout> {
   Widget _buildGlobalHeader(BuildContext context, bool isDesktop) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final borderCol = isDark ? AppTheme.borderColorDark : AppTheme.borderColor;
+    final cardBg = isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground;
+    final textPri = isDark ? AppTheme.primaryTextDark : AppTheme.primaryText;
+    final textSec = isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText;
 
     if (!isDesktop) {
       // -------------------------------------------------------------
@@ -318,16 +359,16 @@ class _AdminLayoutState extends State<AdminLayout> {
       // -------------------------------------------------------------
       return Container(
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          color: cardBg,
           border: Border(
             bottom: BorderSide(
-              color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+              color: borderCol,
               width: 1,
             ),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
+              color: const Color(0xFF0E1A1F).withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -341,12 +382,7 @@ class _AdminLayoutState extends State<AdminLayout> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // -------------------------------------------------------------
-                // Row 1 (Top Bar):
-                // Left side: The Hamburger Menu (☰) + the App Logo.
-                // Right side: Notification Bell (with a red badge if unread) +
-                // a compact [+ Add Property] button (wrap content, no stretch).
-                // -------------------------------------------------------------
+                // Top Row: Hamburger + Logo + Title | Bell + Add Property
                 LayoutBuilder(
                   builder: (context, constraints) {
                     return SizedBox(
@@ -360,7 +396,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              // Left side: Hamburger (☰) + App Logo
+                              // Left: Hamburger (☰) + Logo + Title
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -368,7 +404,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                     builder: (scaffoldContext) => IconButton(
                                       icon: Icon(
                                         Icons.menu_rounded,
-                                        color: isDark ? Colors.white : AppTheme.textDark,
+                                        color: textPri,
                                         size: 26,
                                       ),
                                       padding: EdgeInsets.zero,
@@ -383,25 +419,27 @@ class _AdminLayoutState extends State<AdminLayout> {
                                   Container(
                                     padding: const EdgeInsets.all(7),
                                     decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF334155) : const Color(0xFFEEF2FF),
+                                      gradient: const LinearGradient(
+                                        colors: [AppTheme.brightTeal, AppTheme.primaryTeal],
+                                      ),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Icon(Icons.home_work_rounded, color: AppTheme.primaryBlue, size: 20),
+                                    child: const Icon(Icons.apartment_rounded, color: Colors.white, size: 19),
                                   ),
                                   const SizedBox(width: 8),
                                   Text(
                                     'PG Pilot',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
+                                    style: GoogleFonts.manrope(
+                                      fontWeight: FontWeight.w800,
                                       fontSize: 16,
-                                      color: isDark ? Colors.white : AppTheme.textDark,
+                                      color: textPri,
                                       letterSpacing: -0.3,
                                     ),
                                   ),
                                 ],
                               ),
 
-                              // Right side: Notification Bell + Compact [+ Add Property]
+                              // Right: Notification Bell + Compact [+ Add Property]
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -411,7 +449,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                       IconButton(
                                         icon: Icon(
                                           Icons.notifications_none_rounded,
-                                          color: isDark ? Colors.white : AppTheme.textDark,
+                                          color: textPri,
                                           size: 24,
                                         ),
                                         padding: EdgeInsets.zero,
@@ -432,7 +470,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                             constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                                             child: Text(
                                               '${AppData.adminNotifications.length}',
-                                              style: const TextStyle(
+                                              style: GoogleFonts.manrope(
                                                 color: Colors.white,
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
@@ -449,19 +487,19 @@ class _AdminLayoutState extends State<AdminLayout> {
                                     icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
                                     label: Text(
                                       constraints.maxWidth < 310 ? 'Add' : 'Add Property',
-                                      style: const TextStyle(
+                                      style: GoogleFonts.manrope(
                                         color: Colors.white,
-                                        fontWeight: FontWeight.bold,
+                                        fontWeight: FontWeight.w700,
                                         fontSize: 12.5,
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryBlue,
+                                      backgroundColor: AppTheme.primaryTeal,
                                       foregroundColor: Colors.white,
                                       padding: EdgeInsets.symmetric(horizontal: constraints.maxWidth < 310 ? 8 : 12, vertical: 8),
                                       minimumSize: const Size(0, 36),
                                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                       elevation: 0,
                                     ),
                                   ),
@@ -476,10 +514,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                 ),
                 const SizedBox(height: 10),
 
-                // -------------------------------------------------------------
-                // Row 2 (Greeting & Date):
-                // 'Good morning' (bold) and the Date pill sitting next to it.
-                // -------------------------------------------------------------
+                // Row 2: Greeting & Date Pill
                 FittedBox(
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
@@ -488,28 +523,26 @@ class _AdminLayoutState extends State<AdminLayout> {
                     children: [
                       Text(
                         'Good morning',
-                        style: TextStyle(
+                        style: GoogleFonts.manrope(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : AppTheme.textDark,
+                          fontWeight: FontWeight.w800,
+                          color: textPri,
                         ),
                       ),
                       const SizedBox(width: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                          color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0),
-                          ),
+                          border: Border.all(color: borderCol),
                         ),
                         child: Text(
                           'Wednesday, October 28',
-                          style: TextStyle(
-                            color: isDark ? const Color(0xFFCBD5E1) : AppTheme.textGrey,
+                          style: GoogleFonts.manrope(
+                            color: textSec,
                             fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
@@ -517,10 +550,8 @@ class _AdminLayoutState extends State<AdminLayout> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                // -------------------------------------------------------------
-                // Row 3 (Property Switcher):
-                // The 'Green View PG - Hebbal' dropdown, taking full width.
-                // -------------------------------------------------------------
+
+                // Row 3: Property Switcher
                 SizedBox(
                   width: double.infinity,
                   child: AppDropdown<String>(
@@ -555,12 +586,12 @@ class _AdminLayoutState extends State<AdminLayout> {
     // -----------------------------------------------------------------
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        color: cardBg,
         border: Border(
           bottom: BorderSide(
-            color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+            color: borderCol,
             width: 1,
           ),
         ),
@@ -584,28 +615,25 @@ class _AdminLayoutState extends State<AdminLayout> {
                       children: [
                         Text(
                           'Good morning',
-                          style: TextStyle(
+                          style: GoogleFonts.manrope(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : AppTheme.textDark,
+                            fontWeight: FontWeight.w800,
+                            color: textPri,
+                            letterSpacing: -0.3,
                           ),
                         ),
                         const SizedBox(width: 12),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          padding: const EdgeInsets.only(left: 14),
                           decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0),
-                            ),
+                            border: Border(left: BorderSide(color: borderCol)),
                           ),
                           child: Text(
                             'Wednesday, October 28',
-                            style: TextStyle(
-                              color: isDark ? const Color(0xFFCBD5E1) : AppTheme.textGrey,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                            style: GoogleFonts.manrope(
+                              color: textSec,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -643,8 +671,8 @@ class _AdminLayoutState extends State<AdminLayout> {
                             IconButton(
                               icon: Icon(
                                 Icons.notifications_none_rounded,
-                                color: isDark ? Colors.white : AppTheme.textDark,
-                                size: 24,
+                                color: textPri,
+                                size: 23,
                               ),
                               tooltip: 'Notifications',
                               onPressed: () => _showNotificationsModal(context),
@@ -662,7 +690,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                                   constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                                   child: Text(
                                     '${AppData.adminNotifications.length}',
-                                    style: const TextStyle(
+                                    style: GoogleFonts.manrope(
                                       color: Colors.white,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
@@ -676,21 +704,21 @@ class _AdminLayoutState extends State<AdminLayout> {
                         const SizedBox(width: 12),
                         ElevatedButton.icon(
                           onPressed: () => _showAddPropertyDialog(context),
-                          icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                          label: const Text(
+                          icon: const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                          label: Text(
                             'Add Property',
-                            style: TextStyle(
+                            style: GoogleFonts.manrope(
                               color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
+                            backgroundColor: AppTheme.primaryTeal,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                             minimumSize: const Size(0, 38),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             elevation: 0,
                           ),
                         ),
@@ -709,7 +737,6 @@ class _AdminLayoutState extends State<AdminLayout> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 800;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -720,14 +747,15 @@ class _AdminLayoutState extends State<AdminLayout> {
           // Desktop Sidebar
           if (isDesktop)
             Container(
-              width: 250,
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1E293B) : Colors.white,
-                border: Border(
-                  right: BorderSide(
-                    color: isDark ? const Color(0xFF334155) : Colors.black.withValues(alpha: 0.04),
-                    width: 1,
-                  ),
+              width: 252,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppTheme.primaryNavy,
+                    AppTheme.darkNavy,
+                  ],
                 ),
               ),
               child: _buildSidebar(context),
@@ -748,44 +776,74 @@ class _AdminLayoutState extends State<AdminLayout> {
   }
 
   Widget _buildSidebar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Material(
-      color: isDark ? const Color(0xFF1E293B) : Colors.white,
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppTheme.primaryNavy,
+            AppTheme.darkNavy,
+          ],
+        ),
+      ),
       child: Column(
         children: [
+          // Brand Header
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(9),
+                  width: 38,
+                  height: 38,
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF334155) : const Color(0xFFEEF2FF),
-                    borderRadius: BorderRadius.circular(12),
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.brightTeal, AppTheme.primaryTeal],
+                    ),
+                    borderRadius: BorderRadius.circular(11),
                   ),
-                  child: const Icon(Icons.domain_rounded, color: AppTheme.primaryBlue, size: 22),
+                  child: const Center(
+                    child: Icon(Icons.apartment_rounded, color: Colors.white, size: 20),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(
-                    'PG Owner',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: isDark ? Colors.white : AppTheme.textDark,
-                      letterSpacing: -0.2,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'PG Owner',
+                        style: GoogleFonts.manrope(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: Colors.white,
+                          letterSpacing: -0.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        'PG Pilot admin',
+                        style: GoogleFonts.manrope(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF7FA0AB),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          Divider(height: 1, color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9)),
+          Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
           const SizedBox(height: 8),
           
+          // Navigation List
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
@@ -799,97 +857,103 @@ class _AdminLayoutState extends State<AdminLayout> {
                 _buildMenuItem(Icons.badge_rounded, 'Staff', '/staff', context),
                 _buildMenuItem(Icons.restaurant_menu_rounded, 'Food Menu', '/food-menu', context),
                 _buildMenuItem(Icons.warning_amber_rounded, 'Complaints', '/complaints', context),
-                _buildMenuItem(Icons.trending_up_rounded, 'Leads', '/leads', context),
                 _buildMenuItem(Icons.bar_chart_rounded, 'Reports', '/reports', context),
                 _buildMenuItem(Icons.settings_outlined, 'Settings', '/settings', context),
               ],
             ),
           ),
           
-          // User Profile Card at Sidebar Bottom
+          // User Profile Card at Sidebar Bottom (Matching .me in reference)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               border: Border(
                 top: BorderSide(
-                  color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                  color: Colors.white.withValues(alpha: 0.1),
                   width: 1,
                 ),
               ),
             ),
-            child: InkWell(
-              onTap: () {
-                if (MediaQuery.of(context).size.width < 800) {
-                  Navigator.pop(context);
-                }
-                context.go('/settings');
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF10B981),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.person_rounded,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.brightTeal,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      'OM',
+                      style: GoogleFonts.manrope(
+                        color: const Color(0xFF052B27),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Profile',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: isDark ? Colors.white : AppTheme.textDark,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'PG Owner (Admin)',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? const Color(0xFF94A3B8) : AppTheme.textGrey,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.logout_rounded,
-                        size: 20,
-                        color: isDark ? const Color(0xFF94A3B8) : AppTheme.textGrey,
-                      ),
-                      tooltip: 'Log Out',
-                      onPressed: () async {
-                        await AdminAuthService.logout();
-                        if (context.mounted) {
-                          context.go('/login');
-                        }
-                      },
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: InkWell(
+                    onTap: () {
+                      if (MediaQuery.of(context).size.width < 800) {
+                        Navigator.pop(context);
+                      }
+                      context.go('/settings');
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Owner Manager',
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          'PG Owner (Admin)',
+                          style: GoogleFonts.manrope(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF7FA0AB),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // Gear / Settings Icon
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined, size: 18, color: Color(0xFF9DB4BC)),
+                  tooltip: 'Settings',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () {
+                    if (MediaQuery.of(context).size.width < 800) {
+                      Navigator.pop(context);
+                    }
+                    context.go('/settings');
+                  },
+                ),
+                // Logout Icon
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded, size: 18, color: Color(0xFF9DB4BC)),
+                  tooltip: 'Log Out',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  onPressed: () => _showLogoutConfirmDialog(context),
+                ),
+              ],
             ),
           ),
         ],
@@ -898,18 +962,19 @@ class _AdminLayoutState extends State<AdminLayout> {
   }
 
   Widget _buildMenuItem(IconData icon, String title, String route, BuildContext context) {
-    final isActive = GoRouterState.of(context).uri.toString() == route;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final currentRoute = GoRouterState.of(context).uri.toString();
+    final isActive = currentRoute == route;
     
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       child: Material(
         color: isActive 
-            ? (isDark ? const Color(0xFF2563EB).withValues(alpha: 0.25) : AppTheme.primaryLight) 
+            ? const Color(0x1A5EEAD4) 
             : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
+          hoverColor: Colors.white.withValues(alpha: 0.05),
           onTap: () {
             if (MediaQuery.of(context).size.width < 800) {
               Navigator.pop(context);
@@ -917,26 +982,36 @@ class _AdminLayoutState extends State<AdminLayout> {
             context.go(route);
           },
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Row(
               children: [
+                if (isActive)
+                  Container(
+                    width: 3,
+                    height: 18,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.glowTeal,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  )
+                else
+                  const SizedBox(width: 11),
                 Icon(
                   icon, 
-                  color: isActive ? AppTheme.primaryBlue : (isDark ? const Color(0xFF94A3B8) : AppTheme.textGrey), 
-                  size: 21,
+                  color: isActive ? AppTheme.glowTeal : const Color(0xFF9DB4BC), 
+                  size: 19,
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: isActive 
-                          ? AppTheme.primaryBlue 
-                          : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF475569)),
-                      fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
-                      fontSize: 14,
+                    style: GoogleFonts.manrope(
+                      color: isActive ? Colors.white : const Color(0xFF9DB4BC),
+                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
+                      fontSize: 13.5,
                     ),
                   ),
                 ),

@@ -49,6 +49,11 @@ class AdminApiService {
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
+  static Future<Map<String, dynamic>> updateRoom(String roomId, Map<String, dynamic> data) async {
+    final res = await ApiClient.patch('/rooms/$roomId', body: data);
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
   static Future<Map<String, dynamic>> createBed(Map<String, dynamic> data) async {
     final res = await ApiClient.post('/beds', body: data);
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
@@ -281,6 +286,46 @@ class AdminApiService {
       return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
     return [];
+  }
+
+  /// Retrieves rich payment & UPI reconciliation history (Verified, Pending Verification, Failed).
+  static Future<List<Map<String, dynamic>>> getPaymentHistory({
+    String? propertyId,
+    String? status,
+    String? paymentMode,
+    String? search,
+  }) async {
+    final query = <String, dynamic>{
+      if (propertyId != null && propertyId.isNotEmpty) 'property_id': propertyId,
+      if (status != null && status.isNotEmpty && status != 'ALL') 'status': status,
+      if (paymentMode != null && paymentMode.isNotEmpty && paymentMode != 'ALL')
+        'payment_mode': paymentMode,
+      if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+    };
+    final res = await ApiClient.get('/payments/history', queryParameters: query);
+    if (res is List) {
+      return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return [];
+  }
+
+  /// Authoritatively reconciles a pending UPI payment after checking bank credit statement.
+  static Future<Map<String, dynamic>> reconcileUpiPayment({
+    required String paymentId,
+    String action = 'APPROVE',
+    String? bankReference,
+    String? notes,
+  }) async {
+    final res = await ApiClient.post(
+      '/payments/upi/$paymentId/reconcile',
+      body: {
+        'action': action,
+        if (bankReference != null && bankReference.trim().isNotEmpty)
+          'bank_reference': bankReference.trim(),
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      },
+    );
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
   // ---------------------------------------------------------------------------
@@ -530,6 +575,29 @@ class AdminApiService {
 
   static Future<Map<String, dynamic>> getSubscriptionQuota() async {
     final res = await ApiClient.get('/settings/subscription');
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> requestPasswordChangeOtp(String email) async {
+    final res = await ApiClient.post('/auth/change-password/request-otp', body: {'email': email});
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> verifyPasswordChangeOtp(String email, String otp) async {
+    final res = await ApiClient.post('/auth/change-password/verify-otp', body: {'email': email, 'otp': otp});
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    final res = await ApiClient.post('/auth/change-password/reset-with-otp', body: {
+      'email': email,
+      'otp': otp,
+      'new_password': newPassword,
+    });
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 

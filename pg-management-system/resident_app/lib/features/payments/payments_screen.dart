@@ -14,6 +14,7 @@ class PaymentsScreen extends StatefulWidget {
 class _PaymentsScreenState extends State<PaymentsScreen>
     with TickerProviderStateMixin {
   late final List<Map<String, dynamic>> _invoices;
+  List<Map<String, dynamic>> _paymentHistory = [];
   late final AnimationController _entranceController;
   late final AnimationController _dotPulseController;
   late final AnimationController _sheenController;
@@ -157,7 +158,17 @@ class _PaymentsScreenState extends State<PaymentsScreen>
       });
     }
     try {
-      final invs = await ResidentApiService.getInvoices();
+      final results = await Future.wait([
+        ResidentApiService.getInvoices(),
+        ResidentApiService.getPaymentHistory().catchError((_) => <Map<String, dynamic>>[]),
+      ]);
+      final invs = results[0];
+      final history = results[1];
+      if (mounted && history.isNotEmpty) {
+        setState(() {
+          _paymentHistory = history;
+        });
+      }
       if (invs.isNotEmpty && mounted) {
         setState(() {
           _invoices.clear();
@@ -654,6 +665,116 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                           ),
                         );
                       }),
+                    if (_paymentHistory.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Text(
+                        'Recent UPI & payment activity',
+                        style: HomeThemeTokens.manrope(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: textPri,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ..._paymentHistory.take(8).map((tx) {
+                        final st = (tx['status'] ?? '').toString().toUpperCase();
+                        final invNo = tx['invoice_number']?.toString() ?? 'Rent Invoice';
+                        final txnRef = tx['transaction_ref']?.toString() ?? tx['payment_number']?.toString() ?? '';
+                        final utr = tx['bank_reference']?.toString() ?? tx['client_upi_txn_id']?.toString();
+                        final amt = tx['amount'] ?? 0;
+                        final isVerified = st == 'PAID' || st == 'SUCCESS';
+                        final isPendingVerif = st == 'PENDING_VERIFICATION' || st == 'PENDING';
+                        final badgeColor = isVerified
+                            ? const Color(0xFF16A34A)
+                            : (isPendingVerif ? const Color(0xFFD97706) : const Color(0xFFDC2626));
+                        final badgeLabel = isVerified
+                            ? 'Verified'
+                            : (st == 'PENDING_VERIFICATION' ? 'Pending Verification' : st);
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 10),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: borderCol),
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () {
+                              if (isPendingVerif || isVerified) {
+                                context.push(
+                                  '/payment-status',
+                                  extra: {
+                                    'invoiceId': tx['invoice_id']?.toString() ?? '',
+                                    'paymentId': tx['payment_id']?.toString() ?? tx['id']?.toString(),
+                                    'amount': amt,
+                                    'paymentApp': tx['payment_mode']?.toString() ?? 'UPI',
+                                    'txnRef': txnRef,
+                                    'initialState': isVerified ? 'successful' : null,
+                                    'autoPoll': isPendingVerif,
+                                  },
+                                );
+                              }
+                            },
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '$invNo · ${tx['payment_mode'] ?? 'UPI'}',
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: textPri,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        utr != null && utr.isNotEmpty
+                                            ? 'Ref: $txnRef · UTR: $utr'
+                                            : 'Ref: $txnRef',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 11.5,
+                                          color: textSec,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '₹${_formatIndianAmount(amt)}',
+                                      style: HomeThemeTokens.manrope(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: textPri,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      badgeLabel,
+                                      style: HomeThemeTokens.manrope(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: badgeColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
                   ],
                 ),
               ),
@@ -1374,32 +1495,33 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                   ),
                 )
               else
-                _ScaleTap(
-                  onTap: () => _openRentPayment(context, invoice),
-                  child: Semantics(
-                    button: true,
-                    label: 'Pay now',
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 36),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 17,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: tealCol,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'Pay now',
-                          style: HomeThemeTokens.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: isDark
-                                ? const Color(0xFF04201C)
-                                : Colors.white,
-                          ),
-                        ),
+                Container(
+                  constraints: const BoxConstraints(minHeight: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isPendingOrPartial
+                        ? (isDark ? const Color(0xFF382310) : const Color(0xFFFEF3C7))
+                        : (isDark ? const Color(0xFF351C1C) : const Color(0xFFFEE2E2)),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isPendingOrPartial
+                          ? (isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A))
+                          : (isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA)),
+                      width: 1,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      statusStr,
+                      style: HomeThemeTokens.manrope(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: isPendingOrPartial
+                            ? const Color(0xFFD97706)
+                            : const Color(0xFFDC2626),
                       ),
                     ),
                   ),

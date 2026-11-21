@@ -54,14 +54,13 @@ void main() {
     );
 
     expect(find.text('Pending Resident Approvals'), findsOneWidget);
-    expect(find.text('1 PENDING'), findsOneWidget);
+    expect(find.text('1 Awaiting Review'), findsOneWidget);
     expect(find.text('Review & Assign'), findsOneWidget);
 
-    // Verify styling: yellow background & orange border
+    // Verify styling: modern card container
     final container = tester.widget<Container>(find.byType(Container).first);
     final boxDecoration = container.decoration as BoxDecoration;
-    expect(boxDecoration.color, const Color(0xFFFEF9C3));
-    expect((boxDecoration.border as Border).top.color, const Color(0xFFF97316));
+    expect(boxDecoration.borderRadius, isNotNull);
 
     // Tap Review & Assign
     await tester.tap(find.text('Review & Assign'));

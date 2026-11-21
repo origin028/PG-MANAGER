@@ -828,55 +828,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                             ),
                           ),
                         ),
-                        const SizedBox(height: 18),
-
-                        // ----------------------------------------------------
-                        // EXISTING PAYMENT EVALUATION POC TOOLS
-                        // ----------------------------------------------------
-                        _staggeredEntrance(
-                          begin: 0.42,
-                          end: 0.86,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: cardBg,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: borderCol, width: 1),
-                              boxShadow: cardShadow,
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(19),
-                              child: Column(
-                                children: [
-                                  _buildNavRow(
-                                    icon: Icons.science_rounded,
-                                    iconBg: HomeThemeTokens.foodBg(context),
-                                    iconColor:
-                                        HomeThemeTokens.foodIcon(context),
-                                    title: 'UPI Package POC (flutter_upi_india)',
-                                    subtitle:
-                                        'Evaluate package-based ₹1 intent vs bank limits',
-                                    textPri: textPri,
-                                    textSec: textSec,
-                                    onTap: () =>
-                                        context.push('/poc-upi-india'),
-                                  ),
-                                  _buildInsetDivider(dividerCol),
-                                  _buildNavRow(
-                                    icon: Icons.biotech_rounded,
-                                    iconBg: softTealCol,
-                                    iconColor: tealCol,
-                                    title: 'UPI Pay Package POC (upi_pay)',
-                                    subtitle:
-                                        'Evaluate drenther/upi_pay with GPay, PhonePe & Navi',
-                                    textPri: textPri,
-                                    textSec: textSec,
-                                    onTap: () => context.push('/poc-upi-pay'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
                         const SizedBox(height: 20),
 
                         // ----------------------------------------------------
@@ -1071,75 +1022,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                 isDark: isDark,
                 tealCol: tealCol,
                 onChanged: onChanged,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavRow({
-    required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
-    required String title,
-    required String subtitle,
-    required Color textPri,
-    required Color textSec,
-    required VoidCallback onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: HomeThemeTokens.manrope(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: textPri,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: HomeThemeTokens.manrope(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: textSec,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 19,
-                color: textSec,
               ),
             ],
           ),

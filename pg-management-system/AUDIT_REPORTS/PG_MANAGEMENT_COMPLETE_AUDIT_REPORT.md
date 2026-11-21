@@ -690,7 +690,7 @@ The migration chain in `backend/migrations/versions` was verified via Python AST
      - Method 2: PhonePe (4-tier native Kotlin fallback)
      - Method 3: Navi UPI (Direct intent targeting `com.navi.curiosity`)
      - Method 4: Other UPI Apps (Generic system chooser)
-     - Method 5: Copy UPI ID (`masisokatali90900@okaxis`)
+     - Method 5: Copy UPI ID (`9886699258-3@ybl`)
      - Method 6: Dynamic UPI QR Code (Real-time QR with image save/share)
      - Method 7: Demo Online Payment (Instant end-to-end sandbox verification)
    - Note Formatting: Uses UTF-8 `%20` URL encoding (`Rent Payment - Invoice Reference - Payee Name`).

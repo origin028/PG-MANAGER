@@ -4,7 +4,7 @@
 **Environment**: Flutter 3.47.4 • Dart 3.13.3 • Android Gradle Plugin 8.13 / 9.1.0 • Kotlin 2.4.0 • FastAPI • PostgreSQL  
 **Evaluated Package**: `upi_india: ^3.0.1` ([pub.dev](https://pub.dev/packages/upi_india/versions/3.0.1), [GitHub azhar1038/UPI-Plugin-Flutter](https://github.com/azhar1038/UPI-Plugin-Flutter))  
 **Target Invoices**: ₹1.00 TEST Invoice (`INV-202611-TEST01`) & ₹8,000 Production Invoice  
-**Verified Payee**: `masisokatali90900@okaxis` (Saukatali Masi, INR)  
+**Verified Payee**: `9886699258-3@ybl` (SMART GROUP PG'S, INR)  
 **Date**: November 6, 2026  
 **Status**: Isolated POC & Compatibility Assessment Complete — **Phase 3 Production Integration NOT Executed** (Pending Review)
 
@@ -50,7 +50,7 @@ Our rigorous assessment confirms that **`upi_india: ^3.0.1` should NOT be integr
    - Enforces strict **₹1.00 TEST INVOICE SAFETY**: blocks accidental execution of the ₹8,000 rent invoice.
    - Features **Navi UPI Fallback**: Queries `pm.getPackageInfo("com.navi.curiosity")` and instantiates a custom `upi_india_pkg.UpiApp('Navi UPI', 'com.navi.curiosity')`.
    - Implements **PhonePe Native Fallback**: Seamlessly falls back to our Kotlin MethodChannel (`com.pgmanagement/upi_intent`) if `upi_india` launch fails.
-   - Formats clean, human-readable transaction notes (e.g., `Rent Payment - 08bd684a - Saukatali Masi`) using UTF-8 URL encoding without `+` signs.
+   - Formats clean, human-readable transaction notes (e.g., `Rent Payment 08bd684a SMART GROUP PGS`) using UTF-8 URL encoding without `+` signs.
    - Implements independent backend verification recording via `POST /api/v1/payments/upi/{id}/return`. Always records status as `PENDING_VERIFICATION`—never auto-approving client callbacks.
 2. **`lib/features/payments/poc_upi_india_screen.dart`**:
    - Complete isolated diagnostics and test screen accessible at `/poc-upi-india-v3`.
@@ -69,12 +69,12 @@ Our rigorous assessment confirms that **`upi_india: ^3.0.1` should NOT be integr
 
 - **Configuration Used**:
   - Target: Google Pay (`com.google.android.apps.nbu.paisa.user`)
-  - Payee VPA: `masisokatali90900@okaxis`
-  - Payee Name: `Saukatali Masi`
+  - Payee VPA: `9886699258-3@ybl`
+  - Payee Name: `SMART GROUP PG'S`
   - Currency: `INR`
   - Amount: `₹1.00` (Enforced safe test amount)
 - **Transaction Note Formatting**:
-  - Note Generated: `Rent Payment - 08bd684a - Saukatali Masi`
+  - Note Generated: `Rent Payment 08bd684a SMART GROUP PGS`
   - Encoding: Proper UTF-8 percent-encoding (`%20`). No hardcoded or literal `+` characters.
   - Display: Decodes cleanly as human-readable text on the receiving UPI payment screen.
 - **Intent Dispatch & Bank of Baroda Analysis**:
@@ -179,7 +179,7 @@ flutter test test/poc_upi_india_test.dart test/rent_payment_flow_test.dart test/
 
 ### Breakdown of Test Suites:
 - `test/poc_upi_india_test.dart`: **13 / 13 passed**
-  - Payee configuration matches verified PG Management credentials (`masisokatali90900@okaxis`)
+  - Payee configuration matches verified PG Management credentials (`9886699258-3@ybl`)
   - `discoverInstalledApps` discovers Google Pay and PhonePe
   - `discoverInstalledApps` detects Navi via native fallback
   - `discoverInstalledApps` handles `UpiIndiaActivityMissingException` gracefully

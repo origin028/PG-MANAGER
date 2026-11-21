@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class AdminRegisterRequest(BaseModel):
-    business_name: str = Field(..., min_length=2, max_length=150, description="Business or PG Organization Name")
+    business_name: Optional[str] = Field(None, max_length=150, description="Business or PG Organization Name")
     email: EmailStr = Field(..., description="Administrator work email address")
     password: str = Field(..., min_length=8, max_length=128, description="Strong password (min 8 characters)")
     confirm_password: Optional[str] = Field(None, min_length=8, max_length=128, description="Confirmation password")

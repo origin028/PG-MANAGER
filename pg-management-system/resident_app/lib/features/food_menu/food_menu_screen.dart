@@ -272,67 +272,33 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Fresh, hygienic meals cooked daily',
-                              style: HomeThemeTokens.manrope(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: textSec,
-                                height: 1.35,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
                               'Weekly Food Menu',
                               style: HomeThemeTokens.manrope(
-                                fontSize: 21,
+                                fontSize: 22,
                                 fontWeight: FontWeight.w800,
                                 color: textPri,
                                 letterSpacing: -0.5,
                                 height: 1.15,
                               ),
                             ),
-                            const SizedBox(height: 10),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: HomeThemeTokens.foodBg(context),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    'Today: $_currentDayName',
-                                    style: HomeThemeTokens.manrope(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: HomeThemeTokens.foodIcon(context),
-                                    ),
-                                  ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: HomeThemeTokens.foodBg(context),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Text(
+                                'Today: $_currentDayName',
+                                style: HomeThemeTokens.manrope(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: HomeThemeTokens.foodIcon(context),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: softTealCol,
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    '3 meals a day',
-                                    style: HomeThemeTokens.manrope(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: tealCol,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                             AnimatedSwitcher(
                               duration: (MediaQuery.maybeDisableAnimationsOf(context) ?? false)

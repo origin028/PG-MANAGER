@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_upi_india/flutter_upi_india.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,8 +8,10 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/data/app_data.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/motion_wrappers.dart';
+import '../../core/services/direct_upi_service.dart';
 import '../../core/services/payment_verification_service.dart';
 import '../../core/services/resident_api_service.dart';
+import 'payment_status_screen.dart';
 
 class RentPaymentScreen extends StatefulWidget {
   final Map<String, dynamic>? invoiceData;
@@ -49,11 +50,19 @@ class RentPaymentScreen extends StatefulWidget {
     required String invoiceId,
     required String payeeName,
   }) {
-    final cleanId = invoiceId.trim();
-    final displayId = cleanId.length > 8 && !cleanId.toUpperCase().startsWith('INV-')
+    final cleanId = invoiceId.trim().replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+    final displayId = cleanId.length > 8 && !cleanId.toUpperCase().startsWith('INV')
         ? cleanId.substring(0, 8)
         : cleanId;
-    return 'Rent Payment - $displayId - ${payeeName.trim()}';
+    final cleanName = payeeName
+        .replaceAll("'", '')
+        .replaceAll(RegExp(r'[^A-Za-z0-9 ]'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final note = cleanName.isNotEmpty
+        ? 'Rent Payment $displayId $cleanName'.trim()
+        : 'Rent Payment $displayId'.trim();
+    return note.length > 50 ? note.substring(0, 50).trim() : note;
   }
 
   /// Builds a standard NPCI-compliant UPI URI using UTF-8 URL percent-encoding.
@@ -65,13 +74,13 @@ class RentPaymentScreen extends StatefulWidget {
   /// into human-readable text instead of displaying literal '+' characters.
   ///
   /// Standard parameters:
-  ///   - pa: Payee VPA / UPI ID (e.g. masisokatali90900@okaxis) [Mandatory]
-  ///   - pn: Payee Name (e.g. Saukatali Masi) [Mandatory]
+  ///   - pa: Payee VPA / UPI ID (e.g. 9886699258-3@ybl) [Mandatory]
+  ///   - pn: Payee Name (e.g. SMART GROUP PG'S) [Mandatory]
   ///   - am: Exact amount formatted to 2 decimal places (e.g. 1.00 or 8000.00) [Mandatory]
   ///   - cu: Currency code (strictly 'INR') [Mandatory]
   ///   - tn: Meaningful transaction note / description [Recommended]
-  ///   - tr: Unique Transaction Reference / Order Reference [NPCI Intent Specification]
-  ///   - mc: Merchant Category Code (4-digit MCC, if registered merchant) [Optional]
+  ///   - tr: Unique Transaction Reference / Order Reference (strictly alphanumeric, no hyphens)
+  ///   - mc: Merchant Category Code (4-digit MCC: 5411)
   static Uri buildUpiUri({
     required String payeeVpa,
     required String payeeName,
@@ -81,9 +90,10 @@ class RentPaymentScreen extends StatefulWidget {
     String? transactionRef,
     String? merchantCode,
   }) {
+    final cleanPn = payeeName.replaceAll("'", '').trim();
     final queryParams = <String, String>{
       'pa': payeeVpa.trim(),
-      'pn': payeeName.trim(),
+      'pn': cleanPn,
       'am': amount.toStringAsFixed(2),
       'cu': currency.trim(),
     };
@@ -93,12 +103,17 @@ class RentPaymentScreen extends StatefulWidget {
     }
 
     if (transactionRef != null && transactionRef.trim().isNotEmpty) {
-      queryParams['tr'] = transactionRef.trim();
+      // NPCI Rule: tr must be strictly alphanumeric (no hyphens, no underscores, max 35 chars)
+      final cleanTr = transactionRef.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').trim();
+      if (cleanTr.isNotEmpty) {
+        queryParams['tr'] = cleanTr.length > 35 ? cleanTr.substring(0, 35) : cleanTr;
+      }
     }
 
     if (merchantCode != null && merchantCode.trim().isNotEmpty) {
       queryParams['mc'] = merchantCode.trim();
     }
+    queryParams['mode'] = '04';
 
     // Use RFC 3986 UTF-8 percent-encoding for query components.
     // Spaces become '%20', NOT '+' (application/x-www-form-urlencoded).
@@ -128,16 +143,17 @@ class RentPaymentScreen extends StatefulWidget {
     String? merchantCode,
   }) {
     final note = transactionNote?.trim();
-    final ref = transactionRef?.trim();
-    final mc = merchantCode?.trim();
+    final cleanTr = transactionRef?.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').trim();
+    final cleanPn = payeeName.replaceAll("'", '').trim();
+    final mc = (merchantCode != null && merchantCode.trim().isNotEmpty) ? merchantCode.trim() : '5411';
     final query = <String, String>{
       'pa': payeeVpa.trim(),
-      'pn': payeeName.trim(),
+      'pn': cleanPn,
       'am': amount.toStringAsFixed(2),
       'cu': currency.trim(),
       if (note != null && note.isNotEmpty) 'tn': note,
-      if (ref != null && ref.isNotEmpty) 'tr': ref,
-      if (mc != null && mc.isNotEmpty) 'mc': mc,
+      if (cleanTr != null && cleanTr.isNotEmpty) 'tr': cleanTr.length > 35 ? cleanTr.substring(0, 35) : cleanTr,
+      'mc': mc,
     };
     final queryString = query.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
     return Uri.parse('intent://pay?$queryString#Intent;scheme=upi;package=$phonePePackage;end');
@@ -148,17 +164,20 @@ class RentPaymentScreen extends StatefulWidget {
 }
 
 class _RentPaymentScreenState extends State<RentPaymentScreen> {
-  // Verified payee details
-  static const String defaultPayeeUpiId = 'masisokatali90900@okaxis';
-  static const String defaultPayeeName = "Saukatali Masi";
+  // Official PG Management merchant payee details
+  static const String defaultPayeeUpiId = '9886699258-3@ybl';
+  static const String defaultPayeeName = "SMART GROUP PG'S";
   static const String defaultCurrency = 'INR';
 
   late final Map<String, dynamic> _invoice;
   String _ownerUpiId = defaultPayeeUpiId;
   String _payeeName = defaultPayeeName;
   String? _merchantCode;
-  bool _isMerchantConfigured = false;
+  bool _isMerchantConfigured = true;
   bool _isLaunching = false;
+  bool _isDiscoveringApps = true;
+  List<InstalledUpiApp> _installedUpiApps = [];
+  InstalledUpiApp? _selectedUpiApp;
 
   @override
   void initState() {
@@ -178,6 +197,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
           };
 
     _loadOwnerUpi();
+    _discoverInstalledUpiApps();
 
     // Automatically open the payment options modal when navigating from Pay Now
     if (widget.invoiceData?['autoOpen'] == true) {
@@ -189,23 +209,74 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     }
   }
 
+  Future<void> _discoverInstalledUpiApps() async {
+    try {
+      final apps = await DirectUpiService.discoverInstalledApps();
+      if (!mounted) return;
+      setState(() {
+        _installedUpiApps = apps;
+        _selectedUpiApp = apps.isNotEmpty ? apps.first : null;
+        _isDiscoveringApps = false;
+      });
+    } catch (e) {
+      debugPrint('UPI app discovery error: $e');
+      if (!mounted) return;
+      setState(() {
+        _installedUpiApps = [];
+        _selectedUpiApp = null;
+        _isDiscoveringApps = false;
+      });
+    }
+  }
+
   Future<void> _loadOwnerUpi() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final upi = prefs.getString('admin_upi_id');
-      if (upi != null && upi.trim().isNotEmpty) {
-        setState(() => _ownerUpiId = upi.trim());
+      String? upi = prefs.getString('admin_upi_id');
+      String? name = prefs.getString('admin_payee_name');
+      await prefs.remove('admin_merchant_code');
+
+      // Force-purge any legacy Saukatali / personal / invalid VPAs from device local cache
+      if (upi != null && (upi.contains('masisokatali') || upi.contains('okaxis') || !upi.contains('@'))) {
+        await prefs.remove('admin_upi_id');
+        await prefs.remove('admin_payee_name');
+        upi = null;
+        name = null;
       }
-      final name = prefs.getString('admin_payee_name');
-      if (name != null && name.trim().isNotEmpty) {
-        setState(() => _payeeName = name.trim());
-      }
-      final mc = prefs.getString('admin_merchant_code');
-      if (mc != null && mc.trim().isNotEmpty) {
+
+      if (mounted) {
         setState(() {
-          _merchantCode = mc.trim();
+          _ownerUpiId = (upi != null && upi.trim().isNotEmpty) ? upi.trim() : defaultPayeeUpiId;
+          _payeeName = (name != null && name.trim().isNotEmpty) ? name.trim() : defaultPayeeName;
+          _merchantCode = null;
           _isMerchantConfigured = true;
         });
+      }
+
+      // Dynamically fetch authoritative UPI config from backend
+      final config = await ResidentApiService.getUpiConfig();
+      final backendUpi = config['payee_vpa'] as String?;
+      final backendName = config['payee_name'] as String?;
+
+      if (backendUpi != null && backendUpi.trim().isNotEmpty) {
+        final cleanUpi = backendUpi.trim();
+        final cleanName = (backendName != null && backendName.trim().isNotEmpty) ? backendName.trim() : defaultPayeeName;
+
+        // Ensure backend response is not an old legacy VPA
+        if (!cleanUpi.contains('masisokatali') && !cleanUpi.contains('okaxis')) {
+          await prefs.setString('admin_upi_id', cleanUpi);
+          await prefs.setString('admin_payee_name', cleanName);
+          await prefs.remove('admin_merchant_code');
+
+          if (mounted) {
+            setState(() {
+              _ownerUpiId = cleanUpi;
+              _payeeName = cleanName;
+              _merchantCode = null;
+              _isMerchantConfigured = true;
+            });
+          }
+        }
       }
     } catch (_) {}
   }
@@ -267,7 +338,16 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       // =========================================================================
       if (paymentApp == 'PhonePe' || paymentApp == 'Pay using PhonePe') {
         setState(() => _isLaunching = false);
-        await _handlePhonePePayment();
+        _handlePhonePePayment();
+        return;
+      }
+
+      // =========================================================================
+      // SEPARATE FLOW 3: DEDICATED GOOGLE PAY PACKAGE FLOW (com.google.android.apps.nbu.paisa.user)
+      // =========================================================================
+      if (paymentApp == 'Google Pay' || paymentApp == 'GPay' || paymentApp == 'Google Pay (G Pay)') {
+        setState(() => _isLaunching = false);
+        _showGooglePayModal();
         return;
       }
 
@@ -331,17 +411,46 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
       bool launched = false;
 
-      // 4. Launch Android UPI Intent
+      // 4. Launch Android UPI Intent with explicit package targeting
+      String? targetPackage;
+      if (paymentApp == 'Google Pay' || paymentApp == 'GPay') {
+        targetPackage = 'com.google.android.apps.nbu.paisa.user';
+      } else if (paymentApp == 'PhonePe') {
+        targetPackage = 'com.phonepe.app';
+      } else if (paymentApp == 'Paytm') {
+        targetPackage = 'net.one97.paytm';
+      } else if (paymentApp == 'BHIM') {
+        targetPackage = 'in.org.npci.upiapp';
+      }
+
       try {
-        if (await canLaunchUrl(upiUri)) {
-          launched = await launchUrl(upiUri, mode: LaunchMode.externalNonBrowserApplication);
-        } else {
-          try {
-            launched = await launchUrl(upiUri, mode: LaunchMode.externalApplication);
-          } catch (_) {}
+        const nativeUpiChannel = MethodChannel('com.originpg.resident/native_upi');
+        final nativeRes = await nativeUpiChannel.invokeMapMethod<String, dynamic>(
+          'launchUpiIntent',
+          {
+            'uri': upiUri.toString(),
+            'packageName': ?targetPackage,
+          },
+        );
+        if (nativeRes != null && nativeRes['status'] != 'APP_NOT_INSTALLED' && nativeRes['status'] != 'FAILURE') {
+          launched = true;
         }
       } catch (e) {
-        debugPrint('[UPI Intent] Error launching UPI application: $e');
+        debugPrint('[UPI Intent] Native channel error: $e');
+      }
+
+      if (!launched) {
+        try {
+          if (await canLaunchUrl(upiUri)) {
+            launched = await launchUrl(upiUri, mode: LaunchMode.externalNonBrowserApplication);
+          } else {
+            try {
+              launched = await launchUrl(upiUri, mode: LaunchMode.externalApplication);
+            } catch (_) {}
+          }
+        } catch (e) {
+          debugPrint('[UPI Intent] Error launching UPI application: $e');
+        }
       }
 
       debugPrint('[UPI Diagnostics] Launch Method: url_launcher.launchUrl(mode: LaunchMode.externalNonBrowserApplication)');
@@ -385,33 +494,37 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   Future<({String? backendPaymentId, String txnRef, double amount, String invoiceId})>
       _initiateAuthoritativePayment(String paymentApp) async {
     final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
-    final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
-    final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
+    double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
+    String txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
     String? backendPaymentId;
 
     if (!invoiceId.startsWith('INV-')) {
-      try {
-        final initiateRes = await ResidentApiService.initiateDirectUpiPayment(
-          invoiceId: invoiceId,
-          idempotencyKey: 'UPI-$txnRef',
-        );
-        if (initiateRes.isNotEmpty) {
-          backendPaymentId = initiateRes['payment_id']?.toString();
-          if (initiateRes['payee_vpa'] != null && initiateRes['payee_vpa'].toString().trim().isNotEmpty) {
-            _ownerUpiId = initiateRes['payee_vpa'].toString().trim();
-          }
-          if (initiateRes['payee_name'] != null && initiateRes['payee_name'].toString().trim().isNotEmpty) {
-            _payeeName = initiateRes['payee_name'].toString().trim();
-          }
-          if (initiateRes['merchant_code'] != null && initiateRes['merchant_code'].toString().trim().isNotEmpty) {
-            _merchantCode = initiateRes['merchant_code'].toString().trim();
-          }
-          if (initiateRes['is_merchant_configured'] != null) {
-            _isMerchantConfigured = initiateRes['is_merchant_configured'] == true;
-          }
+      final initiateRes = await ResidentApiService.initiateDirectUpiPayment(
+        invoiceId: invoiceId,
+        idempotencyKey: 'UPI-$txnRef',
+        appName: paymentApp,
+      );
+      if (initiateRes.isNotEmpty) {
+        backendPaymentId = initiateRes['payment_id']?.toString();
+        final serverTxnRef = initiateRes['transaction_ref']?.toString();
+        if (serverTxnRef != null && serverTxnRef.trim().isNotEmpty) {
+          txnRef = serverTxnRef.trim();
         }
-      } catch (e) {
-        debugPrint('API initiateDirectUpiPayment error: $e');
+        if (initiateRes['amount'] is num) {
+          amount = (initiateRes['amount'] as num).toDouble();
+        }
+        if (initiateRes['payee_vpa'] != null && initiateRes['payee_vpa'].toString().trim().isNotEmpty) {
+          _ownerUpiId = initiateRes['payee_vpa'].toString().trim();
+        }
+        if (initiateRes['payee_name'] != null && initiateRes['payee_name'].toString().trim().isNotEmpty) {
+          _payeeName = initiateRes['payee_name'].toString().trim();
+        }
+        if (initiateRes['merchant_code'] != null && initiateRes['merchant_code'].toString().trim().isNotEmpty) {
+          _merchantCode = initiateRes['merchant_code'].toString().trim();
+        }
+        if (initiateRes['is_merchant_configured'] != null) {
+          _isMerchantConfigured = initiateRes['is_merchant_configured'] == true;
+        }
       }
     }
 
@@ -429,6 +542,95 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       amount: amount,
       invoiceId: invoiceId,
     );
+  }
+
+  /// Launches Direct UPI Intent for the selected installed UPI app and syncs outcome.
+  /// Never trusts client callback as proof of settlement; always ends in
+  /// pendingVerification (or failed/cancelled) until verified by backend.
+  Future<void> _launchDirectUpiFlow(InstalledUpiApp app, {double? customAmount}) async {
+    if (_isLaunching || DirectUpiService.isProcessing) return;
+    setState(() => _isLaunching = true);
+
+    try {
+      final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
+      if (kIsWeb) {
+        final init = await _initiateAuthoritativePayment(app.name);
+        if (!mounted) return;
+        setState(() => _isLaunching = false);
+        _showDynamicQrDialog(
+          invoiceId: init.invoiceId,
+          amount: customAmount ?? init.amount,
+          txnRef: init.txnRef,
+          backendPaymentId: init.backendPaymentId,
+          appLabel: app.name,
+        );
+        return;
+      }
+
+      final flowResult = await DirectUpiService.initiateAndPay(
+        invoiceId: invoiceId,
+        selectedApp: app,
+        overrideAmount: customAmount,
+      );
+
+      final resolvedTxnRef = flowResult.txnRef ?? PaymentVerificationService.generateTxnReference(invoiceId);
+      await PaymentVerificationService.initiatePayment(
+        invoiceId: invoiceId,
+        amount: flowResult.amount,
+        paymentApp: app.name,
+        txnRef: resolvedTxnRef,
+        paymentId: flowResult.paymentId,
+      );
+
+      if (!mounted) return;
+      setState(() => _isLaunching = false);
+
+      if (flowResult.outcome.status == DirectUpiOutcomeStatus.appNotInstalled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(flowResult.outcome.userMessage),
+            backgroundColor: const Color(0xFFD97706),
+          ),
+        );
+        return;
+      }
+
+      String? initialState;
+      bool autoPoll = true;
+      if (flowResult.isSettled) {
+        initialState = 'successful';
+        autoPoll = false;
+      } else if (flowResult.outcome.status == DirectUpiOutcomeStatus.cancelled) {
+        initialState = 'cancelled';
+        autoPoll = false;
+      } else if (flowResult.outcome.status == DirectUpiOutcomeStatus.failure ||
+          flowResult.outcome.status == DirectUpiOutcomeStatus.networkError) {
+        initialState = 'failed';
+        autoPoll = false;
+      }
+
+      _navigateToStatusScreen(
+        paymentApp: app.name,
+        txnRef: resolvedTxnRef,
+        paymentId: flowResult.paymentId,
+        isDemo: false,
+        initialState: initialState,
+        statusMessage: flowResult.isSettled
+            ? DirectUpiService.msgVerifiedSuccess
+            : flowResult.outcome.userMessage,
+        autoPoll: autoPoll,
+      );
+    } catch (e) {
+      debugPrint('[DirectUpiFlow] Error: $e');
+      if (!mounted) return;
+      setState(() => _isLaunching = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not initiate UPI payment: $e'),
+          backgroundColor: const Color(0xFFDC2626),
+        ),
+      );
+    }
   }
 
   // ===========================================================================
@@ -476,438 +678,28 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   }
 
   // ===========================================================================
-  // OPTION 1: GOOGLE PAY (G PAY) MODAL
+  // OPTION 1: DIRECT UPI INTENT FOR GOOGLE PAY
   // ===========================================================================
-  void _showGooglePayModal() {
-    final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
-    final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
-    final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
-    final formattedAmt = _formatAmount(amount);
-
-    final note = RentPaymentScreen.formatTransactionNote(
-      invoiceId: invoiceId,
-      payeeName: _payeeName,
-    );
-    final upiUri = RentPaymentScreen.buildUpiUri(
-      payeeVpa: _ownerUpiId,
-      payeeName: _payeeName,
-      amount: amount,
-      currency: defaultCurrency,
-      transactionNote: note,
-      transactionRef: (_merchantCode != null && _merchantCode!.trim().isNotEmpty) ? txnRef : null,
-      merchantCode: _merchantCode,
-    );
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) {
-        final isDark = AppTheme.isDark(sheetCtx);
-        final cardBg = AppTheme.cardBg(sheetCtx);
-        final textPri = AppTheme.textPrimary(sheetCtx);
-        final textSec = AppTheme.textSecondary(sheetCtx);
-
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: isDark ? const Color(0x33000000) : Colors.black12,
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF4285F4).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.g_mobiledata_rounded, color: Color(0xFF4285F4), size: 28),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Google Pay (G Pay)',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.near_me_rounded, color: Color(0xFF1D4ED8), size: 14),
-                        SizedBox(width: 6),
-                        Text(
-                          'Redirecting to Google Pay app...',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Recipient', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(_payeeName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPri)),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('UPI ID', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(_ownerUpiId, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue)),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Total Payable', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text('₹ $formattedAmt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: QrImageView(
-                      data: upiUri.toString(),
-                      version: QrVersions.auto,
-                      size: 170.0,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Scan with Google Pay from another phone or upload from gallery',
-                    style: TextStyle(fontSize: 11.5, color: textSec),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          await launchUrl(upiUri, mode: LaunchMode.externalApplication);
-                        } catch (e) {
-                          debugPrint('Error launching GPay upiUri: $e');
-                        }
-                      },
-                      icon: const Icon(Icons.launch_rounded, size: 18),
-                      label: const Text('Open Google Pay App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4285F4),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(sheetCtx);
-                        _completePaymentSuccess(
-                          paymentApp: 'Google Pay',
-                          amount: amount,
-                          txnRef: txnRef,
-                        );
-                      },
-                      icon: const Icon(Icons.check_circle_rounded, size: 18),
-                      label: const Text('I Have Paid via Google Pay (Confirm)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  TextButton(
-                    onPressed: () => Navigator.pop(sheetCtx),
-                    child: Text('Cancel', style: TextStyle(color: textSec)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  void _showGooglePayModal({double? amount}) {
+    _launchDirectUpiFlow(
+      const InstalledUpiApp(
+        name: 'Google Pay',
+        packageName: 'com.google.android.apps.nbu.paisa.user',
+      ),
+      customAmount: amount,
     );
   }
 
   // ===========================================================================
-  // OPTION 2: PHONEPE MODAL
+  // OPTION 2: DIRECT UPI INTENT FOR PHONEPE
   // ===========================================================================
-  void _showPhonePeModal() {
-    final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
-    final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
-    final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
-    final formattedAmt = _formatAmount(amount);
-
-    final note = RentPaymentScreen.formatTransactionNote(
-      invoiceId: invoiceId,
-      payeeName: _payeeName,
-    );
-    final upiUri = RentPaymentScreen.buildUpiUri(
-      payeeVpa: _ownerUpiId,
-      payeeName: _payeeName,
-      amount: amount,
-      currency: defaultCurrency,
-      transactionNote: note,
-      transactionRef: (_merchantCode != null && _merchantCode!.trim().isNotEmpty) ? txnRef : null,
-      merchantCode: _merchantCode,
-    );
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetCtx) {
-        final isDark = AppTheme.isDark(sheetCtx);
-        final cardBg = AppTheme.cardBg(sheetCtx);
-        final textPri = AppTheme.textPrimary(sheetCtx);
-        final textSec = AppTheme.textSecondary(sheetCtx);
-
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: isDark ? const Color(0x33000000) : Colors.black12,
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF5F259F).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.payments_rounded, color: Color(0xFF5F259F), size: 24),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'PhonePe',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFAF5FF),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFE9D5FF)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.near_me_rounded, color: Color(0xFF6B21A8), size: 14),
-                        SizedBox(width: 6),
-                        Text(
-                          'Redirecting to PhonePe app...',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF6B21A8)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Recipient', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(_payeeName, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textPri)),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('UPI ID', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(_ownerUpiId, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF5F259F))),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Total Payable', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text('₹ $formattedAmt', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: QrImageView(
-                      data: upiUri.toString(),
-                      version: QrVersions.auto,
-                      size: 170.0,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Scan with PhonePe from another phone or upload from gallery',
-                    style: TextStyle(fontSize: 11.5, color: textSec),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        try {
-                          await launchUrl(upiUri, mode: LaunchMode.externalApplication);
-                        } catch (e) {
-                          debugPrint('Error launching PhonePe upiUri: $e');
-                        }
-                      },
-                      icon: const Icon(Icons.launch_rounded, size: 18),
-                      label: const Text('Open PhonePe App', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5F259F),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(sheetCtx);
-                        _completePaymentSuccess(
-                          paymentApp: 'PhonePe',
-                          amount: amount,
-                          txnRef: txnRef,
-                        );
-                      },
-                      icon: const Icon(Icons.check_circle_rounded, size: 18),
-                      label: const Text('I Have Paid via PhonePe (Confirm)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  TextButton(
-                    onPressed: () => Navigator.pop(sheetCtx),
-                    child: Text('Cancel', style: TextStyle(color: textSec)),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+  void _showPhonePeModal({double? amount}) {
+    _launchDirectUpiFlow(
+      const InstalledUpiApp(
+        name: 'PhonePe',
+        packageName: 'com.phonepe.app',
+      ),
+      customAmount: amount,
     );
   }
 
@@ -1539,268 +1331,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   // DEDICATED PHONEPE PAYMENT ACTION (Targeted com.phonepe.app)
   // ===========================================================================
   Future<void> _handlePhonePePayment() async {
-    if (_isLaunching) return;
-    setState(() => _isLaunching = true);
-
-    try {
-      final init = await _initiateAuthoritativePayment('PhonePe');
-      final invoiceId = init.invoiceId;
-      final amount = init.amount;
-      final txnRef = init.txnRef;
-      final backendPaymentId = init.backendPaymentId;
-      final note = RentPaymentScreen.formatTransactionNote(
-        invoiceId: invoiceId,
-        payeeName: _payeeName,
-      );
-
-      final upiUri = RentPaymentScreen.buildUpiUri(
-        payeeVpa: _ownerUpiId,
-        payeeName: _payeeName,
-        amount: amount,
-        currency: defaultCurrency,
-        transactionNote: note,
-        transactionRef: txnRef,
-        merchantCode: _merchantCode,
-      );
-
-      debugPrint('==================== [PHONEPE INTENT DIAGNOSTICS] ====================');
-      debugPrint('[PhonePe Diagnostics] Invoice ID: $invoiceId');
-      debugPrint('[PhonePe Diagnostics] Payable Amount: ₹${amount.toStringAsFixed(2)}');
-      debugPrint('[PhonePe Diagnostics] Target Package: ${RentPaymentScreen.phonePePackage}');
-      debugPrint('[PhonePe Diagnostics] Payee VPA: $_ownerUpiId');
-      debugPrint('[PhonePe Diagnostics] Payee Name: $_payeeName');
-      debugPrint('[PhonePe Diagnostics] Transaction Ref: $txnRef');
-      debugPrint('[PhonePe Diagnostics] Standard UPI URI: $upiUri');
-      debugPrint('======================================================================');
-
-      // Web Desktop Guard: Show QR Code directly
-      if (kIsWeb) {
-        if (!mounted) return;
-        setState(() => _isLaunching = false);
-        _showDynamicQrDialog(
-          invoiceId: invoiceId,
-          amount: amount,
-          txnRef: txnRef,
-          backendPaymentId: backendPaymentId,
-          appLabel: 'PhonePe',
-        );
-        return;
-      }
-
-      bool launched = false;
-      bool channelExecuted = false;
-
-      // Stage 1: Explicit Android Native Platform Channel targeting com.phonepe.app
-      try {
-        const nativeUpiChannel = MethodChannel('com.originpg.resident/native_upi');
-        final nativeRes = await nativeUpiChannel.invokeMapMethod<String, dynamic>(
-          'launchPhonePeDirect',
-          {
-            'uri': upiUri.toString(),
-            'package': RentPaymentScreen.phonePePackage,
-            'payeeVpa': _ownerUpiId,
-            'payeeName': _payeeName,
-            'amount': amount.toStringAsFixed(2),
-            'txnRef': txnRef,
-            'note': note,
-          },
-        );
-        if (nativeRes != null) {
-          channelExecuted = true;
-          if (nativeRes['status'] == 'SUCCESS') {
-            launched = true;
-            debugPrint('[PhonePe Direct] Native channel launched successfully via ${nativeRes['method']}');
-          } else {
-            debugPrint('[PhonePe Direct] Native channel result: $nativeRes');
-          }
-        }
-      } catch (e) {
-        debugPrint('[PhonePe Direct] Native channel unavailable or error: $e');
-      }
-
-      // If Android native channel was not available, try URL fallbacks strictly for PhonePe
-      if (!channelExecuted) {
-        // Stage 2: PhonePe custom scheme URI (phonepe://pay?...) with url_launcher (preserves %20 encoding)
-        final phonePeSchemeUri = upiUri.replace(scheme: 'phonepe');
-        try {
-          if (await canLaunchUrl(phonePeSchemeUri)) {
-            launched = await launchUrl(phonePeSchemeUri, mode: LaunchMode.externalNonBrowserApplication);
-            debugPrint('[PhonePe Direct] Launched via phonepe:// scheme URI: $launched');
-          }
-        } catch (e) {
-          debugPrint('[PhonePe Direct] phonepe:// scheme launch error: $e');
-        }
-
-        // Stage 3: PhonePe custom scheme URI (ppe://pay?...) with url_launcher (preserves %20 encoding)
-        if (!launched) {
-          final ppeSchemeUri = upiUri.replace(scheme: 'ppe');
-          try {
-            if (await canLaunchUrl(ppeSchemeUri)) {
-              launched = await launchUrl(ppeSchemeUri, mode: LaunchMode.externalNonBrowserApplication);
-              debugPrint('[PhonePe Direct] Launched via ppe:// scheme URI: $launched');
-            }
-          } catch (e) {
-            debugPrint('[PhonePe Direct] ppe:// scheme launch error: $e');
-          }
-        }
-
-        // Stage 4: Native startActivityForResult via flutter_upi_india with explicit package
-        if (!launched) {
-          try {
-            final res = await UpiPay.initiateTransaction(
-              app: UpiApplication.phonePe,
-              receiverUpiAddress: _ownerUpiId,
-              receiverName: _payeeName,
-              transactionRef: txnRef,
-              amount: amount.toStringAsFixed(2),
-              transactionNote: note,
-              merchantCode: _merchantCode,
-            );
-            final raw = res.rawResponse ?? '';
-            if (raw.isNotEmpty && raw != 'activity_unavailable' && raw != 'failed_to_open_app') {
-              launched = true;
-              debugPrint('[PhonePe Direct] UpiPay.initiateTransaction launched successfully: $raw');
-            } else {
-              debugPrint('[PhonePe Direct] UpiPay returned: $raw');
-            }
-          } catch (e) {
-            debugPrint('[PhonePe Direct] flutter_upi_india launch error: $e');
-          }
-        }
-      }
-
-      // STRICT RULE: NEVER fall back to generic upi:// chooser or &package= query param!
-      // If PhonePe cannot be opened directly, show clear error dialog with option to use other apps.
-
-      if (!mounted) return;
-      setState(() => _isLaunching = false);
-
-      // Safe fallback if PhonePe is not available on device
-      if (!launched) {
-        _showPhonePeUnavailableDialog(
-          amount: amount,
-          invoiceId: invoiceId,
-        );
-        return;
-      }
-
-      // Strictly set state to PENDING_VERIFICATION on backend (never automatically marked PAID)
-      if (backendPaymentId != null) {
-        ResidentApiService.recordUpiReturn(backendPaymentId).catchError((_) => <String, dynamic>{});
-      }
-
-      // Navigate to Payment Status screen strictly in PENDING_VERIFICATION
-      _navigateToStatusScreen(
-        paymentApp: 'PhonePe',
-        txnRef: txnRef,
-        paymentId: backendPaymentId,
-        isDemo: false,
-      );
-    } catch (e) {
-      debugPrint('[PhonePe Action] Unexpected error: $e');
-      if (mounted) setState(() => _isLaunching = false);
-    }
+    _showPhonePeModal();
   }
-
-  void _showPhonePeUnavailableDialog({
-    required double amount,
-    required String invoiceId,
-  }) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3E8FF),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.payments_rounded, color: Color(0xFF5F259F), size: 22),
-            ),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'PhonePe Not Available',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'The PhonePe application (com.phonepe.app) could not be opened directly on your device.\n\n'
-              'You can copy the PG Owner UPI ID below to pay, or select another UPI application (like Navi or Paytm).',
-              style: TextStyle(fontSize: 13, height: 1.4, color: AppTheme.textGrey),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFCBD5E1)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('Payee UPI ID', style: TextStyle(fontSize: 10, color: AppTheme.textGrey)),
-                        const SizedBox(height: 2),
-                        Text(
-                          _ownerUpiId,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.primaryBlue),
-                    tooltip: 'Copy UPI ID',
-                    onPressed: () {
-                      try {
-                        Clipboard.setData(ClipboardData(text: _ownerUpiId));
-                      } catch (_) {}
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('UPI ID copied to clipboard!'), duration: Duration(seconds: 2)),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _handlePaymentMethodSelection('Other UPI', 'upi');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0284C7),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('Use Other UPI App'),
-          ),
-        ],
-      ),
-    );
-  }
-
-
 
   void _showDynamicQrDialog({
     required String invoiceId,
@@ -1994,15 +1526,40 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         ),
                         const SizedBox(height: 6),
                         const Text(
-                          '• Scan using Google Pay, PhonePe, Paytm, or BHIM on another phone.\n'
-                          '• Or take a screenshot and use "Scan from Gallery / Upload QR" in your UPI app.\n'
-                          '• Note: A phone cannot scan a QR code displayed directly on its own screen.',
+                          '• Scan using camera scanner in Google Pay, PhonePe, Paytm, or BHIM.\n'
+                          '• NPCI Rule: UPI apps restrict gallery-uploaded QR screenshots to ₹2,000. For rent amounts above ₹2,000, scan directly via camera or copy the Merchant UPI ID below to pay directly in your app.',
                           style: TextStyle(fontSize: 11.5, color: Color(0xFF1E3A8A), height: 1.4),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+
+                  // 1-Tap Copy Merchant UPI ID
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: _ownerUpiId));
+                        ScaffoldMessenger.of(sheetCtx).showSnackBar(
+                          SnackBar(
+                            content: Text('Merchant UPI ID ($_ownerUpiId) copied! Open your UPI app and paste to pay.'),
+                            duration: const Duration(seconds: 3),
+                            backgroundColor: const Color(0xFF0B6B63),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.copy_rounded, size: 16),
+                      label: Text('Copy Merchant UPI ID ($_ownerUpiId)'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0B6B63),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
 
                   // Actions: Save QR & Share QR
                   Row(
@@ -2221,155 +1778,259 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     required String txnRef,
     String? paymentId,
     required bool isDemo,
+    String? initialState,
+    String? statusMessage,
+    bool autoPoll = true,
   }) {
     final amount = RentPaymentScreen.calculatePayableAmount(_invoice);
+    final effectiveInitialState = initialState ?? (isDemo ? 'successful' : null);
+    final effectiveAutoPoll = isDemo ? false : autoPoll;
+    final payload = <String, dynamic>{
+      'invoiceId': _invoice['id'] ?? 'INV-2026-010',
+      'amount': amount,
+      'paymentApp': paymentApp,
+      'txnRef': txnRef,
+      'paymentId': paymentId,
+      'isDemo': isDemo,
+      'dueDate': _invoice['date'] ?? '05 Nov 2026',
+      'month': _invoice['month'] ?? 'November 2026',
+      'autoPoll': effectiveAutoPoll,
+      'initialState': ?effectiveInitialState,
+      'statusMessage': ?statusMessage,
+    };
+
     try {
-      context.push(
-        '/payment-status',
-        extra: {
-          'invoiceId': _invoice['id'] ?? 'INV-2026-010',
-          'amount': amount,
-          'paymentApp': paymentApp,
-          'txnRef': txnRef,
-          'paymentId': paymentId,
-          'isDemo': isDemo,
-          'dueDate': _invoice['date'] ?? '05 Nov 2026',
-          'month': _invoice['month'] ?? 'November 2026',
-          'autoPoll': true,
-        },
-      );
+      final router = GoRouter.maybeOf(context);
+      if (router != null) {
+        context.push('/payment-status', extra: payload);
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PaymentStatusScreen(paymentData: payload),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('[Navigation] Status screen push error: $e');
     }
   }
 
   void _showPaymentInterfaceModal() {
-    final amount = RentPaymentScreen.calculatePayableAmount(_invoice);
+    final originalAmount = RentPaymentScreen.calculatePayableAmount(_invoice);
     final month = _invoice['month'] ?? 'November 2026';
+    double activeAmount = originalAmount;
+    bool isTestOneRupee = false;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
-        final isDark = AppTheme.isDark(bottomSheetContext);
-        final cardBg = AppTheme.cardBg(bottomSheetContext);
-        final textPri = AppTheme.textPrimary(bottomSheetContext);
-        final textSec = AppTheme.textSecondary(bottomSheetContext);
+        return StatefulBuilder(
+          builder: (sheetCtx, setModalState) {
+            final isDark = AppTheme.isDark(sheetCtx);
+            final cardBg = AppTheme.cardBg(sheetCtx);
+            final textPri = AppTheme.textPrimary(sheetCtx);
+            final textSec = AppTheme.textSecondary(sheetCtx);
 
-        return Container(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            boxShadow: [
-              BoxShadow(
-                color: isDark ? const Color(0x33000000) : Colors.black12,
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Drag Handle
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
+            return Container(
+              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? const Color(0x33000000) : Colors.black12,
+                    blurRadius: 20,
+                    offset: const Offset(0, -4),
                   ),
-                  const SizedBox(height: 18),
-
-                  // Amount & Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                ],
+              ),
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Payment Options',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: textPri,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Text(
-                              'Rent Due • $month',
-                              style: TextStyle(
-                                fontSize: 12.5,
-                                color: textSec,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isDark ? const Color(0xFF3B82F6) : const Color(0xFFDBEAFE)),
-                        ),
-                        child: Text(
-                          '₹ ${_formatAmount(amount)}',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? const Color(0xFF93C5FD) : AppTheme.primaryBlue,
+                      // Drag Handle
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Choose from Google Pay, PhonePe, PayPal, or Credit Card.',
-                    style: TextStyle(fontSize: 12.5, color: textSec, height: 1.3),
-                  ),
-                  const SizedBox(height: 18),
+                      const SizedBox(height: 18),
 
-                  // Option 1: Google Pay (G Pay)
-                  _buildModalPaymentOption(
-                    title: 'Google Pay (G Pay)',
-                    subtitle: 'Direct transfer to $_payeeName via Google Pay',
-                    brandColor: const Color(0xFF4285F4),
-                    iconData: Icons.g_mobiledata_rounded,
-                    isIconLetter: true,
-                    context: bottomSheetContext,
-                    onTap: () {
-                      Navigator.pop(bottomSheetContext);
-                      _showGooglePayModal();
-                    },
-                  ),
-                  const SizedBox(height: 10),
+                      // Amount & Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Payment Options',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: textPri,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  'Choose from Google Pay, PhonePe, PayPal, or Credit Card • $month',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: textSec,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: isDark ? const Color(0xFF3B82F6) : const Color(0xFFDBEAFE)),
+                            ),
+                            child: Text(
+                              '₹ ${_formatAmount(activeAmount)}',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: isDark ? const Color(0xFF93C5FD) : AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
 
-                  // Option 2: PhonePe
-                  _buildModalPaymentOption(
-                    title: 'PhonePe',
-                    subtitle: 'Fast UPI payment via PhonePe app',
-                    brandColor: const Color(0xFF5F259F),
-                    iconData: Icons.payments_rounded,
-                    isIconLetter: false,
-                    context: bottomSheetContext,
-                    onTap: () {
-                      Navigator.pop(bottomSheetContext);
-                      _showPhonePeModal();
-                    },
-                  ),
+                      // Quick Amount Mode Switcher (Full Rent vs Test ₹1.00)
+                      Row(
+                        children: [
+                          InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              setModalState(() {
+                                isTestOneRupee = false;
+                                activeAmount = originalAmount;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: !isTestOneRupee
+                                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: !isTestOneRupee ? AppTheme.primaryBlue : (isDark ? Colors.white24 : Colors.black12),
+                                ),
+                              ),
+                              child: Text(
+                                'Full Rent (₹ ${_formatAmount(originalAmount)})',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: !isTestOneRupee ? FontWeight.bold : FontWeight.normal,
+                                  color: !isTestOneRupee ? AppTheme.primaryBlue : textSec,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () {
+                              setModalState(() {
+                                isTestOneRupee = true;
+                                activeAmount = 1.0;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: isTestOneRupee
+                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: isTestOneRupee ? const Color(0xFF10B981) : (isDark ? Colors.white24 : Colors.black12),
+                                ),
+                              ),
+                              child: Text(
+                                'Test Intent (₹ 1.00)',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: isTestOneRupee ? FontWeight.bold : FontWeight.normal,
+                                  color: isTestOneRupee ? const Color(0xFF10B981) : textSec,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Direct UPI Intent transfers funds to $_ownerUpiId ($defaultPayeeName).',
+                        style: TextStyle(fontSize: 12.5, color: textSec, height: 1.3),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Option 1: Google Pay (G Pay)
+                      _buildModalPaymentOption(
+                        title: 'Google Pay (G Pay)',
+                        subtitle: 'Direct transfer of ₹ ${_formatAmount(activeAmount)} via Google Pay',
+                        brandColor: const Color(0xFF4285F4),
+                        iconData: Icons.g_mobiledata_rounded,
+                        isIconLetter: true,
+                        context: bottomSheetContext,
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          _showGooglePayModal(amount: activeAmount);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Option 2: PhonePe
+                      _buildModalPaymentOption(
+                        title: 'PhonePe',
+                        subtitle: 'Fast UPI payment of ₹ ${_formatAmount(activeAmount)} via PhonePe',
+                        brandColor: const Color(0xFF5F259F),
+                        iconData: Icons.payments_rounded,
+                        isIconLetter: false,
+                        context: bottomSheetContext,
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          _showPhonePeModal(amount: activeAmount);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Option 3: Dynamic UPI QR Code
+                      _buildModalPaymentOption(
+                        title: 'Dynamic UPI QR Code',
+                        subtitle: 'Scan with camera on PhonePe, Google Pay, or Paytm',
+                        brandColor: const Color(0xFF0B6B63),
+                        iconData: Icons.qr_code_rounded,
+                        isIconLetter: false,
+                        context: bottomSheetContext,
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          _showDynamicQrDialog(
+                            invoiceId: _invoice['id']?.toString() ?? 'INV-2026-010',
+                            amount: activeAmount,
+                            txnRef: PaymentVerificationService.generateTxnReference(_invoice['id']?.toString() ?? 'INV-2026-010'),
+                          );
+                        },
+                      ),
                   const SizedBox(height: 10),
 
                   // Option 3: PayPal
@@ -2454,7 +2115,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         );
       },
     );
-  }
+  },
+);
+}
 
   Widget _buildModalPaymentOption({
     required String title,
@@ -2749,6 +2412,16 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   const SizedBox(height: 26),
 
+                  // Direct UPI Intent Installed App Selector
+                  _buildDirectUpiSelectorSection(
+                    isDark: isDark,
+                    cardBg: cardBg,
+                    borderCol: borderCol,
+                    textPri: textPri,
+                    textSec: textSec,
+                  ),
+                  const SizedBox(height: 22),
+
                   // Payment Options Heading
                   Text(
                     'Select Payment Method',
@@ -2890,6 +2563,124 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDirectUpiSelectorSection({
+    required bool isDark,
+    required Color cardBg,
+    required Color borderCol,
+    required Color textPri,
+    required Color textSec,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: borderCol),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.account_balance_wallet_rounded, size: 18, color: Color(0xFF0B6B63)),
+              const SizedBox(width: 8),
+              Text(
+                'Installed UPI Apps',
+                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: textPri),
+              ),
+              const Spacer(),
+              if (_isLaunching)
+                const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (_isDiscoveringApps)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'Detecting UPI apps on device...',
+                style: TextStyle(fontSize: 12.5, color: textSec),
+              ),
+            )
+          else if (_installedUpiApps.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF2C3841) : const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'No UPI apps installed on this device. Install Google Pay, PhonePe, Paytm, or BHIM to pay via Direct UPI.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                ),
+              ),
+            )
+          else ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _installedUpiApps.map((app) {
+                final selected = _selectedUpiApp?.packageName == app.packageName;
+                return ChoiceChip(
+                  label: Text(
+                    app.name,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      color: selected ? Colors.white : textPri,
+                    ),
+                  ),
+                  selected: selected,
+                  selectedColor: const Color(0xFF0B6B63),
+                  backgroundColor: isDark ? const Color(0xFF1B232A) : const Color(0xFFF2F5F4),
+                  onSelected: _isLaunching
+                      ? null
+                      : (_) => setState(() => _selectedUpiApp = app),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: (_selectedUpiApp == null || _isLaunching)
+                    ? null
+                    : () => _launchDirectUpiFlow(_selectedUpiApp!),
+                icon: _isLaunching
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.qr_code_scanner_rounded, size: 18),
+                label: Text(
+                  _isLaunching
+                      ? 'Opening ${_selectedUpiApp?.name ?? 'UPI App'}...'
+                      : 'Pay using UPI',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0B6B63),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

@@ -332,7 +332,7 @@ def test_complete_phase4_end_to_end_workflow(client: TestClient, e2e_env):
     # Verify standard NPCI format and RFC %20 encoding
     assert "upi://pay?" in upi_uri
     assert "%20" in upi_uri
-    assert "masisokatali90900" in upi_uri
+    assert "9886699258-3" in upi_uri
 
     # Resident returns from UPI app
     return_payload = {

@@ -33,6 +33,9 @@ from app.schemas.admin_auth import (
 from app.schemas.auth import (
     LoginRequest,
     PasswordChangeRequest,
+    PasswordChangeOtpRequest,
+    PasswordChangeOtpVerifyRequest,
+    PasswordChangeWithOtpRequest,
     RefreshRequest,
     TokenResponse,
 )
@@ -166,6 +169,69 @@ def change_user_password(
         success=True,
         message="Password updated successfully.",
         data={"user_id": str(current_user.id)},
+    )
+
+
+@router.post("/change-password/request-otp", response_model=APIResponse[dict], status_code=status.HTTP_200_OK)
+def request_password_change_otp(
+    payload: PasswordChangeOtpRequest,
+    db: Session = Depends(get_db),
+):
+    """Dispatches a 6-digit OTP to the registered administrator email for password reset/change."""
+    service = OTPService(db)
+    result = service.request_password_change_otp(email=payload.email)
+    return APIResponse(
+        success=True,
+        message="Verification code sent to registered email.",
+        data=result,
+    )
+
+
+@router.post("/change-password/verify-otp", response_model=APIResponse[dict], status_code=status.HTTP_200_OK)
+def verify_password_change_otp(
+    payload: PasswordChangeOtpVerifyRequest,
+    db: Session = Depends(get_db),
+):
+    """Verifies the 6-digit OTP for password change without consuming it."""
+    service = OTPService(db)
+    user = service.verify_password_change_otp(email=payload.email, otp=payload.otp, consume=False)
+    return APIResponse(
+        success=True,
+        message="Verification code validated successfully.",
+        data={"email": user.email, "user_id": str(user.id)},
+    )
+
+
+@router.post("/change-password/reset-with-otp", response_model=APIResponse[dict], status_code=status.HTTP_200_OK)
+def reset_password_with_otp(
+    payload: PasswordChangeWithOtpRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Verifies OTP, consumes it, and securely updates the user's password."""
+    service = OTPService(db)
+    user = service.verify_password_change_otp(email=payload.email, otp=payload.otp, consume=True)
+
+    user.password_hash = get_password_hash(payload.new_password)
+    db.commit()
+
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+
+    record_audit_log(
+        db=db,
+        action="PASSWORD_CHANGE_VIA_EMAIL_OTP",
+        resource_type="users",
+        user_id=user.id,
+        user_email=user.email,
+        user_role=user.role.name if user.role else None,
+        details={"ip_address": ip_address, "user_agent": user_agent},
+    )
+
+    return APIResponse(
+        success=True,
+        message="Password updated successfully.",
+        data={"user_id": str(user.id), "email": user.email},
     )
 
 
@@ -955,11 +1021,16 @@ def admin_register(
         raise ConflictError("An account with this email address already exists.")
 
     # 4. Generate unique company code
-    clean_name = re.sub(r"[^A-Z0-9]", "", payload.business_name.upper())[:6] or "ORG"
+    b_name = (payload.business_name or "").strip()
+    if not b_name:
+        prefix = email_norm.split("@")[0]
+        b_name = f"{prefix.capitalize()} PG"
+
+    clean_name = re.sub(r"[^A-Z0-9]", "", b_name.upper())[:6] or "ORG"
     company_code = f"{clean_name}_{secrets.token_hex(3).upper()}"
 
     company = Company(
-        name=payload.business_name.strip(),
+        name=b_name,
         code=company_code,
         email=email_norm,
         phone=payload.phone,
@@ -985,7 +1056,7 @@ def admin_register(
     admin_user = User(
         company_id=company.id,
         role_id=manager_role.id,
-        full_name=payload.full_name or payload.business_name.strip(),
+        full_name=payload.full_name or b_name,
         email=email_norm,
         phone=payload.phone or f"00{secrets.token_hex(4)}",
         password_hash=get_password_hash(payload.password),

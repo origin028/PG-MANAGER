@@ -53,8 +53,8 @@ void main() {
     expect(find.text('PG Owner Registration'), findsOneWidget);
     expect(find.text('Create your account to manage properties and rooms'), findsOneWidget);
 
-    // Verify all input fields in order
-    expect(find.widgetWithText(TextField, 'Business Name'), findsOneWidget);
+    // Verify all input fields (Business Name removed)
+    expect(find.widgetWithText(TextField, 'Business Name'), findsNothing);
     expect(find.widgetWithText(TextField, 'Email Address'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Password'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Super Key'), findsOneWidget);
@@ -76,7 +76,6 @@ void main() {
     expect(find.text('Please fill all fields including Super Key'), findsOneWidget);
 
     // 2. Fill in the fields
-    await tester.enterText(find.widgetWithText(TextField, 'Business Name'), 'Cozy Nest PG');
     await tester.enterText(find.widgetWithText(TextField, 'Email Address'), 'owner@cozynest.com');
     await tester.enterText(find.widgetWithText(TextField, 'Password'), 'Secret123!');
     await tester.enterText(find.widgetWithText(TextField, 'Super Key'), 'SK-889900');

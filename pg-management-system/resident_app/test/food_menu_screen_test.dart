@@ -59,9 +59,9 @@ void main() {
       );
       expect(lightScaffold.backgroundColor, const Color(0xFFFFFFFF));
 
-      expect(find.text('Fresh, hygienic meals cooked daily'), findsOneWidget);
+      expect(find.text('Fresh, hygienic meals cooked daily'), findsNothing);
       expect(find.text('Weekly Food Menu'), findsOneWidget);
-      expect(find.text('3 meals a day'), findsOneWidget);
+      expect(find.text('3 meals a day'), findsNothing);
       expect(find.textContaining('Today:'), findsOneWidget);
 
       await tester.scrollUntilVisible(
@@ -100,7 +100,7 @@ void main() {
       );
       expect(darkScaffold.backgroundColor, const Color(0xFF1B232A));
       expect(find.text('Weekly Food Menu'), findsOneWidget);
-      expect(find.text('3 meals a day'), findsOneWidget);
+      expect(find.text('3 meals a day'), findsNothing);
     }
 
     addTearDown(() => tester.view.resetPhysicalSize());

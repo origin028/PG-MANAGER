@@ -547,3 +547,94 @@ class OTPService:
             raise NotFoundError("Administrator account not found.")
 
         return user
+
+    def request_password_change_otp(self, email: str, admin_name: Optional[str] = None) -> Dict[str, any]:
+        """Dispatches 6-digit Password Change OTP to admin email with rate limiting and secure hashing."""
+        norm_email = email.strip().lower()
+        now = datetime.now(timezone.utc)
+
+        # 1. Verify user exists
+        user = self.db.scalar(sa.select(User).where(sa.func.lower(User.email) == norm_email))
+        if not user:
+            raise NotFoundError("Administrator account not found with this email.")
+
+        # 2. Rate-limiting: Cooldown check
+        recent_otp = self.db.scalar(
+            sa.select(OTPVerification)
+            .where(
+                OTPVerification.email == norm_email,
+                OTPVerification.purpose == "PASSWORD_CHANGE",
+                OTPVerification.is_verified == False,
+            )
+            .order_by(OTPVerification.created_at.desc())
+        )
+        if recent_otp:
+            rec_created = recent_otp.created_at.replace(tzinfo=timezone.utc) if recent_otp.created_at.tzinfo is None else recent_otp.created_at
+            elapsed = (now - rec_created).total_seconds()
+            if elapsed < self.COOLDOWN_SECONDS:
+                wait_sec = int(self.COOLDOWN_SECONDS - elapsed)
+                raise TooManyRequestsError(f"Please wait {wait_sec} seconds before requesting a new OTP.")
+
+        # 3. Generate 6-digit secure code & salt
+        raw_otp = str(secrets.randbelow(900000) + 100000)
+        salt = secrets.token_hex(16)
+        digest = hash_otp(salt, raw_otp)
+        expires_at = now + timedelta(minutes=self.EXPIRY_MINUTES)
+
+        otp_record = OTPVerification(
+            email=norm_email,
+            phone=user.phone,
+            otp_hash=digest,
+            salt=salt,
+            purpose="PASSWORD_CHANGE",
+            attempts=0,
+            max_attempts=self.MAX_ATTEMPTS,
+            expires_at=expires_at,
+            is_verified=False,
+        )
+
+        # 4. Dispatch via email
+        try:
+            self.email_service.send_password_change_otp(
+                to_email=norm_email,
+                otp=raw_otp,
+                admin_name=admin_name or user.full_name,
+            )
+        except Exception:
+            self.db.rollback()
+            raise
+
+        # 5. Invalidate prior unverified password change OTPs for this email
+        self.db.execute(
+            sa.update(OTPVerification)
+            .where(
+                OTPVerification.email == norm_email,
+                OTPVerification.purpose == "PASSWORD_CHANGE",
+                OTPVerification.is_verified == False,
+            )
+            .values(is_verified=True)
+        )
+
+        self.db.add(otp_record)
+        self.db.commit()
+
+        provider = get_email_provider()
+        return {
+            "email": norm_email,
+            "email_masked": mask_email(norm_email),
+            "expires_in_seconds": self.EXPIRY_MINUTES * 60,
+            "cooldown_seconds": self.COOLDOWN_SECONDS,
+            "is_mock": getattr(provider, "is_mock", False),
+        }
+
+    def verify_password_change_otp(self, email: str, otp: str, consume: bool = True) -> User:
+        """Validates Password Change OTP, consumes code, and returns verified User."""
+        norm_email = email.strip().lower()
+        self._verify_email_otp(email=norm_email, otp=otp, purpose="PASSWORD_CHANGE", consume=consume)
+
+        user = self.db.scalar(sa.select(User).where(sa.func.lower(User.email) == norm_email))
+        if not user:
+            raise NotFoundError("Administrator account not found.")
+
+        return user
+

@@ -90,9 +90,9 @@ void main() {
     expect(find.text('Phone Support'), findsOneWidget);
     expect(find.text('Available Mon-Fri, 9 AM - 6 PM'), findsOneWidget);
     expect(find.text('1800 123 4567'), findsOneWidget);
-    expect(find.text('Help Center'), findsOneWidget);
-    expect(find.text('Browse FAQs and tutorials'), findsOneWidget);
-    expect(find.text('Visit Help Center'), findsOneWidget);
+    // Help Center is removed per UI requirements
+    expect(find.text('Help Center'), findsNothing);
+    expect(find.text('Visit Help Center'), findsNothing);
 
     // 7. Verify Log Out Button
     expect(find.text('Log Out of PG Owner'), findsOneWidget);
@@ -212,7 +212,7 @@ void main() {
 
     // Verify Themed Confirm Logout Dialog
     expect(find.text('Confirm Logout'), findsOneWidget);
-    expect(find.text('Are you sure you want to log out of PG Owner?'), findsOneWidget);
+    expect(find.text('Are you sure you want to log out of PG Owner? You will need to sign in again to access the dashboard.'), findsOneWidget);
     expect(find.byIcon(Icons.logout_rounded), findsWidgets);
     expect(find.text('Cancel'), findsOneWidget);
     expect(find.widgetWithText(ElevatedButton, 'Log Out'), findsOneWidget);

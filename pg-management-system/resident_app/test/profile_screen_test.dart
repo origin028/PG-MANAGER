@@ -48,7 +48,7 @@ void main() {
       expect(find.text('Priya Sharma'), findsNWidgets(2));
       expect(find.text('BNR Luxury PG · Room 101 · Bed B'), findsOneWidget);
       expect(find.text('KYC Verified'), findsOneWidget);
-      expect(find.text('Edit Profile'), findsOneWidget);
+      expect(find.text('Edit Profile'), findsNothing);
       expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
 
       // Tri-metric strip
@@ -84,7 +84,7 @@ void main() {
       final darkScaffold = tester.widget<Scaffold>(find.byType(Scaffold));
       expect(darkScaffold.backgroundColor, const Color(0xFF1B232A));
       expect(find.text('My Profile'), findsOneWidget);
-      expect(find.text('Edit Profile'), findsOneWidget);
+      expect(find.text('Edit Profile'), findsNothing);
     }
 
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -135,7 +135,7 @@ void main() {
   });
 
   testWidgets(
-      'Edit Profile modal keeps Email read-only, validates input, and updates resident profile',
+      'ProfileScreen maintains personal details without edit profile button in menu',
       (WidgetTester tester) async {
     AppData.currentResident = {
       ...AppData.residents[1],
@@ -149,39 +149,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Open Edit Profile modal
-    await tester.tap(find.text('Edit Profile'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Update your personal information below.'), findsOneWidget);
-    expect(find.text('(Read-only)'), findsOneWidget);
-
-    // Email field must be strictly disabled/read-only
-    final formFields = tester.widgetList<TextFormField>(find.byType(TextFormField)).toList();
-    expect(formFields.length, 3);
-    expect(formFields[2].enabled, isFalse);
-
-    // Trigger validation failure with invalid phone
-    await tester.enterText(find.byType(TextFormField).at(0), '');
-    await tester.enterText(find.byType(TextFormField).at(1), '123');
-    await tester.tap(find.text('Save Changes'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Please enter your name'), findsOneWidget);
-    expect(find.text('Please enter a valid 10-digit mobile number'), findsOneWidget);
-
-    // Enter valid name & phone and save
-    await tester.enterText(find.byType(TextFormField).at(0), 'Ananya Verma');
-    await tester.enterText(find.byType(TextFormField).at(1), '9123456789');
-    await tester.tap(find.text('Save Changes'));
-    await tester.pumpAndSettle();
-
-    expect(AppData.currentResident['name'], 'Ananya Verma');
-    expect(AppData.currentResident['phone'], '9123456789');
-    expect(find.text('AV'), findsOneWidget);
-    expect(find.text('Ananya Verma'), findsNWidgets(2));
-    expect(find.text('+91 9123456789'), findsOneWidget);
-    expect(find.text('Profile updated successfully!'), findsOneWidget);
+    expect(find.text('Edit Profile'), findsNothing);
+    expect(find.text('Personal & Contact Details'), findsOneWidget);
+    expect(find.text('+91 9876543210'), findsOneWidget);
   });
 
   testWidgets(

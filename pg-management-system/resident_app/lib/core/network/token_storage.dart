@@ -6,11 +6,13 @@ class TokenStorage {
   static const String _refreshTokenKey = 'pg_resident_refresh_token';
   static const String _userProfileKey = 'pg_resident_user_profile';
   static const String _residentProfileKey = 'pg_resident_profile';
+  static const String _dashboardKey = 'pg_resident_dashboard';
 
   static String? _cachedAccessToken;
   static String? _cachedRefreshToken;
   static Map<String, dynamic>? _cachedUserProfile;
   static Map<String, dynamic>? _cachedResidentProfile;
+  static Map<String, dynamic>? _cachedDashboard;
   static bool _initialized = false;
 
   /// Initializes storage and loads cached tokens into memory
@@ -28,6 +30,10 @@ class TokenStorage {
       if (residentJson != null) {
         _cachedResidentProfile = jsonDecode(residentJson) as Map<String, dynamic>?;
       }
+      final dashJson = prefs.getString(_dashboardKey);
+      if (dashJson != null) {
+        _cachedDashboard = jsonDecode(dashJson) as Map<String, dynamic>?;
+      }
       _initialized = true;
     } catch (_) {
       _initialized = true;
@@ -38,6 +44,7 @@ class TokenStorage {
   static String? get refreshToken => _cachedRefreshToken;
   static Map<String, dynamic>? get userProfile => _cachedUserProfile;
   static Map<String, dynamic>? get residentProfile => _cachedResidentProfile;
+  static Map<String, dynamic>? get cachedDashboard => _cachedDashboard;
   static bool get isAuthenticated => _cachedAccessToken != null && _cachedAccessToken!.isNotEmpty;
 
   static Future<void> saveTokens({
@@ -63,16 +70,26 @@ class TokenStorage {
     await prefs.setString(_residentProfileKey, jsonEncode(profile));
   }
 
+  static Future<void> saveCachedDashboard(Map<String, dynamic> dash) async {
+    _cachedDashboard = dash;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_dashboardKey, jsonEncode(dash));
+    } catch (_) {}
+  }
+
   static Future<void> clear() async {
     _cachedAccessToken = null;
     _cachedRefreshToken = null;
     _cachedUserProfile = null;
     _cachedResidentProfile = null;
+    _cachedDashboard = null;
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_accessTokenKey);
     await prefs.remove(_refreshTokenKey);
     await prefs.remove(_userProfileKey);
     await prefs.remove(_residentProfileKey);
+    await prefs.remove(_dashboardKey);
   }
 }

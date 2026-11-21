@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/data/app_data.dart';
 
 import '../../core/services/admin_api_service.dart';
@@ -7,6 +8,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/table_components.dart';
 import '../../core/widgets/app_dropdown.dart';
+import '../../core/widgets/premium_dialogs.dart';
+import '../../core/widgets/month_year_selector.dart';
 
 class ResidentsScreen extends StatefulWidget {
   const ResidentsScreen({super.key});
@@ -72,34 +75,153 @@ class ResidentsScreen extends StatefulWidget {
       }
     }
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (builderContext, setModalState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              title: Row(
-                children: [
-                  const Icon(Icons.person_add_alt_1, color: AppTheme.primaryBlue),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Onboard New Resident',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+            return PremiumDialog(
+              maxWidth: 640,
+              title: 'Onboard New Resident',
+              subtitle: 'Enter personal, contact, stay and KYC details',
+              icon: Icons.person_add_alt_1_rounded,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    String name = nameController.text.trim();
+                    String phone = phoneController.text.trim();
+                    String roomNo = roomController.text.trim();
+
+                    if (name.isEmpty || phone.isEmpty || roomNo.isEmpty) {
+                      setModalState(() {
+                        localError = 'Name, Phone and Room Number are strictly required!';
+                      });
+                      return;
+                    }
+
+                    // Check for duplicate name
+                    if (AppData.getResidentByName(name) != null) {
+                      setModalState(() {
+                        localError = 'Error: A resident named "$name" is already registered!';
+                      });
+                      return;
+                    }
+
+                    // Allocate next available bed in this room
+                    AppData.assignResidentToRoom(
+                      roomNo,
+                      name,
+                      phone: phone,
+                      rent: int.tryParse(rentController.text) ?? 8000,
+                      deposit: int.tryParse(depositController.text) ?? 16000,
+                    );
+                    final foundResident = AppData.getResidentByName(name);
+                    final assignedBedName = foundResident?['bed']?.toString() ?? 'Bed A';
+
+                    // API Call
+                    final propId = AppData.selectedPropertyId;
+                    String? backendResidentId;
+                    if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
+                      try {
+                        final created = await AdminApiService.onboardResident({
+                          'property_id': propId,
+                          'full_name': name,
+                          'phone': phone,
+                          'email': emailController.text.trim(),
+                          'emergency_contact_phone': emergencyContactController.text.trim(),
+                          'date_of_birth': dobController.text.trim(),
+                          'gender': gender.toUpperCase(),
+                          'occupation': occupationController.text.trim(),
+                          'permanent_address': addressController.text.trim(),
+                          'monthly_rent': double.tryParse(rentController.text) ?? 8000,
+                          'security_deposit': double.tryParse(depositController.text) ?? 16000,
+                        });
+                        if (created.isNotEmpty && created['id'] != null) {
+                          backendResidentId = created['id'].toString();
+                        }
+                      } catch (e) {
+                        debugPrint('Could not sync resident to backend: $e');
+                      }
+                    }
+
+                    final newResident = <String, dynamic>{
+                      'name': name,
+                      'phone': phone,
+                      'email': emailController.text.trim().isNotEmpty ? emailController.text.trim() : '$name@example.com',
+                      'emergency_contact': emergencyContactController.text.trim().isNotEmpty
+                          ? emergencyContactController.text.trim()
+                          : '9876543299',
+                      'room': roomNo,
+                      'floor': floorController.text.trim().isNotEmpty ? floorController.text.trim() : '1st Floor',
+                      'bed': assignedBedName,
+                      'rent': int.tryParse(rentController.text) ?? 8000,
+                      'deposit': int.tryParse(depositController.text) ?? 16000,
+                      'status': 'Active',
+                      'kyc': 'Verified',
+                      'dob': dobController.text.trim().isNotEmpty ? dobController.text.trim() : '01/01/2000',
+                      'gender': gender,
+                      'occupation': occupationController.text.trim().isNotEmpty
+                          ? occupationController.text.trim()
+                          : 'Professional',
+                      'address': addressController.text.trim().isNotEmpty
+                          ? addressController.text.trim()
+                          : 'Bengaluru, Karnataka',
+                      'pincode': pincodeController.text.trim().isNotEmpty ? pincodeController.text.trim() : '560001',
+                      'aadhaar_number':
+                          aadhaarController.text.trim().isNotEmpty ? aadhaarController.text.trim() : 'Not provided',
+                      'pan_number': panController.text.trim().isNotEmpty ? panController.text.trim() : 'Not provided',
+                      'property_name': AppData.selectedProperty,
+                      'joining_date': 'Today',
+                      'role': 'Resident',
+                    };
+                    if (backendResidentId != null) {
+                      newResident['id'] = backendResidentId;
+                    }
+
+                    AppData.residents.insert(0, newResident);
+
+                    // Auto-generate invoice
+                    AppData.invoices.insert(0, {
+                      'id': 'INV-2026-${100 + AppData.invoices.length}',
+                      'name': name,
+                      'room': roomNo,
+                      'amount': int.tryParse(rentController.text) ?? 8000,
+                      'status': 'Pending',
+                      'date': 'Today',
+                    });
+
+                    AppData.saveResidentsToStorage();
+
+                    if (dialogContext.mounted) Navigator.pop(dialogContext);
+                    onComplete?.call();
+
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Resident $name onboarded to Room $roomNo ($assignedBedName)!'),
+                          backgroundColor: AppTheme.statusOk,
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text('Onboard Resident'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                ],
-              ),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 560),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                ),
+              ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                       if (localError != null) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -368,180 +490,12 @@ class ResidentsScreen extends StatefulWidget {
                       ),
                     ],
                   ),
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    final phone = phoneController.text.trim();
-                    final roomNo = roomController.text.trim();
-
-                    if (name.isEmpty || phone.isEmpty || roomNo.isEmpty) {
-                      setModalState(() {
-                        localError = 'Full Name, Phone Number, and Room Number are required!';
-                      });
-                      return;
-                    }
-
-                    String assignedBedName = 'Bed A';
-                    final floor = floorController.text.trim().isNotEmpty
-                        ? floorController.text.trim()
-                        : '1st Floor';
-
-                    final propId = AppData.selectedPropertyId;
-                    String? backendResidentId;
-
-                    if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
-                      // Lookup matching room and bed from AppData.rooms
-                      Map<String, dynamic>? matchedRoom;
-                      for (var r in AppData.rooms) {
-                        if (r['number']?.toString().trim() == roomNo.trim()) {
-                          matchedRoom = r;
-                          break;
-                        }
-                      }
-                      String? roomId = matchedRoom?['id']?.toString();
-                      String? bedId;
-                      if (matchedRoom != null && matchedRoom['beds'] is List) {
-                        for (var b in matchedRoom['beds'] as List) {
-                          if (b['status'] != 'Occupied') {
-                            bedId = b['id']?.toString();
-                            break;
-                          }
-                        }
-                      }
-
-                      final onboardData = <String, dynamic>{
-                        'property_id': propId,
-                        'full_name': name,
-                        'phone': phone,
-                        'email': emailController.text.trim().isNotEmpty ? emailController.text.trim() : null,
-                        'monthly_rent': (int.tryParse(rentController.text) ?? 8000).toDouble(),
-                        'security_deposit': (int.tryParse(depositController.text) ?? 16000).toDouble(),
-                        'check_in_date': DateTime.now().toIso8601String().substring(0, 10),
-                        if (roomId != null && !roomId.startsWith('r-')) 'room_id': roomId,
-                        if (bedId != null && !bedId.startsWith('b-')) 'bed_id': bedId,
-                      };
-                      if (aadhaarController.text.trim().isNotEmpty) {
-                        onboardData['id_proof_number'] = aadhaarController.text.trim();
-                      }
-                      if (panController.text.trim().isNotEmpty) {
-                        onboardData['pan_number'] = panController.text.trim();
-                      }
-                      if (emergencyContactController.text.trim().isNotEmpty) {
-                        onboardData['emergency_contact_phone'] = emergencyContactController.text.trim();
-                      }
-
-                      try {
-                        final onboardRes = await AdminApiService.onboardResident(onboardData);
-                        if (onboardRes.isNotEmpty && onboardRes['id'] != null) {
-                          backendResidentId = onboardRes['id'].toString();
-                        }
-                      } catch (e) {
-                        setModalState(() {
-                          localError = 'Backend onboarding error: $e';
-                        });
-                        return;
-                      }
-                    }
-
-                    final errorMessage = AppData.assignResidentToRoom(
-                      roomNo,
-                      name,
-                      floor: floor,
-                      onBedAssigned: (bName) {
-                        assignedBedName = bName;
-                        return bName;
-                      },
-                      dob: dobController.text.trim().isNotEmpty ? dobController.text.trim() : '15/05/2000',
-                      gender: gender,
-                      occupation: occupationController.text.trim().isNotEmpty ? occupationController.text.trim() : 'Software Engineer',
-                      email: emailController.text.trim().isNotEmpty ? emailController.text.trim() : 'resident@example.com',
-                      emergencyContact: emergencyContactController.text.trim().isNotEmpty ? emergencyContactController.text.trim() : 'Not provided',
-                      address: addressController.text.trim().isNotEmpty ? addressController.text.trim() : 'Not provided',
-                      pincode: pincodeController.text.trim().isNotEmpty ? pincodeController.text.trim() : '560001',
-                      aadhaarNumber: aadhaarController.text.trim().isNotEmpty ? aadhaarController.text.trim() : 'Not provided',
-                      panNumber: panController.text.trim().isNotEmpty ? panController.text.trim() : 'Not provided',
-                      rent: int.tryParse(rentController.text) ?? 8000,
-                      deposit: int.tryParse(depositController.text) ?? 16000,
-                    );
-
-                    if (errorMessage != null) {
-                      setModalState(() {
-                        localError = errorMessage;
-                      });
-                      return;
-                    }
-
-                    final newResident = <String, dynamic>{
-                      'name': name,
-                      'phone': phone,
-                      'room': roomNo,
-                      'room_number': roomNo,
-                      'floor': floor,
-                      'bed': assignedBedName,
-                      'rent': int.tryParse(rentController.text) ?? 8000,
-                      'deposit': int.tryParse(depositController.text) ?? 16000,
-                      'kyc': 'Verified',
-                      'status': 'Active',
-                      'dob': dobController.text.trim().isNotEmpty ? dobController.text.trim() : '15/05/2000',
-                      'gender': gender,
-                      'occupation': occupationController.text.trim().isNotEmpty ? occupationController.text.trim() : 'Software Engineer',
-                      'email': emailController.text.trim().isNotEmpty ? emailController.text.trim() : 'resident@example.com',
-                      'emergency_contact': emergencyContactController.text.trim().isNotEmpty ? emergencyContactController.text.trim() : 'Not provided',
-                      'address': addressController.text.trim().isNotEmpty ? addressController.text.trim() : 'Not provided',
-                      'pincode': pincodeController.text.trim().isNotEmpty ? pincodeController.text.trim() : '560001',
-                      'aadhaar_number': aadhaarController.text.trim().isNotEmpty ? aadhaarController.text.trim() : 'Not provided',
-                      'pan_number': panController.text.trim().isNotEmpty ? panController.text.trim() : 'Not provided',
-                      'property_name': AppData.selectedProperty,
-                      'joining_date': 'Today',
-                      'role': 'Resident',
-                    };
-                    if (backendResidentId != null) {
-                      newResident['id'] = backendResidentId;
-                    }
-
-                    AppData.residents.insert(0, newResident);
-
-                    // Auto-generate invoice
-                    AppData.invoices.insert(0, {
-                      'id': 'INV-2026-${100 + AppData.invoices.length}',
-                      'name': name,
-                      'room': roomNo,
-                      'amount': int.tryParse(rentController.text) ?? 8000,
-                      'status': 'Pending',
-                      'date': 'Today',
-                    });
-
-                    AppData.saveResidentsToStorage();
-
-                    if (dialogContext.mounted) Navigator.pop(dialogContext);
-                    onComplete?.call();
-
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Resident $name onboarded to Room $roomNo ($assignedBedName)!'),
-                          backgroundColor: AppTheme.successGreen,
-                        ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
-                  child: const Text('Onboard Resident'),
-                ),
-              ],
+                );
+              },
             );
           },
         );
-      },
-    );
-  }
+      }
 
   // Public static method to show Edit Resident Dialog from anywhere
   static void showEditResidentDialog(
@@ -574,7 +528,7 @@ class ResidentsScreen extends StatefulWidget {
     String? localError;
     bool isSaving = false;
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       barrierDismissible: true,
       builder: (dialogCtx) {
@@ -616,77 +570,162 @@ class ResidentsScreen extends StatefulWidget {
                 ),
                 focusedBorder: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(10)),
-                  borderSide: BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                  borderSide: BorderSide(color: AppTheme.primaryTeal, width: 1.5),
                 ),
               );
             }
 
-            return Dialog(
-              backgroundColor: cardBg,
-              surfaceTintColor: Colors.transparent,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Container(
-                constraints: BoxConstraints(
-                  maxWidth: 640,
-                  maxHeight: MediaQuery.of(context).size.height * 0.9,
+            return PremiumDialog(
+              maxWidth: 680,
+              title: 'Edit Resident Details',
+              subtitle: resident['name'] ?? resident['full_name'] ?? 'Resident',
+              icon: Icons.edit_note_rounded,
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(color: textSec, fontWeight: FontWeight.w600),
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
-                      decoration: BoxDecoration(
-                        border: Border(bottom: BorderSide(color: borderCol)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryBlue, size: 24),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Edit Resident Details',
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Edit name, phone number, stay financials, and address info',
-                                  style: TextStyle(fontSize: 12, color: textSec),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
-                            icon: Icon(Icons.close, color: textSec, size: 20),
-                            tooltip: 'Close',
-                          ),
-                        ],
-                      ),
-                    ),
+                ElevatedButton.icon(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final nameVal = nameController.text.trim();
+                          final phoneVal = phoneController.text.trim();
+                          final emailVal = emailController.text.trim();
+                          final emVal = emergencyController.text.trim();
+                          final dobVal = dobController.text.trim();
+                          final occVal = occupationController.text.trim();
+                          final addrVal = addressController.text.trim();
+                          final pinVal = pincodeController.text.trim();
+                          final rentVal = int.tryParse(rentController.text.trim()) ?? 8000;
+                          final depVal = int.tryParse(depositController.text.trim()) ?? 16000;
 
-                    // Body
-                    Flexible(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (localError != null)
+                          if (nameVal.isEmpty) {
+                            setDialogState(() => localError = 'Full name cannot be empty');
+                            return;
+                          }
+                          if (phoneVal.isEmpty) {
+                            setDialogState(() => localError = 'Phone number cannot be empty');
+                            return;
+                          }
+
+                          setDialogState(() {
+                            isSaving = true;
+                            localError = null;
+                          });
+
+                          final messenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(dialogCtx);
+
+                          // 1. Update In-Memory Resident
+                          resident['name'] = nameVal;
+                          resident['full_name'] = nameVal;
+                          resident['phone'] = phoneVal;
+                          resident['email'] = emailVal;
+                          resident['emergency_contact'] = emVal;
+                          resident['emergency_contact_phone'] = emVal;
+                          resident['dob'] = dobVal;
+                          resident['date_of_birth'] = dobVal;
+                          resident['gender'] = selectedGender;
+                          resident['occupation'] = occVal;
+                          resident['address'] = addrVal;
+                          resident['permanent_address'] = addrVal;
+                          resident['pincode'] = pinVal;
+                          resident['rent'] = rentVal;
+                          resident['monthly_rent'] = rentVal;
+                          resident['deposit'] = depVal;
+                          resident['security_deposit'] = depVal;
+                          resident['status'] = selectedStatus;
+
+                          // 2. Sync with AppData.residents
+                          final resId = resident['id']?.toString();
+                          for (var r in AppData.residents) {
+                            if ((resId != null && resId.isNotEmpty && r['id']?.toString() == resId) ||
+                                identical(r, resident)) {
+                              r['name'] = nameVal;
+                              r['full_name'] = nameVal;
+                              r['phone'] = phoneVal;
+                              r['email'] = emailVal;
+                              r['emergency_contact'] = emVal;
+                              r['dob'] = dobVal;
+                              r['gender'] = selectedGender;
+                              r['occupation'] = occVal;
+                              r['address'] = addrVal;
+                              r['permanent_address'] = addrVal;
+                              r['pincode'] = pinVal;
+                              r['rent'] = rentVal;
+                              r['monthly_rent'] = rentVal;
+                              r['deposit'] = depVal;
+                              r['security_deposit'] = depVal;
+                              r['status'] = selectedStatus;
+                              break;
+                            }
+                          }
+                          AppData.saveResidentsToStorage();
+
+                          // 3. Sync to Backend API
+                          if (resId != null && resId.isNotEmpty && !resId.startsWith('mock-') && !resId.startsWith('r-')) {
+                            try {
+                              final apiPayload = <String, dynamic>{
+                                'full_name': nameVal,
+                                'name': nameVal,
+                                'phone': phoneVal,
+                                'email': emailVal.isNotEmpty ? emailVal : null,
+                                'emergency_contact': emVal,
+                                'dob': dobVal,
+                                'gender': selectedGender,
+                                'occupation': occVal,
+                                'address': addrVal,
+                                'pincode': pinVal,
+                                'monthly_rent': rentVal.toDouble(),
+                                'rent': rentVal.toDouble(),
+                                'security_deposit': depVal.toDouble(),
+                                'deposit': depVal.toDouble(),
+                                'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
+                              };
+                              await AdminApiService.updateResident(resId, apiPayload);
+                            } catch (e) {
+                              debugPrint('API updateResident error: $e');
+                            }
+                          }
+
+                          navigator.pop();
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Resident profile for "$nameVal" updated successfully!'),
+                              backgroundColor: AppTheme.statusOk,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          onComplete?.call();
+                        },
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(
+                    isSaving ? 'Saving...' : 'Save Changes',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (localError != null)
                               Container(
                                 margin: const EdgeInsets.only(bottom: 16),
                                 padding: const EdgeInsets.all(12),
@@ -920,178 +959,14 @@ class ResidentsScreen extends StatefulWidget {
                             ),
                           ],
                         ),
-                      ),
-                    ),
-
-                    // Actions
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                      decoration: BoxDecoration(
-                        border: Border(top: BorderSide(color: borderCol)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton(
-                            onPressed: isSaving ? null : () => Navigator.pop(dialogCtx),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: textSec,
-                              side: BorderSide(color: borderCol),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.w600)),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: isSaving
-                                ? null
-                                : () async {
-                                    final nameVal = nameController.text.trim();
-                                    final phoneVal = phoneController.text.trim();
-
-                                    if (nameVal.isEmpty) {
-                                      setDialogState(() => localError = 'Full Name cannot be empty.');
-                                      return;
-                                    }
-                                    if (phoneVal.isEmpty) {
-                                      setDialogState(() => localError = 'Mobile Number cannot be empty.');
-                                      return;
-                                    }
-                                    final cleanDigits = phoneVal.replaceAll(RegExp(r'\D'), '');
-                                    if (cleanDigits.length < 10) {
-                                      setDialogState(() => localError = 'Mobile Number must be at least 10 digits.');
-                                      return;
-                                    }
-
-                                    final messenger = ScaffoldMessenger.of(context);
-                                    final navigator = Navigator.of(dialogCtx);
-
-                                    setDialogState(() {
-                                      isSaving = true;
-                                      localError = null;
-                                    });
-
-                                    final rentVal = int.tryParse(rentController.text.trim()) ?? (resident['rent'] ?? 8000);
-                                    final depVal = int.tryParse(depositController.text.trim()) ?? (resident['deposit'] ?? 16000);
-                                    final emailVal = emailController.text.trim();
-                                    final emVal = emergencyController.text.trim();
-                                    final dobVal = dobController.text.trim();
-                                    final occVal = occupationController.text.trim();
-                                    final addrVal = addressController.text.trim();
-                                    final pinVal = pincodeController.text.trim();
-
-                                    // 1. Update in-memory resident object
-                                    resident['name'] = nameVal;
-                                    resident['full_name'] = nameVal;
-                                    resident['phone'] = phoneVal;
-                                    resident['email'] = emailVal;
-                                    resident['emergency_contact'] = emVal;
-                                    resident['dob'] = dobVal;
-                                    resident['gender'] = selectedGender;
-                                    resident['occupation'] = occVal;
-                                    resident['address'] = addrVal;
-                                    resident['permanent_address'] = addrVal;
-                                    resident['pincode'] = pinVal;
-                                    resident['rent'] = rentVal;
-                                    resident['monthly_rent'] = rentVal;
-                                    resident['deposit'] = depVal;
-                                    resident['security_deposit'] = depVal;
-                                    resident['status'] = selectedStatus;
-
-                                    // 2. Sync with AppData.residents
-                                    final resId = resident['id']?.toString();
-                                    for (var r in AppData.residents) {
-                                      if ((resId != null && resId.isNotEmpty && r['id']?.toString() == resId) ||
-                                          identical(r, resident)) {
-                                        r['name'] = nameVal;
-                                        r['full_name'] = nameVal;
-                                        r['phone'] = phoneVal;
-                                        r['email'] = emailVal;
-                                        r['emergency_contact'] = emVal;
-                                        r['dob'] = dobVal;
-                                        r['gender'] = selectedGender;
-                                        r['occupation'] = occVal;
-                                        r['address'] = addrVal;
-                                        r['permanent_address'] = addrVal;
-                                        r['pincode'] = pinVal;
-                                        r['rent'] = rentVal;
-                                        r['monthly_rent'] = rentVal;
-                                        r['deposit'] = depVal;
-                                        r['security_deposit'] = depVal;
-                                        r['status'] = selectedStatus;
-                                        break;
-                                      }
-                                    }
-                                    AppData.saveResidentsToStorage();
-
-                                    // 3. Sync to Backend API
-                                    if (resId != null && resId.isNotEmpty && !resId.startsWith('mock-') && !resId.startsWith('r-')) {
-                                      try {
-                                        final apiPayload = <String, dynamic>{
-                                          'full_name': nameVal,
-                                          'name': nameVal,
-                                          'phone': phoneVal,
-                                          'email': emailVal.isNotEmpty ? emailVal : null,
-                                          'emergency_contact': emVal,
-                                          'dob': dobVal,
-                                          'gender': selectedGender,
-                                          'occupation': occVal,
-                                          'address': addrVal,
-                                          'pincode': pinVal,
-                                          'monthly_rent': rentVal.toDouble(),
-                                          'rent': rentVal.toDouble(),
-                                          'security_deposit': depVal.toDouble(),
-                                          'deposit': depVal.toDouble(),
-                                          'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
-                                        };
-                                        await AdminApiService.updateResident(resId, apiPayload);
-                                      } catch (e) {
-                                        debugPrint('API updateResident error: $e');
-                                      }
-                                    }
-
-                                    navigator.pop();
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text('Resident profile for "$nameVal" updated successfully!'),
-                                        backgroundColor: const Color(0xFF10B981),
-                                        behavior: SnackBarBehavior.floating,
-                                      ),
-                                    );
-                                    onComplete?.call();
-                                  },
-                            icon: isSaving
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Icon(Icons.check_circle_outline, size: 18),
-                            label: Text(
-                              isSaving ? 'Saving...' : 'Save Changes',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              elevation: 0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
             );
           },
         );
       },
     );
   }
+
+
 
   // Public static method to show Resident Profile Modal from anywhere
   static void showResidentProfileModal(
@@ -1109,11 +984,10 @@ class ResidentsScreen extends StatefulWidget {
     }
     if (initials.isEmpty) initials = 'R';
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogCtx) {
         final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
-        final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
         final sectionBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
         final borderCol = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
         final textPri = isDark ? Colors.white : AppTheme.textDark;
@@ -1128,66 +1002,136 @@ class ResidentsScreen extends StatefulWidget {
             ? 'Pending Resident'
             : (isActive ? 'Active Resident' : '${resident['status'] ?? 'Active'} Resident');
 
-        return Dialog(
-          backgroundColor: cardBg,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: 620,
-              maxHeight: MediaQuery.of(context).size.height * 0.9,
+        return PremiumDialog(
+          maxWidth: 640,
+          title: resident['name'] ?? 'Resident Profile',
+          subtitle: statusText,
+          icon: Icons.badge_outlined,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Close', style: TextStyle(color: AppTheme.textGrey)),
             ),
-            decoration: BoxDecoration(
-              color: cardBg,
-              borderRadius: BorderRadius.circular(16),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                final rIndex = AppData.residents.indexOf(resident);
+                showTransferModal(context, resident, rIndex >= 0 ? rIndex : 0, onComplete: onStateChanged);
+              },
+              icon: const Icon(Icons.swap_horiz, size: 16),
+              label: const Text('Change Room'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primaryTeal,
+                side: const BorderSide(color: AppTheme.primaryTeal),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
             ),
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header: CircleAvatar with Initials (amber background), Name, Status Subtitle
-                      Center(
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              radius: 44,
-                              backgroundColor: const Color(0xFFFEF3C7),
-                              child: Text(
-                                initials,
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFD97706),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              resident['name'] ?? 'Unknown Resident',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: textPri,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              statusText,
-                              style: TextStyle(
-                                color: statusColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                showEditResidentDialog(
+                  context,
+                  resident,
+                  onComplete: () {
+                    onStateChanged?.call();
+                    showResidentProfileModal(context, resident, onStateChanged: onStateChanged);
+                  },
+                );
+              },
+              icon: const Icon(Icons.edit_rounded, size: 16),
+              label: const Text('Edit Profile'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryTeal,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.pop(dialogCtx);
+                final rIndex = AppData.residents.indexOf(resident);
+                showCheckoutModal(context, resident, rIndex >= 0 ? rIndex : 0, onComplete: onStateChanged);
+              },
+              icon: const Icon(Icons.logout, size: 16),
+              label: const Text('Proceed Exit'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.statusRed,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              ),
+            ),
+          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header banner with Initials and info
+              Container(
+                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: borderCol),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 32,
+                      backgroundColor: isPending ? const Color(0xFFFEF3C7) : AppTheme.lightTeal,
+                      child: Text(
+                        initials,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isPending ? const Color(0xFFD97706) : AppTheme.primaryTeal,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            resident['name'] ?? 'Unknown Resident',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isPending ? const Color(0xFFFEF3C7) : const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: isPending ? const Color(0xFFFDE68A) : const Color(0xFFA7F3D0)),
+                                ),
+                                child: Text(
+                                  statusText,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                resident['phone'] ?? '',
+                                style: TextStyle(fontSize: 12, color: textSec),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
 
                   // Card 1: Personal Information (Full Name, DOB, Gender, Occupation in 2 columns)
                   _buildProfileSectionCard(
@@ -1397,103 +1341,11 @@ class ResidentsScreen extends StatefulWidget {
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 20),
-
-                  // Bottom Action Bar: [Edit] [Change Room] [Proceed Exit]
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(dialogCtx);
-                            showEditResidentDialog(
-                              context,
-                              resident,
-                              onComplete: () {
-                                onStateChanged?.call();
-                                showResidentProfileModal(context, resident, onStateChanged: onStateChanged);
-                              },
-                            );
-                          },
-                          icon: Icon(Icons.edit_outlined, size: 16, color: textPri),
-                          label: Text('Edit', style: TextStyle(fontWeight: FontWeight.bold, color: textPri)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                            foregroundColor: textPri,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            minimumSize: const Size(0, 42),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 3,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(dialogCtx);
-                            final rIndex = AppData.residents.indexOf(resident);
-                            showTransferModal(context, resident, rIndex >= 0 ? rIndex : 0, onComplete: onStateChanged);
-                          },
-                          icon: const Icon(Icons.swap_horiz, size: 18, color: AppTheme.primaryBlue),
-                          label: const Text(
-                            'Change Room',
-                            style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: isDark ? const Color(0xFF1E3A8A).withValues(alpha: 0.3) : const Color(0xFFEFF6FF),
-                            foregroundColor: AppTheme.primaryBlue,
-                            side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            minimumSize: const Size(0, 42),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        flex: 3,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(dialogCtx);
-                            final rIndex = AppData.residents.indexOf(resident);
-                            showCheckoutModal(context, resident, rIndex >= 0 ? rIndex : 0, onComplete: onStateChanged);
-                          },
-                          icon: const Icon(Icons.logout, size: 16, color: Colors.white),
-                          label: const Text('Proceed Exit', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFEF4444),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            minimumSize: const Size(0, 42),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              top: 14,
-              right: 14,
-              child: IconButton(
-                icon: Icon(Icons.close, color: textSec, size: 20),
-                onPressed: () => Navigator.pop(dialogCtx),
-                tooltip: 'Close',
-              ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
-  },
-);
   }
 
   // Public static method to show Room Transfer modal
@@ -1505,118 +1357,127 @@ class ResidentsScreen extends StatefulWidget {
   }) {
     final newRoomController = TextEditingController();
     String? localError;
+    bool isSubmitting = false;
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              title: Text('Transfer Resident: ${resident['name']}', overflow: TextOverflow.ellipsis),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Current Room: ${resident['room']}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    const Text('Enter New Room Number:', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: newRoomController,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. 102, 201',
-                      ),
-                      onChanged: (_) {
-                        if (localError != null) {
-                          setModalState(() => localError = null);
-                        }
-                      },
-                    ),
-                    if (localError != null) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red, size: 18),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                localError!,
-                                style: const TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w500),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+            return PremiumDialog(
+              maxWidth: 440,
+              title: 'Transfer Room',
+              subtitle: resident['name'] ?? 'Resident',
+              icon: Icons.swap_horiz_rounded,
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
+                  onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final messenger = ScaffoldMessenger.of(context);
-                    final nav = Navigator.of(dialogContext);
-                    final newRoomNum = newRoomController.text.trim();
-                    if (newRoomNum.isEmpty) {
-                      setModalState(() => localError = 'Please enter a room number');
-                      return;
-                    }
+                ElevatedButton.icon(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          final nav = Navigator.of(dialogContext);
+                          final newRoomNum = newRoomController.text.trim();
+                          if (newRoomNum.isEmpty) {
+                            setModalState(() => localError = 'Please enter a room number');
+                            return;
+                          }
 
-                    final errorMessage = AppData.transferResident(resident['name'], newRoomNum);
+                          setModalState(() => isSubmitting = true);
 
-                    if (errorMessage != null) {
-                      setModalState(() => localError = errorMessage);
-                      return;
-                    }
+                          final errorMessage = AppData.transferResident(resident['name'], newRoomNum);
 
-                    resident['room'] = newRoomNum;
-                    final resId = resident['id']?.toString();
-                    if (resId != null && resId.isNotEmpty && !resId.startsWith('res-')) {
-                      final targetRoom = AppData.rooms.cast<Map<String, dynamic>?>().firstWhere(
-                        (r) => r?['number']?.toString() == newRoomNum,
-                        orElse: () => null,
-                      );
-                      final targetRoomId = targetRoom?['id']?.toString();
-                      if (targetRoomId != null && targetRoomId.isNotEmpty) {
-                        try {
-                          await AdminApiService.transferResident(
-                            residentId: resId,
-                            newRoomId: targetRoomId,
+                          if (errorMessage != null) {
+                            setModalState(() {
+                              isSubmitting = false;
+                              localError = errorMessage;
+                            });
+                            return;
+                          }
+
+                          resident['room'] = newRoomNum;
+                          final resId = resident['id']?.toString();
+                          if (resId != null && resId.isNotEmpty && !resId.startsWith('res-')) {
+                            final targetRoom = AppData.rooms.cast<Map<String, dynamic>?>().firstWhere(
+                              (r) => r?['number']?.toString() == newRoomNum,
+                              orElse: () => null,
+                            );
+                            final targetRoomId = targetRoom?['id']?.toString();
+                            if (targetRoomId != null && targetRoomId.isNotEmpty) {
+                              try {
+                                await AdminApiService.transferResident(
+                                  residentId: resId,
+                                  newRoomId: targetRoomId,
+                                );
+                              } catch (e) {
+                                debugPrint('API transferResident error: $e');
+                              }
+                            }
+                          }
+
+                          nav.pop();
+                          onComplete?.call();
+
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Successfully transferred to Room $newRoomNum!'),
+                              backgroundColor: AppTheme.statusOk,
+                            ),
                           );
-                        } catch (e) {
-                          debugPrint('API transferResident error: $e');
-                        }
-                      }
-                    }
-
-                    nav.pop();
-                    onComplete?.call();
-
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Successfully transferred to Room $newRoomNum!'),
-                        backgroundColor: AppTheme.successGreen,
-                      ),
-                    );
-                  },
-                  child: const Text('Confirm Transfer'),
+                        },
+                  icon: isSubmitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(isSubmitting ? 'Transferring...' : 'Confirm Transfer'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
               ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Current Allocation', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                        Text(
+                          'Room ${resident['room'] ?? 'Unassigned'}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textDark),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  PremiumFormField(
+                    controller: newRoomController,
+                    label: 'New Room Number',
+                    hintText: 'e.g. 102, 201',
+                    prefixIcon: Icons.meeting_room_rounded,
+                    isRequired: true,
+                    errorMessage: localError,
+                    onChanged: (_) {
+                      if (localError != null) {
+                        setModalState(() => localError = null);
+                      }
+                    },
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -1632,10 +1493,11 @@ class ResidentsScreen extends StatefulWidget {
     VoidCallback? onComplete,
   }) {
     final deductionController = TextEditingController(text: '0');
-    final deposit = resident['deposit'] ?? 0;
+    final deposit = (resident['deposit'] as num?)?.toInt() ?? 0;
+    bool isSubmitting = false;
 
     final messenger = ScaffoldMessenger.of(context);
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogCtx) {
         return StatefulBuilder(
@@ -1643,102 +1505,136 @@ class ResidentsScreen extends StatefulWidget {
             final deduction = int.tryParse(deductionController.text) ?? 0;
             final refundAmount = deposit - deduction;
 
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              title: Text('Checkout: ${resident['name']}', overflow: TextOverflow.ellipsis),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      resident['room'] != null && resident['room'].toString().isNotEmpty
-                          ? 'Room: ${resident['room']}'
-                          : 'Room: Not Assigned',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+            return PremiumDialog(
+              maxWidth: 480,
+              title: 'Resident Checkout',
+              subtitle: resident['name'] ?? 'Resident',
+              icon: Icons.logout_rounded,
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
+                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
+                ),
+                ElevatedButton.icon(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final nav = Navigator.of(dialogCtx);
+                          final resId = resident['id']?.toString();
+                          setModalState(() => isSubmitting = true);
+                          if (resId != null && resId.isNotEmpty && !resId.startsWith('res-')) {
+                            try {
+                              await AdminApiService.checkoutResident(
+                                resId,
+                                damageCharges: deduction.toDouble(),
+                              );
+                            } catch (e) {
+                              debugPrint('API checkoutResident error: $e');
+                            }
+                          }
+
+                          if (resident['room'] != null) {
+                            final roomIndex = AppData.rooms.indexWhere((r) => r['number'].toString() == resident['room'].toString());
+                            if (roomIndex != -1) {
+                              final beds = AppData.rooms[roomIndex]['beds'] as List;
+                              final bedIndex = beds.indexWhere((b) => b['occupant'] == resident['name']);
+                              if (bedIndex != -1) {
+                                beds[bedIndex]['status'] = 'Available';
+                                beds[bedIndex]['occupant'] = null;
+                              }
+                            }
+                          }
+
+                          AppData.residents.remove(resident);
+                          AppData.saveResidentsToStorage();
+
+                          nav.pop();
+                          onComplete?.call();
+
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Checked out ${resident['name']}. Refund of ₹ $refundAmount processed.'),
+                              backgroundColor: AppTheme.statusOk,
+                            ),
+                          );
+                        },
+                  icon: isSubmitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(isSubmitting ? 'Processing...' : 'Confirm Checkout'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.statusRed,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
                     ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: Column(
                       children: [
-                        const Text('Security Deposit:'),
-                        Text('₹ $deposit', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Deductions (Pending rent, damages):', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: deductionController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(prefixText: '₹ ', hintText: 'Enter amount'),
-                      onChanged: (val) => setModalState(() {}),
-                    ),
-                    const Divider(height: 32),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Refund to Resident:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text(
-                          '₹ ${refundAmount < 0 ? 0 : refundAmount}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.green),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Room & Property', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                            Text(
+                              resident['room'] != null && resident['room'].toString().isNotEmpty
+                                  ? 'Room ${resident['room']}'
+                                  : 'Not Assigned',
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 16, color: Color(0xFFE2E8F0)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Security Deposit', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                            Text('₹ $deposit', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textDark)),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  PremiumFormField(
+                    controller: deductionController,
+                    label: 'Deductions (Pending rent, damages)',
+                    prefixIcon: Icons.currency_rupee_rounded,
+                    keyboardType: TextInputType.number,
+                    onChanged: (val) => setModalState(() {}),
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Net Refund to Resident', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: Color(0xFF065F46))),
+                        Text(
+                          '₹ ${refundAmount < 0 ? 0 : refundAmount}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: AppTheme.statusOk),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogCtx),
-                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final nav = Navigator.of(dialogCtx);
-                    final resId = resident['id']?.toString();
-                    if (resId != null && resId.isNotEmpty && !resId.startsWith('res-')) {
-                      try {
-                        await AdminApiService.checkoutResident(
-                          resId,
-                          damageCharges: deduction.toDouble(),
-                        );
-                      } catch (e) {
-                        debugPrint('API checkoutResident error: $e');
-                      }
-                    }
-
-                    if (resident['room'] != null) {
-                      final roomIndex = AppData.rooms.indexWhere((r) => r['number'].toString() == resident['room'].toString());
-                      if (roomIndex != -1) {
-                        final beds = AppData.rooms[roomIndex]['beds'] as List;
-                        final bedIndex = beds.indexWhere((b) => b['occupant'] == resident['name']);
-                        if (bedIndex != -1) {
-                          beds[bedIndex]['status'] = 'Available';
-                          beds[bedIndex]['occupant'] = null;
-                        }
-                      }
-                    }
-
-                    AppData.residents.remove(resident);
-                    AppData.saveResidentsToStorage();
-
-                    nav.pop();
-                    onComplete?.call();
-
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Checked out. Refund ₹ $refundAmount processed.'),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: const Text('Confirm Checkout'),
-                ),
-              ],
             );
           },
         );
@@ -1833,74 +1729,75 @@ class ResidentsScreen extends StatefulWidget {
     String? residentId,
     String? docKey,
   ]) {
-    showDialog(
+    showPremiumDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        title: Text('$docType - $residentName', overflow: TextOverflow.ellipsis),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 450),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                height: 220,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Center(
-                  child: residentId != null && residentId.isNotEmpty
-                      ? FutureBuilder<Uint8List?>(
-                          future: AdminApiService.getKycDocumentBytes(residentId, docKey ?? 'aadhaar_front'),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                            }
-                            if (snapshot.hasData && snapshot.data != null) {
-                              return ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.memory(
-                                  snapshot.data!,
-                                  height: 220,
-                                  width: double.infinity,
-                                  fit: BoxFit.contain,
-                                ),
-                              );
-                            }
-                            return Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.document_scanner_outlined, size: 50, color: Colors.grey.shade400),
-                                const SizedBox(height: 10),
-                                Text('Verified $docType Image', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 4),
-                                Text('Uploaded by resident', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                              ],
-                            );
-                          },
-                        )
-                      : Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.document_scanner_outlined, size: 50, color: Colors.grey.shade400),
-                            const SizedBox(height: 10),
-                            Text('Verified $docType Image', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text('Uploaded by resident', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                          ],
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => PremiumDialog(
+        maxWidth: 520,
+        title: '$docType - $residentName',
+        subtitle: 'Identity document verification preview',
+        icon: Icons.document_scanner_rounded,
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close', style: TextStyle(color: AppTheme.textGrey)),
+          ),
         ],
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 240,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Center(
+                child: residentId != null && residentId.isNotEmpty
+                    ? FutureBuilder<Uint8List?>(
+                        future: AdminApiService.getKycDocumentBytes(residentId, docKey ?? 'aadhaar_front'),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryTeal));
+                          }
+                          if (snapshot.hasData && snapshot.data != null) {
+                            return ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Image.memory(
+                                snapshot.data!,
+                                height: 240,
+                                width: double.infinity,
+                                fit: BoxFit.contain,
+                              ),
+                            );
+                          }
+                          return Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.document_scanner_outlined, size: 48, color: AppTheme.textGrey),
+                              const SizedBox(height: 10),
+                              Text('Verified $docType Image', style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                              const SizedBox(height: 4),
+                              const Text('Uploaded by resident', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+                            ],
+                          );
+                        },
+                      )
+                    : const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.document_scanner_outlined, size: 48, color: AppTheme.textGrey),
+                          SizedBox(height: 10),
+                          Text('Verified Document Image', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+                          SizedBox(height: 4),
+                          Text('Uploaded by resident', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+                        ],
+                      ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1912,7 +1809,9 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedResidentStatus = 'All Resident Statuses';
-  String _selectedKycStatus = 'All KYC Statuses';
+  String _selectedKycStatus = 'Verified';
+  int _selectedMonth = DateTime.now().month;
+  int _selectedYear = DateTime.now().year;
 
   @override
   void initState() {
@@ -1988,7 +1887,7 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
         }
       }
 
-      if (_selectedKycStatus != 'All KYC Statuses') {
+      if (_selectedKycStatus.isNotEmpty) {
         final kyc = (res['kyc'] ?? '').toString().trim();
         if (kyc.toLowerCase() != _selectedKycStatus.toLowerCase()) {
           return false;
@@ -2010,216 +1909,402 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
     bool isVerified = resident['kyc'] == 'Verified';
     bool isRejected = resident['kyc'] == 'Rejected';
     final resId = resident['id']?.toString() ?? '';
-
     final messenger = ScaffoldMessenger.of(context);
-    showDialog(
+
+    showPremiumDialog(
       context: context,
       builder: (dialogCtx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          title: Text('KYC: ${resident['name']}', overflow: TextOverflow.ellipsis),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isVerified) ...[
-                  const Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.verified, color: Colors.green, size: 60),
-                        SizedBox(height: 8),
-                        Text('KYC Fully Verified', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                      ],
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return PremiumDialog(
+              maxWidth: 560,
+              icon: isVerified
+                  ? Icons.verified_rounded
+                  : (isRejected ? Icons.gpp_bad_rounded : Icons.verified_user_rounded),
+              iconColor: isVerified
+                  ? AppTheme.statusOk
+                  : (isRejected ? AppTheme.statusRed : AppTheme.primaryTeal),
+              iconBgColor: isVerified
+                  ? const Color(0xFFE8F5E9)
+                  : (isRejected ? const Color(0xFFFFEBEE) : AppTheme.lightTeal),
+              title: 'KYC: ${resident['name'] ?? 'Resident'}',
+              subtitle: isVerified
+                  ? 'Documents fully verified and approved'
+                  : (isRejected
+                      ? 'Identity documents rejected by administration'
+                      : 'Review resident identity documents and take action'),
+              body: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isVerified) ...[
+                    const PremiumDialogBanner(
+                      status: BannerStatus.success,
+                      title: 'KYC Fully Verified',
+                      message: 'This resident has completed verification and identity documents are approved.',
                     ),
-                  ),
-                ] else if (isRejected) ...[
-                  const Center(
-                    child: Column(
-                      children: [
-                        Icon(Icons.cancel, color: Colors.red, size: 60),
-                        SizedBox(height: 8),
-                        Text('KYC Rejected', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                        Text('Please ask resident to re-upload.', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
-                      ],
+                  ] else if (isRejected) ...[
+                    const PremiumDialogBanner(
+                      status: BannerStatus.error,
+                      title: 'KYC Verification Rejected',
+                      message: 'The identity documents were rejected. Please ask the resident to re-upload clear copies.',
                     ),
-                  ),
-                ] else ...[
-                  const Text('Aadhaar Card', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  FutureBuilder<Uint8List?>(
-                    future: resId.isNotEmpty ? AdminApiService.getKycDocumentBytes(resId, 'aadhaar_front') : Future.value(null),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Container(
-                          height: 150,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.inputBorder),
-                          ),
-                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        );
-                      }
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(snapshot.data!, height: 180, width: double.infinity, fit: BoxFit.cover),
-                        );
-                      }
-                      return Container(
-                        height: 150,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppTheme.inputBorder),
-                        ),
-                        child: const Center(child: Text('Aadhaar Image (Uploaded by Resident)')),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('PAN Card', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  FutureBuilder<Uint8List?>(
-                    future: resId.isNotEmpty ? AdminApiService.getKycDocumentBytes(resId, 'pan_card') : Future.value(null),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Container(
-                          height: 150,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppTheme.inputBorder),
-                          ),
-                          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                        );
-                      }
-                      if (snapshot.hasData && snapshot.data != null) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.memory(snapshot.data!, height: 180, width: double.infinity, fit: BoxFit.cover),
-                        );
-                      }
-                      return Container(
-                        height: 150,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppTheme.inputBorder),
-                        ),
-                        child: const Center(child: Text('PAN Image (Uploaded by Resident)')),
-                      );
-                    },
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child: const Text('Close', style: TextStyle(color: AppTheme.textGrey)),
-            ),
-            if (!isVerified) ...[
-              ElevatedButton(
-                onPressed: () {
-                  final reasonController = TextEditingController();
-                  String? err;
-                  showDialog(
-                    context: context,
-                    builder: (rCtx) => StatefulBuilder(
-                      builder: (dialogContext, setRState) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        title: const Text('Reject KYC Verification'),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Please provide a reason for rejecting KYC documents:',
-                              style: TextStyle(fontSize: 13, color: AppTheme.textDark),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: reasonController,
-                              maxLines: 3,
-                              decoration: InputDecoration(
-                                hintText: 'e.g. Identity document is unclear or expired',
-                                filled: true,
-                                fillColor: const Color(0xFFF8FAFC),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ] else ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.lightTeal.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.primaryTeal.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, size: 18, color: AppTheme.primaryTeal),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Please inspect both Aadhaar and PAN documents before approving or rejecting.',
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.primaryTeal,
                               ),
                             ),
-                            if (err != null) ...[
-                              const SizedBox(height: 8),
-                              Text(err!, style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
-                            ],
-                          ],
-                        ),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(rCtx), child: const Text('Cancel')),
-                          ElevatedButton(
-                            onPressed: () async {
-                              final notes = reasonController.text.trim();
-                              if (notes.isEmpty) {
-                                setRState(() => err = 'Please enter a valid rejection reason.');
-                                return;
-                              }
-                              final resId = _residents[residentIndex]['id']?.toString() ?? '';
-                              if (resId.isNotEmpty) {
-                                try {
-                                  await AdminApiService.rejectResidentKYC(resId, notes: notes);
-                                } catch (_) {}
-                              }
-                              setState(() {
-                                _residents[residentIndex]['kyc'] = 'Rejected';
-                              });
-                              _loadResidentsFromApi();
-                              if (rCtx.mounted) Navigator.pop(rCtx);
-                              if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-                              messenger.showSnackBar(
-                                const SnackBar(content: Text('KYC Rejected! Resident notified.'), backgroundColor: Colors.red),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                            child: const Text('Reject KYC'),
                           ),
                         ],
                       ),
                     ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                child: const Text('Reject'),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Icon(Icons.badge_outlined, size: 16, color: AppTheme.textGrey),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Aadhaar Card',
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    FutureBuilder<Uint8List?>(
+                      future: resId.isNotEmpty ? AdminApiService.getKycDocumentBytes(resId, 'aadhaar_front') : Future.value(null),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Container(
+                            height: 150,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.borderColor),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryTeal),
+                              ),
+                            ),
+                          );
+                        }
+                        if (snapshot.hasData && snapshot.data != null) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppTheme.borderColor),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Image.memory(snapshot.data!, height: 180, width: double.infinity, fit: BoxFit.cover),
+                            ),
+                          );
+                        }
+                        return Container(
+                          height: 120,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.description_outlined, size: 32, color: AppTheme.textGrey.withValues(alpha: 0.6)),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Aadhaar document preview not available',
+                                  style: GoogleFonts.manrope(fontSize: 12, color: AppTheme.textGrey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Icon(Icons.credit_card_outlined, size: 16, color: AppTheme.textGrey),
+                        const SizedBox(width: 6),
+                        Text(
+                          'PAN Card',
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    FutureBuilder<Uint8List?>(
+                      future: resId.isNotEmpty ? AdminApiService.getKycDocumentBytes(resId, 'pan_card') : Future.value(null),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return Container(
+                            height: 150,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.borderColor),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryTeal),
+                              ),
+                            ),
+                          );
+                        }
+                        if (snapshot.hasData && snapshot.data != null) {
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                border: Border.all(color: AppTheme.borderColor),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Image.memory(snapshot.data!, height: 180, width: double.infinity, fit: BoxFit.cover),
+                            ),
+                          );
+                        }
+                        return Container(
+                          height: 120,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.borderColor),
+                          ),
+                          child: Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.description_outlined, size: 32, color: AppTheme.textGrey.withValues(alpha: 0.6)),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'PAN document preview not available',
+                                  style: GoogleFonts.manrope(fontSize: 12, color: AppTheme.textGrey),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ],
               ),
-              ElevatedButton(
-                onPressed: () async {
-                  final resId = _residents[residentIndex]['id']?.toString() ?? '';
-                  if (resId.isNotEmpty) {
-                    try {
-                      await AdminApiService.verifyResidentKYC(resId);
-                    } catch (_) {}
-                  }
-                  setState(() {
-                    _residents[residentIndex]['kyc'] = 'Verified';
-                  });
-                  _loadResidentsFromApi();
-                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
-                  messenger.showSnackBar(
-                    const SnackBar(content: Text('KYC Verified Successfully!'), backgroundColor: Colors.green),
-                  );
-                },
-                child: const Text('Verify Documents'),
-              ),
-            ]
-          ],
+              actions: [
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppTheme.borderColor),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  ),
+                  child: Text(
+                    'Close',
+                    style: GoogleFonts.manrope(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                ),
+                if (!isVerified) ...[
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      final reasonController = TextEditingController();
+                      String? err;
+                      bool isRejecting = false;
+
+                      showPremiumDialog(
+                        context: context,
+                        builder: (rCtx) => StatefulBuilder(
+                          builder: (dialogContext, setRState) => PremiumDialog(
+                            maxWidth: 440,
+                            icon: Icons.gpp_bad_rounded,
+                            iconColor: AppTheme.statusRed,
+                            iconBgColor: const Color(0xFFFFEBEE),
+                            title: 'Reject KYC Verification',
+                            subtitle: resident['name'] ?? 'Resident',
+                            body: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const PremiumDialogBanner(
+                                  status: BannerStatus.warning,
+                                  title: 'Rejection Notice',
+                                  message: 'Please provide a clear reason so the resident understands what to fix when re-uploading.',
+                                ),
+                                const SizedBox(height: 16),
+                                PremiumFormField(
+                                  label: 'Reason for Rejection',
+                                  hintText: 'e.g. Identity document is unclear, blurred, or expired',
+                                  controller: reasonController,
+                                  required: true,
+                                  maxLines: 3,
+                                  prefixIcon: Icons.notes_rounded,
+                                ),
+                                if (err != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    err!,
+                                    style: GoogleFonts.manrope(
+                                      color: AppTheme.statusRed,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            actions: [
+                              OutlinedButton(
+                                onPressed: isRejecting ? null : () => Navigator.pop(rCtx),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppTheme.borderColor),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                ),
+                                child: Text(
+                                  'Cancel',
+                                  style: GoogleFonts.manrope(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                              ),
+                              ElevatedButton(
+                                onPressed: isRejecting
+                                    ? null
+                                    : () async {
+                                        final notes = reasonController.text.trim();
+                                        if (notes.isEmpty) {
+                                          setRState(() => err = 'Please enter a valid rejection reason.');
+                                          return;
+                                        }
+                                        setRState(() => isRejecting = true);
+                                        final resId = _residents[residentIndex]['id']?.toString() ?? '';
+                                        if (resId.isNotEmpty) {
+                                          try {
+                                            await AdminApiService.rejectResidentKYC(resId, notes: notes);
+                                          } catch (_) {}
+                                        }
+                                        setState(() {
+                                          _residents[residentIndex]['kyc'] = 'Rejected';
+                                        });
+                                        _loadResidentsFromApi();
+                                        if (rCtx.mounted) Navigator.pop(rCtx);
+                                        if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                                        messenger.showSnackBar(
+                                          const SnackBar(
+                                            content: Text('KYC Rejected. Resident notified to re-upload.'),
+                                            backgroundColor: AppTheme.statusRed,
+                                          ),
+                                        );
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.statusRed,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                                ),
+                                child: isRejecting
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                      )
+                                    : Text(
+                                        'Reject KYC',
+                                        style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                                      ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.statusRed,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 16),
+                    label: Text(
+                      'Reject',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final resId = _residents[residentIndex]['id']?.toString() ?? '';
+                      if (resId.isNotEmpty) {
+                        try {
+                          await AdminApiService.verifyResidentKYC(resId);
+                        } catch (_) {}
+                      }
+                      setState(() {
+                        _residents[residentIndex]['kyc'] = 'Verified';
+                      });
+                      _loadResidentsFromApi();
+                      if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('KYC Verified Successfully!'),
+                          backgroundColor: AppTheme.statusOk,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.statusOk,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    ),
+                    icon: const Icon(Icons.check_rounded, size: 16),
+                    label: Text(
+                      'Verify Documents',
+                      style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
         );
       },
     );
@@ -2289,44 +2374,15 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
     final verifiedKyc = _residents.where((r) => r['kyc'] == 'Verified').length;
     final filtered = _filteredResidents;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Row
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 600;
-              final titleSection = const Text('Residents & KYC', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark));
-
-              final addBtn = ElevatedButton.icon(
-                onPressed: _showAddResidentDialog,
-                icon: const Icon(Icons.person_add),
-                label: const Text('Add Resident'),
-                style: ElevatedButton.styleFrom(minimumSize: const Size(140, 44)),
-              );
-
-              if (isMobile) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    titleSection,
-                    const SizedBox(height: 12),
-                    addBtn,
-                  ],
-                );
-              }
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(child: titleSection),
-                  const SizedBox(width: 16),
-                  addBtn,
-                ],
-              );
-            },
+          const Text(
+            'Residents & KYC',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 20),
 
@@ -2417,33 +2473,54 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
                 final kycStatusDropdown = AppDropdown.simple(
                   height: 40,
                   value: _selectedKycStatus,
-                  items: const ['All KYC Statuses', 'Verified', 'Pending', 'Rejected'],
+                  items: const ['Verified', 'Pending', 'Rejected'],
                   onChanged: (v) => setState(() => _selectedKycStatus = v),
+                );
+
+                final monthYearFilter = MonthYearSelector(
+                  selectedMonth: _selectedMonth,
+                  selectedYear: _selectedYear,
+                  onChanged: (m, y) => setState(() {
+                    _selectedMonth = m;
+                    _selectedYear = y;
+                  }),
                 );
 
                 if (isNarrow) {
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      searchField,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: searchField,
+                      ),
                       const SizedBox(height: 10),
-                      Row(
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Expanded(child: residentStatusDropdown),
-                          const SizedBox(width: 10),
-                          Expanded(child: kycStatusDropdown),
+                          monthYearFilter,
+                          SizedBox(width: 175, child: residentStatusDropdown),
+                          SizedBox(width: 140, child: kycStatusDropdown),
                         ],
                       ),
                     ],
                   );
                 }
 
-                return Row(
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Expanded(child: searchField),
-                    const SizedBox(width: 12),
-                    SizedBox(width: 185, child: residentStatusDropdown),
-                    const SizedBox(width: 12),
-                    SizedBox(width: 175, child: kycStatusDropdown),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 340),
+                      child: searchField,
+                    ),
+                    monthYearFilter,
+                    SizedBox(width: 175, child: residentStatusDropdown),
+                    SizedBox(width: 130, child: kycStatusDropdown),
                   ],
                 );
               },
@@ -2452,9 +2529,8 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
           const SizedBox(height: 16),
           
           // 3. Data Table
-          Expanded(
-            child: Container(
-              decoration: modernTableDecoration,
+          Container(
+            decoration: modernTableDecoration,
               child: filtered.isEmpty
                   ? EmptyState(
                       icon: Icons.people_outline,
@@ -2657,7 +2733,6 @@ class _ResidentsScreenState extends State<ResidentsScreen> {
                       },
                     ),
             ),
-          ),
         ],
       ),
     );

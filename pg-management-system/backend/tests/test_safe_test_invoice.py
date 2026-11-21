@@ -246,8 +246,10 @@ def test_property_manager_can_create_test_invoice(client, test_invoice_fixture):
 
 
 def test_resident_mobile_api_returns_test_invoice_and_can_initiate_upi(client, test_invoice_fixture, monkeypatch):
-    monkeypatch.setattr(settings, "UPI_PAYEE_VPA", "masisokatali90900@okaxis")
-    monkeypatch.setattr(settings, "UPI_PAYEE_NAME", "Saukatali Masi")
+    monkeypatch.setattr(settings, "UPI_PAYEE_VPA", "9886699258-3@ybl")
+    monkeypatch.setattr(settings, "UPI_PAYEE_NAME", "SMART GROUP PG'S")
+    monkeypatch.setattr(settings, "UPI_MERCHANT_VPA", "9886699258-3@ybl")
+    monkeypatch.setattr(settings, "UPI_MERCHANT_NAME", "SMART GROUP PG'S")
 
     ctx = test_invoice_fixture
     admin_headers = make_token_header(ctx["admin_user_id"], "SUPER_ADMIN", ctx["company_id"])
@@ -288,7 +290,7 @@ def test_resident_mobile_api_returns_test_invoice_and_can_initiate_upi(client, t
     upi_data = upi_resp.json()["data"]
 
     assert float(upi_data["amount"]) == 1.00
-    assert upi_data["payee_vpa"] == "masisokatali90900@okaxis"
-    assert upi_data["payee_name"] == "Saukatali Masi"
+    assert upi_data["payee_vpa"] == "9886699258-3@ybl"
+    assert upi_data["payee_name"] == "SMART GROUP PG'S"
     assert "am=1.00" in upi_data["upi_uri"]
-    assert "masisokatali90900" in upi_data["upi_uri"]
+    assert "9886699258-3" in upi_data["upi_uri"]

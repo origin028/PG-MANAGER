@@ -15,7 +15,7 @@ class _CallManagementScreenState extends State<CallManagementScreen>
     with SingleTickerProviderStateMixin {
   bool _isLoading = true;
   String _managerName = 'Rajesh Kumar';
-  String _managerTitle = 'PG Owner • Available 8 AM - 10 PM';
+  String _managerTitle = 'PG Owner';
   String _managerPhone = '9876543210';
   String _managerWhatsApp = '919876543210';
 
@@ -68,9 +68,7 @@ class _CallManagementScreenState extends State<CallManagementScreen>
             _managerName = name.isNotEmpty ? name : _managerName;
             _managerPhone = phone.isNotEmpty ? phone : _managerPhone;
             _managerWhatsApp = wa.isNotEmpty ? wa : _managerWhatsApp;
-            if (timing.isNotEmpty) {
-              _managerTitle = 'PG Owner • $timing';
-            }
+            _managerTitle = 'PG Owner';
           } else if (role.contains('CARETAKER') ||
               role.contains('WARDEN') ||
               role.contains('SECURITY')) {

@@ -2,8 +2,11 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/data/app_data.dart';
+import '../../core/widgets/premium_dialogs.dart';
+import '../../core/widgets/app_dropdown.dart';
 
 import '../../core/services/admin_api_service.dart';
 
@@ -135,59 +138,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     },
   };
 
-  void _showNoticeDialog(BuildContext context) {
-    final noticeController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-        title: const Text('Send Notice to all Residents'),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: TextField(
-            controller: noticeController,
-            maxLines: 3,
-            decoration: const InputDecoration(hintText: 'Type your announcement here...'),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () async {
-              final text = noticeController.text.trim();
-              if (text.isEmpty) return;
-              Navigator.pop(context);
-              try {
-                final propId = AppData.selectedPropertyId ?? (AppData.properties.isNotEmpty ? AppData.properties.first['id']?.toString() : null);
-                if (propId != null && propId.isNotEmpty) {
-                  await AdminApiService.broadcastNotice(
-                    propertyId: propId,
-                    title: 'Notice to Residents',
-                    message: text,
-                    priority: 'NORMAL',
-                  );
-                }
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Notice Sent to All Residents!'), backgroundColor: AppTheme.successGreen),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to send notice: $e'), backgroundColor: Colors.red),
-                  );
-                }
-              }
-            },
-            child: const Text('Send'),
-          ),
-        ],
-      ),
-    );
-  }
-
   // Room Availability Modal showing 2-column grid of rooms with vacant beds and floor numbers
   void _showRoomAvailabilityModal(BuildContext context) {
     final availableRooms = AppData.rooms.where((room) {
@@ -195,186 +145,135 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return beds.any((bed) => bed['status'] == 'Available');
     }).toList();
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogCtx) {
         final isDark = Theme.of(dialogCtx).brightness == Brightness.dark;
-        final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
         final itemBg = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
         final itemBorder = isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0);
         final textPri = isDark ? Colors.white : AppTheme.textDark;
         final textSec = isDark ? const Color(0xFF94A3B8) : AppTheme.textGrey;
 
-        return Dialog(
-          backgroundColor: cardBg,
-          surfaceTintColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          child: Container(
-            width: 640,
-            constraints: BoxConstraints(
-              maxWidth: 640,
-              maxHeight: MediaQuery.of(dialogCtx).size.height * 0.85,
+        return PremiumDialog(
+          maxWidth: 680,
+          title: 'Room Availability',
+          subtitle: 'Live vacant bed count across properties',
+          icon: Icons.bedroom_parent_rounded,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text('Close', style: TextStyle(color: textSec)),
             ),
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFDCFCE7),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.bedroom_parent_rounded, color: AppTheme.successGreen, size: 20),
+          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (availableRooms.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(
+                    child: Text(
+                      'No rooms with vacant beds currently available.',
+                      style: TextStyle(color: AppTheme.textGrey),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Room Availability',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: textPri,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.close, color: textSec, size: 20),
-                      onPressed: () => Navigator.pop(dialogCtx),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Close',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                  ),
+                )
+              else
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: availableRooms.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 14,
+                    mainAxisSpacing: 14,
+                    childAspectRatio: 2.4,
+                  ),
+                  itemBuilder: (_, index) {
+                    final room = availableRooms[index];
+                    final beds = (room['beds'] as List?) ?? [];
+                    final vacantBeds = beds.where((b) => b['status'] == 'Available').length;
+                    final roomNumber = room['number'] ?? '';
+                    final floorName = room['floor'] ?? 'Ground Floor';
+                    final roomType = room['type'] ?? 'Standard';
 
-                // 2-Column Grid of Room Cards
-                Flexible(
-                  child: availableRooms.isEmpty
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(
-                            child: Text(
-                              'No rooms with vacant beds currently available.',
-                              style: TextStyle(color: AppTheme.textGrey),
-                              textAlign: TextAlign.center,
-                            ),
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Navigator.pop(dialogCtx);
+                          AppData.selectedRoomForHighlight = roomNumber;
+                          context.go('/rooms?room=$roomNumber');
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: itemBg,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: itemBorder),
                           ),
-                        )
-                      : GridView.builder(
-                          shrinkWrap: true,
-                          itemCount: availableRooms.length,
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                            childAspectRatio: 2.5,
-                          ),
-                          itemBuilder: (_, index) {
-                            final room = availableRooms[index];
-                            final beds = (room['beds'] as List?) ?? [];
-                            final vacantBeds = beds.where((b) => b['status'] == 'Available').length;
-                            final roomNumber = room['number'] ?? '';
-                            final floorName = room['floor'] ?? 'Ground Floor';
-                            final roomType = room['type'] ?? 'Standard';
-
-                            return Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: () {
-                                  Navigator.pop(dialogCtx);
-                                  AppData.selectedRoomForHighlight = roomNumber;
-                                  context.go('/rooms?room=$roomNumber');
-                                },
-                                borderRadius: BorderRadius.circular(10),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: itemBg,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: itemBorder),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      // Top Row: Room Number (bold) & Availability (green text)
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              'Room $roomNumber',
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 14,
-                                                color: textPri,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '$vacantBeds ${vacantBeds == 1 ? 'Bed' : 'Beds'} Available',
-                                            style: const TextStyle(
-                                              color: AppTheme.successGreen,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Room $roomNumber',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: textPri,
                                       ),
-                                      // Bottom Row: Floor (grey text) & Sharing Type (grey text)
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              floorName,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: textSec,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            roomType,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: textSec,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFECFDF5),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                                    ),
+                                    child: Text(
+                                      '$vacantBeds ${vacantBeds == 1 ? 'Bed' : 'Beds'}',
+                                      style: const TextStyle(
+                                        color: AppTheme.statusOk,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            );
-                          },
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      floorName,
+                                      style: TextStyle(fontSize: 12, color: textSec),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    roomType,
+                                    style: TextStyle(fontSize: 12, color: textSec),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
+                      ),
+                    );
+                  },
                 ),
-                const SizedBox(height: 20),
-
-                // Modal Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(dialogCtx),
-                      child: Text('Close', style: TextStyle(color: textSec)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            ],
           ),
         );
       },
@@ -390,77 +289,76 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showKycDocumentPreview(BuildContext context, String residentId, String docType, String docLabel) {
-    final media = MediaQuery.sizeOf(context);
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (ctx) => FutureBuilder<Uint8List?>(
         future: AdminApiService.getKycDocumentBytes(residentId, docType),
         builder: (ctx, snapshot) {
-          return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            title: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    docLabel,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(ctx),
-                ),
-              ],
-            ),
-            content: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: (media.width * 0.85).clamp(280.0, 560.0),
-                maxHeight: (media.height * 0.70).clamp(220.0, 480.0),
+          return PremiumDialog(
+            maxWidth: 540,
+            title: docLabel,
+            subtitle: 'Identity & Document Verification',
+            icon: Icons.verified_user_rounded,
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Close', style: TextStyle(color: AppTheme.textGrey)),
               ),
-              child: Builder(
-                builder: (_) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const SizedBox(
-                      height: 200,
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 12),
-                            Text('Loading secured KYC document...'),
-                          ],
-                        ),
+            ],
+            child: Builder(
+              builder: (_) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const SizedBox(
+                    height: 200,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(color: AppTheme.primaryTeal),
+                          SizedBox(height: 14),
+                          Text('Loading secured KYC document...', style: TextStyle(color: AppTheme.textGrey, fontSize: 13)),
+                        ],
                       ),
-                    );
-                  }
-                  if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
-                    return const SizedBox(
-                      height: 160,
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.broken_image_outlined, color: Colors.grey, size: 48),
-                            SizedBox(height: 8),
-                            Text('Document could not be loaded or is unavailable.'),
-                          ],
-                        ),
+                    ),
+                  );
+                }
+                if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.broken_image_outlined, color: AppTheme.textGrey, size: 48),
+                          SizedBox(height: 10),
+                          Text(
+                            'Document could not be loaded or is unavailable.',
+                            style: TextStyle(color: AppTheme.textGrey, fontSize: 13),
+                          ),
+                        ],
                       ),
-                    );
-                  }
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    ),
+                  );
+                }
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     child: Image.memory(
                       snapshot.data!,
                       fit: BoxFit.contain,
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           );
         },
@@ -469,96 +367,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showPendingApprovalsListDialog(BuildContext context) {
-    final media = MediaQuery.sizeOf(context);
-    showDialog(
+    showPremiumDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: const BoxDecoration(
-                color: Color(0xFFFEF3C7),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.pending_actions_rounded, color: Color(0xFFD97706)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'Pending Registrations (${AppData.pendingResidents.length})',
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: (media.width * 0.90).clamp(300.0, 560.0),
-            maxHeight: (media.height * 0.70).clamp(240.0, 480.0),
-          ),
-          child: AppData.pendingResidents.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Center(child: Text('No pending resident registrations.')),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: AppData.pendingResidents.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (ctx, index) {
-                    final res = AppData.pendingResidents[index];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      leading: CircleAvatar(
-                        backgroundColor: AppTheme.primaryBlue.withValues(alpha: 0.15),
-                        child: Text(
-                          res['name']?.toString().isNotEmpty == true
-                              ? res['name'].toString()[0].toUpperCase()
-                              : 'R',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-                        ),
-                      ),
-                      title: Text(
-                        res['name'] ?? 'Pending Resident',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('+91 ${res['phone'] ?? ''}', style: const TextStyle(fontSize: 12, color: AppTheme.textGrey)),
-                          if (res['property_name']?.toString().isNotEmpty == true)
-                            Text(
-                              'Property: ${res['property_name']}',
-                              style: const TextStyle(fontSize: 11, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600),
-                            ),
-                        ],
-                      ),
-                      trailing: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(ctx);
-                          _showAssignRoomAndRentDialog(context, res);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFEA580C),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('Review', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                      ),
-                    );
-                  },
-                ),
-        ),
+      builder: (ctx) => PremiumDialog(
+        maxWidth: 580,
+        title: 'Pending Registrations (${AppData.pendingResidents.length})',
+        subtitle: 'Applicants awaiting room allocation & check-in approval',
+        icon: Icons.pending_actions_rounded,
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: const Text('Close', style: TextStyle(color: AppTheme.textGrey)),
           ),
         ],
+        child: AppData.pendingResidents.isEmpty
+            ? const Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Center(
+                  child: Text('No pending resident registrations.', style: TextStyle(color: AppTheme.textGrey)),
+                ),
+              )
+            : ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: AppData.pendingResidents.length,
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
+                itemBuilder: (ctx, index) {
+                  final res = AppData.pendingResidents[index];
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: AppTheme.lightTeal,
+                          child: Text(
+                            res['name']?.toString().isNotEmpty == true
+                                ? res['name'].toString()[0].toUpperCase()
+                                : 'R',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                res['name'] ?? 'Pending Resident',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: AppTheme.textDark),
+                              ),
+                              const SizedBox(height: 2),
+                              Text('+91 ${res['phone'] ?? ''}', style: const TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+                              if (res['property_name']?.toString().isNotEmpty == true)
+                                Text(
+                                  res['property_name'],
+                                  style: const TextStyle(fontSize: 11.5, color: AppTheme.primaryTeal, fontWeight: FontWeight.w600),
+                                ),
+                            ],
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _showAssignRoomAndRentDialog(context, res);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryTeal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Review', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
       ),
     );
   }
@@ -668,7 +558,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         },
     ];
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogCtx) => StatefulBuilder(
@@ -1138,55 +1028,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
             String? rejectError;
             bool isRejectSubmitting = false;
 
-            showDialog(
+            showPremiumDialog(
               context: context,
               builder: (rejectCtx) => StatefulBuilder(
-                builder: (rCtx, setRejectState) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                  title: const Row(
-                    children: [
-                      Icon(Icons.cancel_outlined, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('Reject Registration'),
-                    ],
-                  ),
-                  content: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 460),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Please provide a mandatory reason for rejecting this resident application:',
-                          style: TextStyle(fontSize: 13, color: AppTheme.textDark),
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: reasonController,
-                          maxLines: 3,
-                          decoration: InputDecoration(
-                            hintText: 'e.g. Incomplete KYC documents or invalid identity proof',
-                            filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                        if (rejectError != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            rejectError!,
-                            style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
+                builder: (rCtx, setRejectState) => PremiumDialog(
+                  maxWidth: 460,
+                  title: 'Reject Registration',
+                  subtitle: resName,
+                  icon: Icons.cancel_outlined,
                   actions: [
                     TextButton(
                       onPressed: isRejectSubmitting ? null : () => Navigator.pop(rejectCtx),
                       child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                     ),
-                    ElevatedButton(
+                    ElevatedButton.icon(
                       onPressed: isRejectSubmitting ? null : () async {
                         final reason = reasonController.text.trim();
                         if (reason.isEmpty) {
@@ -1220,20 +1075,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         messenger.showSnackBar(
                           SnackBar(
                             content: Text('Registration for $resName was rejected. Notification sent.'),
-                            backgroundColor: Colors.red.shade700,
+                            backgroundColor: AppTheme.statusRed,
                           ),
                         );
                       },
+                      icon: isRejectSubmitting
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Icon(Icons.cancel_outlined, size: 18),
+                      label: Text(isRejectSubmitting ? 'Rejecting...' : 'Confirm Rejection'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: AppTheme.statusRed,
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
-                      child: isRejectSubmitting
-                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Confirm Rejection'),
                     ),
                   ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const PremiumDialogBanner(
+                        message: 'Rejecting this applicant will cancel the registration and send an explanatory notification to their registered mobile number.',
+                        type: BannerType.warning,
+                      ),
+                      const SizedBox(height: 16),
+                      PremiumFormField(
+                        controller: reasonController,
+                        label: 'Rejection Reason',
+                        hintText: 'e.g. Incomplete KYC documents or invalid identity proof',
+                        maxLines: 3,
+                        isRequired: true,
+                        errorMessage: rejectError,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -1589,9 +1465,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       }
     }
 
-    // Count pending residents from AppData.pendingResidents
-    final pendingCount = AppData.pendingResidents.length;
-
     final isMobile = MediaQuery.of(context).size.width < 800;
 
     return Scaffold(
@@ -1614,15 +1487,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 sliver: SliverList(
                   delegate: SliverChildListDelegate([
-                      // 1. Premium Welcome Banner with Soft Gradients
-                      _buildWelcomeBanner(context, pendingCount),
+                      // 1. Compact Dashboard Header (Operations Dashboard with Send Reminder)
+                      _buildDashboardHeader(context),
                       const SizedBox(height: 20),
 
-                      // Bed Capacity Card (Fixed 240 Beds)
-                      _buildBedCapacityCard(context),
-                      const SizedBox(height: 20),
-
-                      // 2. Pending Resident Approvals Card (if pendingCount > 0)
+                      // 2. Pending Removal & Resident Approval Section (Repositioned directly below Operations Dashboard)
                       if (AppData.pendingResidents.isNotEmpty) ...[
                         PendingApprovalsCard(
                           pendingResidents: AppData.pendingResidents,
@@ -1636,98 +1505,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               _showPendingApprovalsListDialog(context);
                             }
                           },
+                          onReject: () {
+                            if (AppData.pendingResidents.isNotEmpty) {
+                              _showRejectApplicationDirectDialog(
+                                context,
+                                AppData.pendingResidents.first,
+                              );
+                            }
+                          },
                         ),
+                        const SizedBox(height: 20),
+                      ] else ...[
+                        _buildNoPendingApprovalsCard(context),
                         const SizedBox(height: 20),
                       ],
 
-                      // 3. Stat Cards Row
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final isMobile = constraints.maxWidth < 650;
-                          if (isMobile) {
-                            return Column(
-                              children: [
-                                _buildStatCard(
-                                  title: 'Rent Overview',
-                                  subtitle: 'Tenants Unpaid',
-                                  value: _dashboardStats.isNotEmpty ? '${_dashboardStats['total_residents'] ?? 0} / ${_dashboardStats['pending_rent'] ?? 0}' : '${currentData['totalTenants']} / ${currentData['unpaid']}',
-                                  icon: Icons.account_balance_wallet_rounded,
-                                  iconColor: AppTheme.primaryBlue,
-                                  valueColor: AppTheme.primaryBlue,
-                                  isOutlinedButton: false,
-                                  onTap: () => context.go('/payments'),
-                                ),
-                                const SizedBox(height: 16),
-                                _buildStatCard(
-                                  title: 'Room Availability',
-                                  subtitle: 'Beds Available',
-                                  value: _dashboardStats.isNotEmpty && _dashboardStats['vacant_beds'] != null ? _dashboardStats['vacant_beds'].toString() : realAvailableBeds.toString(),
-                                  icon: Icons.bedroom_parent_rounded,
-                                  iconColor: AppTheme.successGreen,
-                                  valueColor: AppTheme.successGreen,
-                                  isOutlinedButton: true,
-                                  onTap: () => _showRoomAvailabilityModal(context),
-                                ),
-                              ],
-                            );
-                          }
-                          return Row(
-                            children: [
-                              Expanded(
-                                child: _buildStatCard(
-                                  title: 'Rent Overview',
-                                  subtitle: 'Tenants Unpaid',
-                                  value: _dashboardStats.isNotEmpty ? '${_dashboardStats['total_residents'] ?? 0} / ${_dashboardStats['pending_rent'] ?? 0}' : '${currentData['totalTenants']} / ${currentData['unpaid']}',
-                                  icon: Icons.account_balance_wallet_rounded,
-                                  iconColor: AppTheme.primaryBlue,
-                                  valueColor: AppTheme.primaryBlue,
-                                  isOutlinedButton: false,
-                                  onTap: () => context.go('/payments'),
-                                ),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: _buildStatCard(
-                                  title: 'Room Availability',
-                                  subtitle: 'Beds Available',
-                                  value: _dashboardStats.isNotEmpty && _dashboardStats['vacant_beds'] != null ? _dashboardStats['vacant_beds'].toString() : realAvailableBeds.toString(),
-                                  icon: Icons.bedroom_parent_rounded,
-                                  iconColor: AppTheme.successGreen,
-                                  valueColor: AppTheme.successGreen,
-                                  isOutlinedButton: true,
-                                  onTap: () => _showRoomAvailabilityModal(context),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
+                      // 3. Important Dashboard Statistics: Bed Capacity Card
+                      _buildBedCapacityCard(context),
+                      const SizedBox(height: 20),
 
-                      const SizedBox(height: 28),
+                      // 4. Important Dashboard Statistics: Stat Cards Row
+                      _buildStatCardsRow(context, currentData, realAvailableBeds),
+                      const SizedBox(height: 24),
 
-                      // Manage PG Section
-                      const Text(
-                        'Manage PG',
-                        style: TextStyle(
-                          fontSize: 18, 
-                          fontWeight: FontWeight.bold, 
-                          color: AppTheme.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 18),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildQuickAction(Icons.person_add_alt_1_rounded, 'Tenant', () => context.go('/residents')),
-                          _buildQuickAction(Icons.account_balance_wallet_outlined, 'Rent', () => context.go('/payments')),
-                          _buildQuickAction(Icons.campaign_outlined, 'Notify', () => _showNoticeDialog(context)),
-                          _buildQuickAction(Icons.receipt_long_outlined, 'Bills', () => context.go('/payments')),
-                        ],
-                      ),
-
-                      const SizedBox(height: 28),
-
-                      // 5. Main Residents Table
+                      // 5. Main Residents Directory Table
                       _buildResidentsTable(context),
                       const SizedBox(height: 40),
                     ]),
@@ -1995,110 +1796,493 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // Welcome Banner Widget
-  Widget _buildWelcomeBanner(BuildContext context, int pendingCount) {
+  void _showRejectApplicationDirectDialog(BuildContext context, Map<String, dynamic> resident) {
+    final resId = resident['id']?.toString() ?? '';
+    final resName = resident['name'] ?? resident['full_name'] ?? 'Applicant';
+    final reasonController = TextEditingController();
+    String? rejectError;
+    bool isRejectSubmitting = false;
+
+    showPremiumDialog(
+      context: context,
+      builder: (rejectCtx) => StatefulBuilder(
+        builder: (rCtx, setRejectState) => PremiumDialog(
+          maxWidth: 440,
+          title: 'Reject Registration',
+          subtitle: 'Cancel applicant registration and state rejection reason',
+          icon: Icons.cancel_outlined,
+          actions: [
+            OutlinedButton(
+              onPressed: isRejectSubmitting ? null : () => Navigator.pop(rejectCtx),
+              child: const Text('Cancel'),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: isRejectSubmitting
+                  ? null
+                  : () async {
+                      final reason = reasonController.text.trim();
+                      if (reason.isEmpty) {
+                        setRejectState(() => rejectError = 'Please enter a valid rejection reason.');
+                        return;
+                      }
+                      setRejectState(() {
+                        isRejectSubmitting = true;
+                        rejectError = null;
+                      });
+                      try {
+                        if (resId.isNotEmpty && !resId.startsWith('p')) {
+                          await AdminApiService.rejectResident(resId, reason: reason);
+                        }
+                      } catch (e) {
+                        debugPrint('API rejectResident error: $e');
+                      }
+                      setState(() {
+                        AppData.pendingResidents.removeWhere((r) => r['id'] == resId);
+                      });
+                      if (rejectCtx.mounted) Navigator.pop(rejectCtx);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Registration for $resName was rejected.'),
+                            backgroundColor: AppTheme.statusRed,
+                          ),
+                        );
+                      }
+                    },
+              icon: isRejectSubmitting
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.cancel_outlined, size: 16),
+              label: Text(isRejectSubmitting ? 'Rejecting...' : 'Confirm Rejection'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.statusRed, foregroundColor: Colors.white),
+            ),
+          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Applicant: $resName', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              const SizedBox(height: 12),
+              PremiumFormField(
+                label: 'Rejection Reason',
+                isRequired: true,
+                controller: reasonController,
+                hintText: 'e.g., Incomplete KYC documents or no vacant bed matching criteria',
+                maxLines: 2,
+                errorMessage: rejectError,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showReminderDialog(
+    BuildContext context, {
+    String? targetResidentName,
+    String? targetResidentId,
+    String? defaultAmount,
+  }) {
+    bool isSubmitting = false;
+    String selectedMode = 'SMS & WhatsApp Notification';
+    final customMsgCtrl = TextEditingController(
+      text: targetResidentName != null
+          ? 'Dear $targetResidentName, gentle reminder to clear your pending rent of ₹ ${defaultAmount ?? '8,500'} for this cycle. Thank you!'
+          : 'Dear Resident, this is a friendly reminder to clear your monthly rent dues. Please ignore if already paid.',
+    );
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showPremiumDialog(
+      context: context,
+      builder: (dContext) => StatefulBuilder(
+        builder: (ctx, setDState) => PremiumDialog(
+          maxWidth: 480,
+          title: targetResidentName != null ? 'Send Rent Reminder' : 'Broadcast Rent Reminders',
+          subtitle: targetResidentName != null
+              ? 'Send automated payment reminder to $targetResidentName'
+              : 'Dispatch payment reminder notification to all residents with pending dues',
+          icon: Icons.notifications_active_outlined,
+          actions: [
+            OutlinedButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(dContext),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                side: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13.5)),
+            ),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      setDState(() => isSubmitting = true);
+                      await Future.delayed(const Duration(milliseconds: 500));
+                      if (dContext.mounted) Navigator.pop(dContext);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  targetResidentName != null
+                                      ? 'Payment reminder sent to $targetResidentName!'
+                                      : 'Rent reminders dispatched to all pending residents!',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: AppTheme.successGreen,
+                          ),
+                        );
+                      }
+                    },
+              icon: isSubmitting
+                  ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.send_rounded, size: 16),
+              label: Text(
+                isSubmitting ? 'Sending...' : 'Send Reminder',
+                style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13.5),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryTeal,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+              ),
+            ),
+          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Notification Channel',
+                style: GoogleFonts.manrope(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                ),
+              ),
+              const SizedBox(height: 6),
+              AppDropdown.simple(
+                height: 40,
+                value: selectedMode,
+                items: const [
+                  'SMS & WhatsApp Notification',
+                  'In-App Push Notification',
+                  'Email Statement Reminder',
+                ],
+                onChanged: (val) => setDState(() => selectedMode = val),
+              ),
+              const SizedBox(height: 14),
+              PremiumFormField(
+                label: 'Reminder Message',
+                isRequired: true,
+                controller: customMsgCtrl,
+                hintText: 'Enter reminder message',
+                maxLines: 3,
+                prefixIcon: const Icon(Icons.message_outlined, size: 18),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 1. Compact Dashboard Header (No "Welcome, Property Manager", No "Monitor Residents")
+  Widget _buildDashboardHeader(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(isMobile ? 18 : 24),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 14 : 20,
+        vertical: isMobile ? 12 : 16,
+      ),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0052CC), Color(0xFF0066FF), Color(0xFF38BDF8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: isDark ? AppTheme.cardBackgroundDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor,
         ),
-        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryBlue.withValues(alpha: 0.28),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          // Background ambient circles
-          Positioned(
-            right: -20,
-            bottom: -30,
-            child: Container(
-              width: 140,
-              height: 140,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 80,
-            top: -20,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 520;
 
-          // Content
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          final titleSection = Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              SizedBox(
-                width: double.infinity,
-                child: Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 8,
-                  runSpacing: 8,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.lightTealDark : AppTheme.lightTeal,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.dashboard_customize_rounded,
+                  color: AppTheme.primaryTeal,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.18),
-                        borderRadius: BorderRadius.circular(20),
+                    Text(
+                      'Operations Dashboard',
+                      style: GoogleFonts.manrope(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                        letterSpacing: -0.4,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.verified_rounded, color: Colors.white, size: 13),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              '$_selectedProperty • Operations Active',
-                              style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.successGreen,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            '$_selectedProperty • Real-Time Synchronization',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              const Text(
-                'Welcome, Property Manager 👋',
-                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: -0.3),
+            ],
+          );
+
+          final reminderButton = ElevatedButton.icon(
+            onPressed: () => _showReminderDialog(context),
+            icon: const Icon(Icons.notifications_active_outlined, size: 15),
+            label: Text(
+              'Send Reminder',
+              style: GoogleFonts.manrope(fontSize: 12.5, fontWeight: FontWeight.w700),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryTeal,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+
+          if (isCompact) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                titleSection,
+                const SizedBox(height: 12),
+                reminderButton,
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: titleSection),
+              const SizedBox(width: 12),
+              reminderButton,
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  // 2. Stat Cards Row (Rent Overview & Room Availability)
+  Widget _buildStatCardsRow(BuildContext context, Map<String, dynamic> currentData, int realAvailableBeds) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 650;
+        if (isMobile) {
+          return Column(
+            children: [
+              _buildStatCard(
+                title: 'Rent Overview',
+                subtitle: 'Tenants Unpaid',
+                value: _dashboardStats.isNotEmpty
+                    ? '${_dashboardStats['total_residents'] ?? 0} / ${_dashboardStats['pending_rent'] ?? 0}'
+                    : '${currentData['totalTenants']} / ${currentData['unpaid']}',
+                icon: Icons.account_balance_wallet_rounded,
+                iconColor: AppTheme.primaryTeal,
+                valueColor: AppTheme.primaryTeal,
+                isOutlinedButton: false,
+                onTap: () => context.go('/payments'),
               ),
-              const SizedBox(height: 6),
-              const Text(
-                'Monitor resident self-onboardings, assign rooms, and manage monthly rent distributions seamlessly.',
-                style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+              const SizedBox(height: 16),
+              _buildStatCard(
+                title: 'Room Availability',
+                subtitle: 'Beds Available',
+                value: _dashboardStats.isNotEmpty && _dashboardStats['vacant_beds'] != null
+                    ? _dashboardStats['vacant_beds'].toString()
+                    : realAvailableBeds.toString(),
+                icon: Icons.bedroom_parent_rounded,
+                iconColor: AppTheme.successGreen,
+                valueColor: AppTheme.successGreen,
+                isOutlinedButton: true,
+                onTap: () => _showRoomAvailabilityModal(context),
               ),
             ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                title: 'Rent Overview',
+                subtitle: 'Tenants Unpaid',
+                value: _dashboardStats.isNotEmpty
+                    ? '${_dashboardStats['total_residents'] ?? 0} / ${_dashboardStats['pending_rent'] ?? 0}'
+                    : '${currentData['totalTenants']} / ${currentData['unpaid']}',
+                icon: Icons.account_balance_wallet_rounded,
+                iconColor: AppTheme.primaryTeal,
+                valueColor: AppTheme.primaryTeal,
+                isOutlinedButton: false,
+                onTap: () => context.go('/payments'),
+              ),
+            ),
+            const SizedBox(width: 20),
+            Expanded(
+              child: _buildStatCard(
+                title: 'Room Availability',
+                subtitle: 'Beds Available',
+                value: _dashboardStats.isNotEmpty && _dashboardStats['vacant_beds'] != null
+                    ? _dashboardStats['vacant_beds'].toString()
+                    : realAvailableBeds.toString(),
+                icon: Icons.bedroom_parent_rounded,
+                iconColor: AppTheme.successGreen,
+                valueColor: AppTheme.successGreen,
+                isOutlinedButton: true,
+                onTap: () => _showRoomAvailabilityModal(context),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Attractive Empty State when there are no pending removal/approval requests
+  Widget _buildNoPendingApprovalsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.cardBackgroundDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: AppTheme.successGreen.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.verified_user_outlined,
+              color: AppTheme.successGreen,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'No Pending Removal or Onboarding Requests',
+                  style: GoogleFonts.manrope(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w700,
+                    color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'All resident stays, clearances, and room allocations are up to date.',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11.5,
+                    color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.successGreen.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              'All Clear',
+              style: GoogleFonts.manrope(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.successGreen,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Main Residents Table (displays residents and updates dynamically when room/rent is assigned)
   Widget _buildResidentsTable(BuildContext context) {
     final residentsList = AppData.residents;
 
@@ -2359,6 +2543,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                           ),
+                          if (isPending || res['status'] == 'Unpaid') ...[
+                            const SizedBox(width: 6),
+                            IconButton(
+                              onPressed: () => _showReminderDialog(
+                                context,
+                                targetResidentName: res['name']?.toString(),
+                                targetResidentId: res['id']?.toString(),
+                                defaultAmount: rentVal.toString(),
+                              ),
+                              tooltip: 'Send Payment Reminder',
+                              icon: const Icon(
+                                Icons.notifications_active_outlined,
+                                size: 17,
+                                color: AppTheme.primaryTeal,
+                              ),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+                            ),
+                          ],
                         ],
                       );
                     },
@@ -2472,204 +2675,317 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Column(
-        children: [
-          Container(
-            width: 68,
-            height: 68,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryLight,
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Icon(icon, color: const Color(0xFF0F172A), size: 26),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.textGrey,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// Pending Approvals Card matching reference UI (Yellow background, orange border)
+// Redesigned Premium Pending Approvals Card (Enterprise SaaS Style)
 class PendingApprovalsCard extends StatelessWidget {
   final List<Map<String, dynamic>> pendingResidents;
   final VoidCallback onReviewAndAssign;
+  final VoidCallback? onReject;
 
   const PendingApprovalsCard({
     super.key,
     required this.pendingResidents,
     required this.onReviewAndAssign,
+    this.onReject,
   });
 
   @override
   Widget build(BuildContext context) {
     final count = pendingResidents.length;
-    final isMobile = MediaQuery.of(context).size.width < 600;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final first = pendingResidents.isNotEmpty ? pendingResidents.first : <String, dynamic>{};
+    final residentName = first['name'] ?? first['full_name'] ?? 'Applicant';
+    final residentPhone = first['phone'] ?? first['mobile'] ?? '';
+    final residentRoom = first['room'] ?? first['room_number'] ?? 'Unassigned';
+
+    final cardBg = isDark ? AppTheme.cardBackgroundDark : Colors.white;
+    final borderCol = isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0);
+    final textPri = isDark ? AppTheme.primaryTextDark : AppTheme.primaryText;
+    final textSec = isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 14 : 18, vertical: isMobile ? 14 : 16),
       decoration: BoxDecoration(
-        color: const Color(0xFFFEF9C3), // Yellow background
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFF97316), // Orange border
-          width: 2.0,
+          color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.4 : 0.6),
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFFF97316).withValues(alpha: 0.15),
-            blurRadius: 14,
+            color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.08 : 0.06),
+            blurRadius: 16,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 540;
-
-          final iconWidget = Container(
-            padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF97316), Color(0xFFEA580C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.12 : 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              border: Border(
+                bottom: BorderSide(
+                  color: const Color(0xFFF59E0B).withValues(alpha: isDark ? 0.2 : 0.25),
+                ),
               ),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFFEA580C).withValues(alpha: 0.35),
-                  blurRadius: 8,
-                  offset: const Offset(0, 3),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.pending_actions_rounded,
+                          color: Color(0xFFD97706),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          'Pending Resident Approvals',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14.5,
+                            color: textPri,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFD97706),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.25),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '$count Awaiting Review',
+                        style: GoogleFonts.manrope(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
-            child: const Icon(Icons.assignment_ind_rounded, color: Colors.white, size: 22),
-          );
+          ),
 
-          final textSection = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Wrap(
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  const Text(
-                    'Pending Resident Approvals',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: Color(0xFF7C2D12),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEA580C),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFEA580C).withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          offset: const Offset(0, 1),
+          // Content Details & Actions
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isNarrow = constraints.maxWidth < 620;
+
+                final residentInfo = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppTheme.primaryTeal, AppTheme.darkNavy],
+                            ),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              residentName.isNotEmpty ? residentName[0].toUpperCase() : 'A',
+                              style: GoogleFonts.manrope(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                residentName,
+                                style: GoogleFonts.manrope(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14.5,
+                                  color: textPri,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 4,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  if (residentPhone.isNotEmpty)
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.phone_outlined, size: 13, color: textSec),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          residentPhone,
+                                          style: GoogleFonts.manrope(fontSize: 12, color: textSec, fontWeight: FontWeight.w500),
+                                        ),
+                                      ],
+                                    ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.meeting_room_outlined, size: 13, color: textSec),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'Room: $residentRoom',
+                                        style: GoogleFonts.manrope(fontSize: 12, color: textSec, fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  ),
+                                  if (count > 1)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                      decoration: BoxDecoration(
+                                        color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: borderCol),
+                                      ),
+                                      child: Text(
+                                        '+${count - 1} more applicants',
+                                        style: GoogleFonts.manrope(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.primaryTeal,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    child: Text(
-                      '$count PENDING',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
+                  ],
+                );
+
+                final actionButtons = Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    if (onReject != null)
+                      OutlinedButton.icon(
+                        onPressed: onReject,
+                        icon: const Icon(Icons.close_rounded, size: 15, color: AppTheme.statusRed),
+                        label: Text(
+                          'Reject',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.statusRed,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppTheme.statusRed.withValues(alpha: 0.5)),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          minimumSize: const Size(0, 38),
+                        ),
+                      ),
+                    ElevatedButton.icon(
+                      onPressed: onReviewAndAssign,
+                      icon: const Icon(Icons.check_circle_outline_rounded, size: 16),
+                      label: Text(
+                        count > 1 ? 'Review All ($count)' : 'Review & Assign',
+                        style: GoogleFonts.manrope(fontSize: 12.5, fontWeight: FontWeight.w700),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryTeal,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        elevation: 0,
+                        minimumSize: const Size(0, 38),
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '$count applicant${count > 1 ? 's' : ''} awaiting room & rent assignment.',
-                style: const TextStyle(
-                  color: Color(0xFF9A3412),
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          );
-
-          final reviewButton = ElevatedButton(
-            onPressed: onReviewAndAssign,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEA580C),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              elevation: 0,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  count > 1 ? 'Review All ($count)' : 'Review & Assign',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 6),
-                const Icon(Icons.arrow_forward_rounded, size: 16),
-              ],
-            ),
-          );
-
-          if (isNarrow) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    iconWidget,
-                    const SizedBox(width: 12),
-                    Expanded(child: textSection),
                   ],
-                ),
-                const SizedBox(height: 12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: reviewButton,
-                ),
-              ],
-            );
-          }
+                );
 
-          return Row(
-            children: [
-              iconWidget,
-              const SizedBox(width: 14),
-              Expanded(child: textSection),
-              const SizedBox(width: 12),
-              reviewButton,
-            ],
-          );
-        },
+                if (isNarrow) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      residentInfo,
+                      const SizedBox(height: 14),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: actionButtons,
+                      ),
+                    ],
+                  );
+                }
+
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: residentInfo),
+                    const SizedBox(width: 16),
+                    actionButtons,
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -689,7 +689,7 @@ class AppData {
     },
   ];
 
-  // Weekly Food Menu (Monday to Sunday)
+  // Weekly Food Menu (Monday to Sunday) - 3 meals per day
   static List<Map<String, dynamic>> foodMenu = [
     {'day': 'Monday', 'breakfast': 'Poha & Tea', 'lunch': 'Dal, Rice, Roti, Sabzi', 'dinner': 'Paneer, Roti, Rice'},
     {'day': 'Tuesday', 'breakfast': 'Idli & Sambar', 'lunch': 'Rajma, Rice, Roti', 'dinner': 'Mix Veg, Roti, Rice'},

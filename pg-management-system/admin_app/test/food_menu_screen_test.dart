@@ -21,9 +21,15 @@ void main() {
     // Verify Title
     expect(find.text('Food Menu'), findsOneWidget);
 
-    // Verify Save buttons
+    // Verify only 1 Save button exists
     expect(find.text('Save Menu'), findsOneWidget);
-    expect(find.text('Save Weekly Menu'), findsOneWidget);
+    expect(find.text('Save Weekly Menu'), findsNothing);
+
+    // Verify 3 meal times only (Breakfast, Lunch, Dinner)
+    expect(find.text('Evening Snacks'), findsNothing);
+    expect(find.text('Breakfast'), findsWidgets);
+    expect(find.text('Lunch'), findsWidgets);
+    expect(find.text('Dinner'), findsWidgets);
 
     // Verify Days
     expect(find.text('Monday'), findsOneWidget);

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class AppLoader extends StatelessWidget {
@@ -7,6 +8,7 @@ class AppLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -14,15 +16,22 @@ class AppLoader extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(color: AppTheme.primaryBlue),
+            const SizedBox(
+              width: 32,
+              height: 32,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppTheme.primaryTeal,
+              ),
+            ),
             if (message != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
               Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTheme.textGrey,
-                  fontSize: 14,
+                style: GoogleFonts.manrope(
+                  color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                  fontSize: 13.5,
                   fontWeight: FontWeight.w500,
                 ),
               ),

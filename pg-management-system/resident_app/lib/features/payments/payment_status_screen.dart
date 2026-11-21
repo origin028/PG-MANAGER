@@ -26,7 +26,14 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
   @override
   void initState() {
     super.initState();
-    if (widget.paymentData['autoPoll'] != false) {
+    final initial = widget.paymentData['initialState']?.toString().toLowerCase();
+    if (initial == 'failed') {
+      _currentState = PaymentVerificationState.failed;
+    } else if (initial == 'cancelled') {
+      _currentState = PaymentVerificationState.cancelled;
+    } else if (initial == 'successful') {
+      _currentState = PaymentVerificationState.successful;
+    } else if (widget.paymentData['autoPoll'] != false) {
       _startBackendVerificationPolling();
     }
   }
@@ -285,9 +292,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Your transaction is awaiting trusted confirmation from your bank and the PG Owner account.',
-          style: TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
+        Text(
+          widget.paymentData['statusMessage']?.toString() ??
+              'Payment initiated. Waiting for confirmation. Please do not pay again.',
+          style: const TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
@@ -453,7 +461,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
               ),
               const SizedBox(height: 6),
               const Text(
-                'Confirmed and settled with Property Owner backend.',
+                'Payment verified successfully.',
                 style: TextStyle(fontSize: 13, color: Color(0xFF059669), fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
               ),
@@ -591,9 +599,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Your bank could not complete the transaction or verification timed out. Any deducted funds will be reversed within 24 hours.',
-          style: TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
+        Text(
+          widget.paymentData['statusMessage']?.toString() ??
+              'Payment was not completed. Please check your UPI application.',
+          style: const TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 28),
@@ -651,9 +660,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'The payment was cancelled in the UPI application before approval.',
-          style: TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
+        Text(
+          widget.paymentData['statusMessage']?.toString() ??
+              'Payment was cancelled.',
+          style: const TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 28),
@@ -691,8 +701,8 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     required String txnRef,
     required num amount,
     required String paymentApp,
-    String payeeName = "Saukatali Masi",
-    String payeeUpiId = 'masisokatali90900@okaxis',
+    String payeeName = "SMART GROUP PG'S",
+    String payeeUpiId = '9886699258-3@ybl',
     required String statusText,
     required Color statusColor,
     String? approvalCode,

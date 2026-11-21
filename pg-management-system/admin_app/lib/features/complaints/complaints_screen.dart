@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/data/app_data.dart';
-
 import '../../core/services/admin_api_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/premium_dialogs.dart';
 import '../../core/widgets/table_components.dart';
 import '../../core/widgets/app_dropdown.dart';
 
@@ -170,7 +171,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
     final resolvedCount = _complaints.where((c) => c['status'] == 'Resolved').length;
     final filtered = _filteredComplaints;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,14 +309,19 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
 
                 if (isNarrow) {
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      searchField,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: searchField,
+                      ),
                       const SizedBox(height: 10),
-                      Row(
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
                         children: [
-                          Expanded(child: statusDropdown),
-                          const SizedBox(width: 10),
-                          Expanded(child: priorityDropdown),
+                          SizedBox(width: 175, child: statusDropdown),
+                          SizedBox(width: 175, child: priorityDropdown),
                         ],
                       ),
                     ],
@@ -324,7 +330,10 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
 
                 return Row(
                   children: [
-                    Expanded(child: searchField),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 360),
+                      child: searchField,
+                    ),
                     const SizedBox(width: 12),
                     SizedBox(width: 175, child: statusDropdown),
                     const SizedBox(width: 12),
@@ -337,9 +346,8 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
           const SizedBox(height: 16),
           
           // 3. Data Table
-          Expanded(
-            child: Container(
-              decoration: modernTableDecoration,
+          Container(
+            decoration: modernTableDecoration,
               child: filtered.isEmpty
                   ? EmptyState(
                       icon: Icons.report_problem_outlined,
@@ -370,19 +378,53 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                   horizontalInside: BorderSide(color: Color(0xFFF1F5F9), width: 1),
                                 ),
                                 columns: [
-                                  modernTableColumn('COMPLAINT TITLE'),
-                                  modernTableColumn('CATEGORY'),
-                                  modernTableColumn('RESIDENT & ROOM'),
+                                  modernTableColumn('RESIDENT'),
+                                  modernTableColumn('ROOM'),
                                   modernTableColumn('PROPERTY'),
+                                  modernTableColumn('COMPLAINT TITLE'),
                                   modernTableColumn('PRIORITY'),
-                                  modernTableColumn('ASSIGNED STAFF'),
                                   modernTableColumn('STATUS'),
-                                  modernTableColumn('DATE'),
                                   modernTableColumn('ACTIONS'),
                                 ],
                                 rows: filtered.map((comp) {
                                   return DataRow(cells: [
-                                    // COMPLAINT TITLE (with subtitle description below it)
+                                    // 1. RESIDENT (Avatar icon + Name)
+                                    DataCell(
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          TableAvatar(name: comp['resident'] ?? 'R', radius: 15),
+                                          const SizedBox(width: 10),
+                                          Text(
+                                            comp['resident'] ?? 'Resident',
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textDark),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    // 2. ROOM
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                                        ),
+                                        child: Text(
+                                          'Rm ${comp['room'] ?? '-'}',
+                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                                        ),
+                                      ),
+                                    ),
+                                    // 3. PROPERTY
+                                    DataCell(
+                                      Text(
+                                        comp['property'] ?? 'Green View PG - Hebbal',
+                                        style: const TextStyle(fontSize: 13, color: AppTheme.textDark),
+                                      ),
+                                    ),
+                                    // 4. COMPLAINT TITLE (with subtitle description below it)
                                     DataCell(
                                       Padding(
                                         padding: const EdgeInsets.symmetric(vertical: 6),
@@ -405,70 +447,15 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                         ),
                                       ),
                                     ),
-                                    // CATEGORY (rounded grey pill e.g., 'Cleaning')
-                                    DataCell(
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF1F5F9),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          comp['category'] ?? 'Cleaning',
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
-                                        ),
-                                      ),
-                                    ),
-                                    // RESIDENT & ROOM (Avatar icon + Name + '(Rm 201)')
-                                    DataCell(
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          TableAvatar(name: comp['resident'] ?? 'R', radius: 15),
-                                          const SizedBox(width: 10),
-                                          Text(
-                                            '${comp['resident']} (Rm ${comp['room']})',
-                                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textDark),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    // PROPERTY
-                                    DataCell(
-                                      Text(
-                                        comp['property'] ?? 'Green View PG - Hebbal',
-                                        style: const TextStyle(fontSize: 13, color: AppTheme.textDark),
-                                      ),
-                                    ),
-                                    // PRIORITY (Blue, Orange, Red pills)
+                                    // 5. PRIORITY (Blue, Orange, Red pills)
                                     DataCell(
                                       _buildPriorityPill(comp['priority'] ?? 'Medium'),
                                     ),
-                                    // ASSIGNED STAFF (Name)
-                                    DataCell(
-                                      Text(
-                                        comp['assigned_staff'] ?? 'Unassigned',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                          color: comp['assigned_staff'] != null && comp['assigned_staff'] != 'Unassigned'
-                                              ? AppTheme.textDark
-                                              : AppTheme.textGrey,
-                                        ),
-                                      ),
-                                    ),
-                                    // STATUS (Red dot Assigned, Green dot Resolved, etc.)
+                                    // 6. STATUS (Dot with status badge)
                                     DataCell(
                                       _buildComplaintStatusDot(comp['status'] ?? 'Pending'),
                                     ),
-                                    // DATE
-                                    DataCell(
-                                      Text(
-                                        comp['date'] ?? '',
-                                        style: const TextStyle(fontSize: 13, color: AppTheme.textGrey),
-                                      ),
-                                    ),
-                                    // ACTIONS ('Update / Resolve' button)
+                                    // 7. ACTIONS ('Update / Resolve' button)
                                     DataCell(
                                       OutlinedButton.icon(
                                         onPressed: () => _showUpdateStatusModal(comp),
@@ -478,11 +465,8 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue),
                                         ),
                                         style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(color: Color(0xFFBFDBFE)),
-                                          backgroundColor: const Color(0xFFEFF6FF),
-                                          minimumSize: const Size(0, 32),
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                          side: const BorderSide(color: Color(0xFFCBD5E1)),
                                         ),
                                       ),
                                     ),
@@ -495,7 +479,6 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                       },
                     ),
             ),
-          ),
         ],
       ),
     );
@@ -512,99 +495,31 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
     String property = 'Green View PG - Hebbal';
     String staff = 'Ramesh (Electrician)';
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: const Text('Log New Complaint'),
-              content: SizedBox(
-                width: 440,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: titleController,
-                        decoration: const InputDecoration(labelText: 'Complaint Title *', hintText: 'e.g. AC cooling malfunctioning'),
-                      ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: descriptionController,
-                        decoration: const InputDecoration(labelText: 'Issue Description *', hintText: 'e.g. Compressor stops every 10 mins'),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: residentController,
-                              decoration: const InputDecoration(labelText: 'Resident Name *', hintText: 'e.g. Rahul Sharma'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: roomController,
-                              decoration: const InputDecoration(labelText: 'Room *', hintText: 'e.g. 101'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: category,
-                              decoration: const InputDecoration(labelText: 'Category'),
-                              items: ['Cleaning', 'Plumbing', 'Electrical', 'Internet', 'Appliance', 'Other']
-                                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(fontSize: 13))))
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) setModalState(() => category = val);
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: priority,
-                              decoration: const InputDecoration(labelText: 'Priority'),
-                              items: ['Low', 'Medium', 'High']
-                                  .map((p) => DropdownMenuItem(value: p, child: Text(p, style: const TextStyle(fontSize: 13))))
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) setModalState(() => priority = val);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        initialValue: property,
-                        decoration: const InputDecoration(labelText: 'Property'),
-                        items: ['Green View PG - Hebbal', 'BNR Luxury PG', 'Skyline Girls PG']
-                            .map((p) => DropdownMenuItem(value: p, child: Text(p, style: const TextStyle(fontSize: 13))))
-                            .toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => property = val);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
+            return PremiumDialog(
+              maxWidth: 520,
+              icon: Icons.report_problem_outlined,
+              title: 'Log New Complaint',
+              subtitle: 'Submit a maintenance or service ticket on behalf of a resident',
               actions: [
-                TextButton(
+                OutlinedButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                    side: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13.5)),
                 ),
-                ElevatedButton(
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
                   onPressed: () {
                     String resident = residentController.text.trim();
                     String room = roomController.text.trim();
@@ -613,7 +528,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
 
                     if (resident.isEmpty || room.isEmpty || title.isEmpty) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(content: Text('Please fill in title, resident, and room'), backgroundColor: Colors.red),
+                        const SnackBar(content: Text('Please fill in title, resident, and room'), backgroundColor: AppTheme.statusRed),
                       );
                       return;
                     }
@@ -638,12 +553,154 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                     final messenger = ScaffoldMessenger.of(context);
                     Navigator.pop(dialogContext);
                     messenger.showSnackBar(
-                      SnackBar(content: Text('Complaint $newId logged successfully!'), backgroundColor: Colors.green),
+                      SnackBar(content: Text('Complaint $newId logged successfully!'), backgroundColor: AppTheme.successGreen),
                     );
                   },
-                  child: const Text('Submit Ticket'),
+                  icon: const Icon(Icons.send_rounded, size: 16),
+                  label: Text('Submit Ticket', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
                 ),
               ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PremiumFormField(
+                    label: 'Complaint Title',
+                    isRequired: true,
+                    controller: titleController,
+                    hintText: 'e.g. AC cooling malfunctioning, Tap leakage',
+                    prefixIcon: const Icon(Icons.title_rounded, size: 18),
+                  ),
+                  const SizedBox(height: 14),
+                  PremiumFormField(
+                    label: 'Issue Description',
+                    isRequired: true,
+                    controller: descriptionController,
+                    maxLines: 2,
+                    hintText: 'Describe details of the issue for the service technician...',
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: PremiumFormField(
+                          label: 'Resident Name',
+                          isRequired: true,
+                          controller: residentController,
+                          hintText: 'e.g. Rahul Sharma',
+                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: PremiumFormField(
+                          label: 'Room Number',
+                          isRequired: true,
+                          controller: roomController,
+                          hintText: 'e.g. 104',
+                          prefixIcon: const Icon(Icons.meeting_room_outlined, size: 18),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Category',
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              initialValue: category,
+                              decoration: AppTheme.formDropdownDecoration(
+                                fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                              ),
+                              dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                              items: ['Cleaning', 'Plumbing', 'Electrical', 'Internet', 'Appliance', 'Other']
+                                  .map((c) => DropdownMenuItem(value: c, child: Text(c, style: GoogleFonts.manrope(fontSize: 13))))
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val != null) setModalState(() => category = val);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Priority',
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              initialValue: priority,
+                              decoration: AppTheme.formDropdownDecoration(
+                                fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                              ),
+                              dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                              items: ['Low', 'Medium', 'High']
+                                  .map((p) => DropdownMenuItem(value: p, child: Text(p, style: GoogleFonts.manrope(fontSize: 13))))
+                                  .toList(),
+                              onChanged: (val) {
+                                if (val != null) setModalState(() => priority = val);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Property',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: property,
+                    decoration: AppTheme.formDropdownDecoration(
+                      fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                    ),
+                    dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                    items: ['Green View PG - Hebbal', 'BNR Luxury PG', 'Skyline Girls PG']
+                        .map((p) => DropdownMenuItem(value: p, child: Text(p, style: GoogleFonts.manrope(fontSize: 13))))
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => property = val);
+                    },
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -655,144 +712,196 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
   void _showUpdateStatusModal(Map<String, dynamic> complaint) {
     String currentStatus = complaint['status'] ?? 'Pending';
     String assignedStaff = complaint['assigned_staff'] ?? 'Ramesh (Electrician)';
-    
-    showDialog(
+    bool isUpdating = false;
+
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (context, setStateModal) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('Update / Resolve: ${complaint['id']}', overflow: TextOverflow.ellipsis),
-              content: SizedBox(
-                width: 420,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      complaint['title'] ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.textDark),
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final isResolved = currentStatus == 'Resolved';
+
+            return PremiumDialog(
+              maxWidth: 480,
+              icon: Icons.published_with_changes_rounded,
+              title: 'Update Complaint ${complaint['id']}',
+              subtitle: 'Change resolution state or technician assignment',
+              actions: [
+                OutlinedButton(
+                  onPressed: isUpdating ? null : () => Navigator.pop(dialogContext),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                    side: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: isUpdating
+                      ? null
+                      : () async {
+                          setStateModal(() => isUpdating = true);
+                          final compId = complaint['id']?.toString();
+                          if (compId != null && compId.isNotEmpty && !compId.startsWith('CMP-')) {
+                            try {
+                              // Find staff ID if assigning
+                              String? staffId;
+                              for (var s in AppData.staff) {
+                                if (assignedStaff.contains(s['name']?.toString() ?? '')) {
+                                  staffId = s['id']?.toString();
+                                  break;
+                                }
+                              }
+                              if (staffId != null && !staffId.startsWith('staff-')) {
+                                await AdminApiService.assignComplaint(compId, staffId);
+                              }
+
+                              if (currentStatus == 'Resolved') {
+                                await AdminApiService.resolveComplaint(compId, notes: 'Resolved by admin');
+                              } else {
+                                await AdminApiService.updateComplaint(compId, {
+                                  'status': currentStatus == 'In Progress' ? 'IN_PROGRESS' : 'OPEN',
+                                });
+                              }
+                              _loadComplaintsFromApi();
+                            } catch (e) {
+                              setStateModal(() => isUpdating = false);
+                              if (dialogContext.mounted) {
+                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                  SnackBar(content: Text('Failed to update complaint: $e'), backgroundColor: AppTheme.statusRed),
+                                );
+                              }
+                              return;
+                            }
+                          }
+                          if (!mounted) return;
+                          setState(() {
+                            complaint['status'] = currentStatus;
+                            complaint['assigned_staff'] = assignedStaff;
+                          });
+                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Ticket updated to $currentStatus!'), backgroundColor: AppTheme.successGreen),
+                            );
+                          }
+                        },
+                  icon: isUpdating
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Icon(isResolved ? Icons.check_circle_rounded : Icons.save_rounded, size: 16),
+                  label: Text(
+                    isUpdating ? 'Saving...' : (isResolved ? 'Mark Resolved' : 'Save Changes'),
+                    style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13.5),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: isResolved ? AppTheme.statusOk : AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                ),
+              ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Issue Summary Card
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Resident: ${complaint['resident']} • Room ${complaint['room']}',
-                      style: const TextStyle(fontSize: 13, color: AppTheme.textGrey),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          complaint['title'] ?? '',
+                          style: GoogleFonts.manrope(fontWeight: FontWeight.w800, fontSize: 14.5, color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_outline_rounded, size: 14, color: AppTheme.secondaryText),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${complaint['resident']} · Room ${complaint['room']}',
+                              style: GoogleFonts.manrope(fontSize: 12.5, color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: currentStatus,
-                      decoration: const InputDecoration(labelText: 'Status'),
-                      items: ['Assigned', 'In Progress', 'Pending', 'Resolved'].map((String status) {
-                        return DropdownMenuItem(value: status, child: Text(status));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setStateModal(() => currentStatus = val);
-                      },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Status',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
                     ),
-                    const SizedBox(height: 14),
-                    DropdownButtonFormField<String>(
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: currentStatus,
+                    decoration: AppTheme.formDropdownDecoration(
+                      fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                    ),
+                    dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                    items: ['Assigned', 'In Progress', 'Pending', 'Resolved'].map((String status) {
+                      return DropdownMenuItem(value: status, child: Text(status, style: GoogleFonts.manrope(fontSize: 13)));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setStateModal(() => currentStatus = val);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Assigned Staff',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Builder(builder: (context) {
+                    final dynamicStaff = AppData.staff.isNotEmpty
+                        ? AppData.staff.map((s) => '${s['name']} (${s['role'] ?? 'Staff'})').toList()
+                        : [
+                            'Ramesh (Electrician)',
+                            'Suresh (Plumber)',
+                            'Sunita (Housekeeping)',
+                            'Kiran (Network Tech)',
+                            'Manoj (Security)',
+                          ];
+                    if (!dynamicStaff.contains(assignedStaff)) {
+                      dynamicStaff.insert(0, assignedStaff);
+                    }
+                    return DropdownButtonFormField<String>(
                       initialValue: assignedStaff,
-                      decoration: const InputDecoration(labelText: 'Assigned Staff'),
-                      items: [
-                        'Ramesh (Electrician)',
-                        'Suresh (Plumber)',
-                        'Sunita (Housekeeping)',
-                        'Kiran (Network Tech)',
-                        'Manoj (Security)',
-                      ].map((String s) {
-                        return DropdownMenuItem(value: s, child: Text(s));
+                      decoration: AppTheme.formDropdownDecoration(
+                        fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                      ),
+                      dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                      items: dynamicStaff.map((String s) {
+                        return DropdownMenuItem(value: s, child: Text(s, style: GoogleFonts.manrope(fontSize: 13)));
                       }).toList(),
                       onChanged: (val) {
                         if (val != null) setStateModal(() => assignedStaff = val);
                       },
-                    ),
-                    Builder(builder: (context) {
-                      final dynamicStaff = AppData.staff.isNotEmpty
-                          ? AppData.staff.map((s) => '${s['name']} (${s['role'] ?? 'Staff'})').toList()
-                          : [
-                              'Ramesh (Electrician)',
-                              'Suresh (Plumber)',
-                              'Sunita (Housekeeping)',
-                              'Kiran (Network Tech)',
-                              'Manoj (Security)',
-                            ];
-                      if (!dynamicStaff.contains(assignedStaff)) {
-                        dynamicStaff.insert(0, assignedStaff);
-                      }
-                      return DropdownButtonFormField<String>(
-                        initialValue: assignedStaff,
-                        decoration: const InputDecoration(labelText: 'Assigned Staff'),
-                        items: dynamicStaff.map((String s) {
-                          return DropdownMenuItem(value: s, child: Text(s));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setStateModal(() => assignedStaff = val);
-                        },
-                      );
-                    }),
-                  ],
-                ),
+                    );
+                  }),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final compId = complaint['id']?.toString();
-                    if (compId != null && compId.isNotEmpty && !compId.startsWith('CMP-')) {
-                      try {
-                        // Find staff ID if assigning
-                        String? staffId;
-                        for (var s in AppData.staff) {
-                          if (assignedStaff.contains(s['name']?.toString() ?? '')) {
-                            staffId = s['id']?.toString();
-                            break;
-                          }
-                        }
-                        if (staffId != null && !staffId.startsWith('staff-')) {
-                          await AdminApiService.assignComplaint(compId, staffId);
-                        }
-
-                        if (currentStatus == 'Resolved') {
-                          await AdminApiService.resolveComplaint(compId, notes: 'Resolved by admin');
-                        } else {
-                          await AdminApiService.updateComplaint(compId, {
-                            'status': currentStatus == 'In Progress' ? 'IN_PROGRESS' : 'OPEN',
-                          });
-                        }
-                        _loadComplaintsFromApi();
-                      } catch (e) {
-                        if (dialogContext.mounted) {
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text('Failed to update complaint: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                        return;
-                      }
-                    }
-                    if (!mounted) return;
-                    setState(() {
-                      complaint['status'] = currentStatus;
-                      complaint['assigned_staff'] = assignedStaff;
-                    });
-                    if (dialogContext.mounted) Navigator.pop(dialogContext);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Ticket updated to $currentStatus!'), backgroundColor: Colors.green),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: currentStatus == 'Resolved' ? const Color(0xFF059669) : AppTheme.primaryBlue,
-                  ),
-                  child: Text(currentStatus == 'Resolved' ? 'Mark Resolved' : 'Save Changes'),
-                ),
-              ],
             );
-          }
+          },
         );
       },
     );

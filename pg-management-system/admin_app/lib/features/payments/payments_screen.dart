@@ -6,7 +6,8 @@ import '../../core/services/admin_api_service.dart';
 import '../../core/widgets/table_components.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/app_dropdown.dart';
-import 'create_test_invoice_dialog.dart';
+import '../../core/widgets/premium_dialogs.dart';
+import '../../core/widgets/month_year_selector.dart';
 
 class PaymentsScreen extends StatefulWidget {
   const PaymentsScreen({super.key});
@@ -18,6 +19,9 @@ class PaymentsScreen extends StatefulWidget {
 class _PaymentsScreenState extends State<PaymentsScreen> {
   // Shared Invoices from AppData
   List<Map<String, dynamic>> get _invoices => AppData.invoices;
+  List<Map<String, dynamic>> _paymentTransactions = [];
+  int _activeTabIndex = 0; // 0: Rent Invoices, 1: UPI Reconciliation Queue
+  String _upiStatusFilter = 'ALL';
 
   final TextEditingController _searchController = TextEditingController();
 
@@ -56,15 +60,63 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     } catch (e) {
       debugPrint('API getInvoices error: $e');
     }
+
+    try {
+      final txList = await AdminApiService.getPaymentHistory(propertyId: propId);
+      if (mounted) {
+        setState(() {
+          _paymentTransactions = txList;
+        });
+      }
+    } catch (e) {
+      debugPrint('API getPaymentHistory error: $e');
+    }
   }
   String _searchQuery = '';
-  String _selectedMonth = 'September 2026';
+  String _selectedMonth = 'November 2026';
+  int _selectedMonthNumber = DateTime.now().month;
+  int _selectedYearNumber = DateTime.now().year;
   String _selectedStatus = 'All Payment Statuses';
 
   @override
   void dispose() {
+    AppData.selectedPropertyIdNotifier.removeListener(_loadInvoicesFromApi);
     _searchController.dispose();
     super.dispose();
+  }
+
+  List<Map<String, dynamic>> get _filteredTransactions {
+    final query = _searchQuery.toLowerCase().trim();
+    return _paymentTransactions.where((tx) {
+      final st = (tx['status'] ?? '').toString().toUpperCase();
+      if (_upiStatusFilter != 'ALL') {
+        if (_upiStatusFilter == 'PENDING' &&
+            st != 'PENDING' &&
+            st != 'PENDING_VERIFICATION') {
+          return false;
+        } else if (_upiStatusFilter == 'VERIFIED' &&
+            st != 'PAID' &&
+            st != 'SUCCESS') {
+          return false;
+        } else if (_upiStatusFilter == 'FAILED' &&
+            st != 'FAILED' &&
+            st != 'CANCELLED') {
+          return false;
+        }
+      }
+      if (query.isNotEmpty) {
+        final combined = [
+          tx['resident_name'],
+          tx['invoice_number'],
+          tx['transaction_ref'],
+          tx['bank_reference'],
+          tx['client_upi_txn_id'],
+          tx['payment_number'],
+        ].whereType<Object>().join(' ').toLowerCase();
+        if (!combined.contains(query)) return false;
+      }
+      return true;
+    }).toList();
   }
 
   List<Map<String, dynamic>> get _filteredInvoices {
@@ -167,60 +219,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
         final mainContent = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-          // Header Row with Title and "Create Test Invoice" button
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isMobile = constraints.maxWidth < 560;
-              if (isMobile) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Rent & Payments', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () => CreateTestInvoiceDialog.show(
-                          context,
-                          onInvoiceCreated: _loadInvoicesFromApi,
-                        ),
-                        icon: const Icon(Icons.add_task_rounded, size: 18),
-                        label: const Text('Create Test Invoice'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF4F46E5),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text('Rent & Payments', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
-                  ElevatedButton.icon(
-                    onPressed: () => CreateTestInvoiceDialog.show(
-                      context,
-                      onInvoiceCreated: _loadInvoicesFromApi,
-                    ),
-                    icon: const Icon(Icons.add_task_rounded, size: 18),
-                    label: const Text('Create Test Invoice'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4F46E5),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                  ),
-                ],
-              );
-            },
+          // Header Row
+          const Text(
+            'Rent & Payments',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppTheme.textDark),
           ),
           const SizedBox(height: 20),
 
@@ -262,6 +264,30 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
             ],
           ),
           const SizedBox(height: 20),
+
+          // View Switcher: Rent Invoices vs UPI Reconciliation Queue
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Rent Invoices'),
+                selected: _activeTabIndex == 0,
+                onSelected: (_) => setState(() => _activeTabIndex = 0),
+              ),
+              ChoiceChip(
+                label: Text(
+                  'Verification Queue (${_paymentTransactions.where((t) {
+                    final s = (t['status'] ?? '').toString().toUpperCase();
+                    return s == 'PENDING_VERIFICATION' || s == 'PENDING';
+                  }).length} pending)',
+                ),
+                selected: _activeTabIndex == 1,
+                onSelected: (_) => setState(() => _activeTabIndex = 1),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
 
           // 2. Filter Bar
           Container(
@@ -305,12 +331,17 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                   ),
                 );
 
-                final monthDropdown = AppDropdown.simple(
-                  height: 40,
-                  value: _selectedMonth,
-                  leadingIcon: Icons.calendar_month_outlined,
-                  items: const ['All Months', 'November 2026', 'October 2026', 'September 2026', 'August 2026', 'July 2026'],
-                  onChanged: (v) => setState(() => _selectedMonth = v),
+                final monthYearFilter = MonthYearSelector(
+                  selectedMonth: _selectedMonthNumber,
+                  selectedYear: _selectedYearNumber,
+                  onChanged: (m, y) {
+                    setState(() {
+                      _selectedMonthNumber = m;
+                      _selectedYearNumber = y;
+                      const mNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                      _selectedMonth = '${mNames[m - 1]} $y';
+                    });
+                  },
                 );
 
                 final statusDropdown = AppDropdown.simple(
@@ -322,27 +353,37 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
 
                 if (isNarrow) {
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      searchField,
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 360),
+                        child: searchField,
+                      ),
                       const SizedBox(height: 10),
-                      Row(
+                      Wrap(
+                        spacing: 10,
+                        runSpacing: 10,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Expanded(child: monthDropdown),
-                          const SizedBox(width: 10),
-                          Expanded(child: statusDropdown),
+                          monthYearFilter,
+                          SizedBox(width: 175, child: statusDropdown),
                         ],
                       ),
                     ],
                   );
                 }
 
-                return Row(
+                return Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Expanded(child: searchField),
-                    const SizedBox(width: 12),
-                    SizedBox(width: 185, child: monthDropdown),
-                    const SizedBox(width: 12),
-                    SizedBox(width: 185, child: statusDropdown),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 340),
+                      child: searchField,
+                    ),
+                    monthYearFilter,
+                    SizedBox(width: 175, child: statusDropdown),
                   ],
                 );
               },
@@ -350,9 +391,15 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 3. Invoice Table
+          // 3. Invoice Table or UPI Reconciliation Queue
           Builder(
             builder: (context) {
+              if (_activeTabIndex == 1) {
+                final upiBox = _buildUpiReconciliationBox(context);
+                return isCompact
+                    ? SizedBox(height: 400, child: upiBox)
+                    : Expanded(child: upiBox);
+              }
               final tableBox = Container(
                 decoration: modernTableDecoration,
                 child: filtered.isEmpty
@@ -611,56 +658,28 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
     final amountController = TextEditingController(
       text: ((invoice['expected'] ?? invoice['amount'] ?? 8000) - (invoice['paid'] ?? 0)).toString(),
     );
+    bool isSubmitting = false;
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text('Collect Payment: ${invoice['name']}', overflow: TextOverflow.ellipsis),
-              content: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Property: ${invoice['property'] ?? 'Green View PG - Hebbal'}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 13)),
-                    const SizedBox(height: 4),
-                    Text('Room: ${invoice['room'] ?? '101'} • Month: ${invoice['month'] ?? '2026-09'}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: amountController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Collect Amount (₹)',
-                        prefixText: '₹ ',
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedMethod,
-                      decoration: const InputDecoration(labelText: 'Payment Mode'),
-                      items: ['UPI', 'Cash', 'Bank Transfer'].map((String method) {
-                        return DropdownMenuItem(value: method, child: Text(method));
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setDialogState(() => selectedMethod = val);
-                      },
-                    ),
-                  ],
-                ),
-              ),
+            return PremiumDialog(
+              maxWidth: 460,
+              title: 'Record Payment',
+              subtitle: invoice['name']?.toString() ?? 'Resident',
+              icon: Icons.payments_rounded,
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
+                  onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
-                ElevatedButton(
-                  onPressed: () async {
+                ElevatedButton.icon(
+                  onPressed: isSubmitting ? null : () async {
                     final enteredAmount = int.tryParse(amountController.text) ?? (invoice['expected'] ?? 8000);
                     final invId = invoice['id']?.toString();
+                    setDialogState(() => isSubmitting = true);
                     if (invId != null && invId.isNotEmpty && !invId.startsWith('inv-')) {
                       try {
                         await AdminApiService.collectPayment(
@@ -671,9 +690,10 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                         );
                         _loadInvoicesFromApi();
                       } catch (e) {
+                        setDialogState(() => isSubmitting = false);
                         if (dialogContext.mounted) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text('Failed to record payment: $e'), backgroundColor: Colors.red),
+                            SnackBar(content: Text('Failed to record payment: $e'), backgroundColor: AppTheme.statusRed),
                           );
                         }
                         return;
@@ -689,18 +709,408 @@ class _PaymentsScreenState extends State<PaymentsScreen> {
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Payment of ₹ $enteredAmount collected for ${invoice['name']}!'), backgroundColor: Colors.green),
+                        SnackBar(content: Text('Payment of ₹ $enteredAmount collected for ${invoice['name']}!'), backgroundColor: AppTheme.statusOk),
                       );
                     }
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF059669)),
-                  child: const Text('Confirm Payment'),
+                  icon: isSubmitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(isSubmitting ? 'Recording...' : 'Confirm Payment'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
               ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Property: ${invoice['property'] ?? 'Green View PG - Hebbal'}', style: const TextStyle(color: AppTheme.textGrey, fontSize: 12.5)),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Room: ${invoice['room'] ?? '101'} • Month: ${invoice['month'] ?? '2026-09'}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: AppTheme.textDark)),
+                            Text('Due: ₹${invoice['expected'] ?? 8000}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.statusRed)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  PremiumFormField(
+                    label: 'Collect Amount (₹)',
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                    prefixIcon: Icons.currency_rupee_rounded,
+                    isRequired: true,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Payment Mode', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedMethod,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.primaryTeal, width: 1.5)),
+                    ),
+                    items: ['UPI', 'Cash', 'Bank Transfer'].map((String method) {
+                      return DropdownMenuItem(value: method, child: Text(method, style: const TextStyle(fontSize: 13)));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setDialogState(() => selectedMethod = val);
+                    },
+                  ),
+                ],
+              ),
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildUpiReconciliationBox(BuildContext context) {
+    final txs = _filteredTransactions;
+    return Container(
+      decoration: modernTableDecoration,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in const [
+                ('ALL', 'All Transactions'),
+                ('PENDING', 'Pending Verification'),
+                ('VERIFIED', 'Verified'),
+                ('FAILED', 'Failed / Cancelled'),
+              ])
+                ChoiceChip(
+                  label: Text(entry.$2, style: const TextStyle(fontSize: 12)),
+                  selected: _upiStatusFilter == entry.$1,
+                  onSelected: (_) => setState(() => _upiStatusFilter = entry.$1),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: txs.isEmpty
+                ? const EmptyState(
+                    icon: Icons.account_balance_outlined,
+                    title: 'No UPI transactions',
+                    subtitle: 'Direct UPI payment attempts and verified receipts will appear here.',
+                  )
+                : ListView.separated(
+                    itemCount: txs.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (ctx, i) {
+                      final tx = txs[i];
+                      final status = (tx['status'] ?? '').toString().toUpperCase();
+                      final isVerified = status == 'PAID' || status == 'SUCCESS';
+                      final isPending = status == 'PENDING_VERIFICATION' || status == 'PENDING';
+                      final txnRef = tx['transaction_ref']?.toString() ?? '-';
+                      final utr = tx['bank_reference']?.toString() ??
+                          tx['client_upi_txn_id']?.toString() ??
+                          '-';
+                      final reconStatus = tx['reconciliation_status']?.toString() ?? status;
+                      final timestamp = (tx['paid_at'] ?? tx['created_at'] ?? '').toString();
+                      final badgeCol = isVerified
+                          ? const Color(0xFF059669)
+                          : (isPending ? const Color(0xFFD97706) : const Color(0xFFDC2626));
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${tx['resident_name'] ?? 'Resident'} · ${tx['invoice_number'] ?? '-'}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 13.5,
+                                      color: AppTheme.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Txn Ref: $txnRef · UPI/UTR: $utr',
+                                    style: const TextStyle(fontSize: 12, color: AppTheme.textGrey),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Mode: ${tx['payment_mode'] ?? 'UPI'} · $timestamp',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '₹ ${_formatCurrency((tx['amount'] as num?) ?? 0)}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14,
+                                    color: AppTheme.textDark,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: badgeCol.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    reconStatus,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: badgeCol,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 12),
+                            if (isPending)
+                              Wrap(
+                                spacing: 6,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => _showReconcileUpiDialog(context, tx),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF059669),
+                                      foregroundColor: Colors.white,
+                                      minimumSize: const Size(0, 32),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    ),
+                                    child: const Text('Verify', style: TextStyle(fontSize: 12)),
+                                  ),
+                                  OutlinedButton(
+                                    onPressed: () => _showReconcileUpiDialog(context, tx, defaultReject: true),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFDC2626),
+                                      side: const BorderSide(color: Color(0xFFFCA5A5)),
+                                      minimumSize: const Size(0, 32),
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    ),
+                                    child: const Text('Reject', style: TextStyle(fontSize: 12)),
+                                  ),
+                                ],
+                              )
+                            else if (isVerified && tx['receipt_number'] != null)
+                              Text(
+                                tx['receipt_number'].toString(),
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF059669),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showReconcileUpiDialog(
+    BuildContext context,
+    Map<String, dynamic> tx, {
+    bool defaultReject = false,
+  }) {
+    final paymentId = (tx['payment_id'] ?? tx['id'] ?? '').toString();
+    final utrController = TextEditingController(
+      text: tx['client_upi_txn_id']?.toString() ?? '',
+    );
+    final notesController = TextEditingController();
+    String action = defaultReject ? 'REJECT' : 'APPROVE';
+    bool isSubmitting = false;
+
+    showPremiumDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => PremiumDialog(
+          maxWidth: 480,
+          title: action == 'APPROVE' ? 'Verify UPI Credit' : 'Reject Pending UPI',
+          subtitle: 'Reconciliation Queue',
+          icon: action == 'APPROVE' ? Icons.verified_user_rounded : Icons.highlight_off_rounded,
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(dialogCtx),
+              child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
+            ),
+            ElevatedButton.icon(
+              onPressed: isSubmitting ? null : () async {
+                final bankRef = utrController.text.trim();
+                if (action == 'APPROVE' && bankRef.isEmpty) {
+                  ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a verified Bank UTR / RRN.'),
+                      backgroundColor: AppTheme.statusRed,
+                    ),
+                  );
+                  return;
+                }
+                setDialogState(() => isSubmitting = true);
+                try {
+                  await AdminApiService.reconcileUpiPayment(
+                    paymentId: paymentId,
+                    action: action,
+                    bankReference: action == 'APPROVE' ? bankRef : null,
+                    notes: notesController.text.trim(),
+                  );
+                  if (dialogCtx.mounted) Navigator.pop(dialogCtx);
+                  _loadInvoicesFromApi();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          action == 'APPROVE'
+                              ? 'Payment verified & receipt issued!'
+                              : 'Pending payment marked as failed.',
+                        ),
+                        backgroundColor:
+                            action == 'APPROVE' ? AppTheme.statusOk : AppTheme.statusAmb,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  setDialogState(() => isSubmitting = false);
+                  if (dialogCtx.mounted) {
+                    ScaffoldMessenger.of(dialogCtx).showSnackBar(
+                      SnackBar(content: Text('Reconciliation error: $e'), backgroundColor: AppTheme.statusRed),
+                    );
+                  }
+                }
+              },
+              icon: isSubmitting
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : Icon(action == 'APPROVE' ? Icons.check_circle_outline_rounded : Icons.cancel_outlined, size: 18),
+              label: Text(isSubmitting ? 'Processing...' : (action == 'APPROVE' ? 'Verify & Settle' : 'Mark Failed')),
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    action == 'APPROVE' ? AppTheme.statusOk : AppTheme.statusRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Resident', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+                        Text(
+                          tx['resident_name']?.toString() ?? 'Resident',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDark),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Invoice #', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+                        Text(
+                          tx['invoice_number']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDark),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Amount', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+                        Text(
+                          '₹${_formatCurrency((tx['amount'] as num?) ?? 0)}',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.statusOk),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Txn Ref', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
+                        Text(
+                          tx['transaction_ref']?.toString() ?? '-',
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.textGrey),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (action == 'APPROVE') ...[
+                PremiumFormField(
+                  controller: utrController,
+                  label: 'Verified Bank UTR / RRN',
+                  hintText: 'Enter 12-digit UTR from bank statement',
+                  prefixIcon: Icons.tag_rounded,
+                  isRequired: true,
+                ),
+                const SizedBox(height: 14),
+              ],
+              PremiumFormField(
+                controller: notesController,
+                label: action == 'APPROVE' ? 'Reconciliation Notes' : 'Rejection Reason',
+                hintText: action == 'APPROVE' ? 'Optional bank reference or comment' : 'Reason for marking failed',
+                prefixIcon: Icons.notes_rounded,
+                isRequired: action != 'APPROVE',
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

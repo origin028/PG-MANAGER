@@ -48,8 +48,8 @@ void main() {
       expect(find.text('November 2026'), findsOneWidget);
       expect(find.text('October 2026'), findsOneWidget);
       expect(find.text('September 2026'), findsOneWidget);
-      expect(find.text('Pending'), findsOneWidget);
-      expect(find.text('Pay now'), findsOneWidget);
+      expect(find.text('Pending'), findsWidgets);
+      expect(find.text('Pay now'), findsNothing);
       expect(find.text('Paid'), findsNWidgets(2));
       expect(find.text('Receipt'), findsNWidgets(2));
       expect(find.text('₹8,000'), findsNWidgets(3));
@@ -74,7 +74,7 @@ void main() {
       expect(darkScaffold.backgroundColor, const Color(0xFF1B232A));
       expect(find.text('Rent & Payments'), findsOneWidget);
       expect(find.text('Pay rent now'), findsOneWidget);
-      expect(find.text('Pay now'), findsOneWidget);
+      expect(find.text('Pay now'), findsNothing);
     }
 
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -171,15 +171,8 @@ void main() {
     router.pop();
     await tester.pumpAndSettle();
 
-    // Test Card Pay now navigation
-    await tester.tap(find.text('Pay now'));
-    await tester.pumpAndSettle();
-    expect(pushedRoute, '/rent-payment');
-    expect(pushedExtra?['id'], 'INV-2026-010');
-
-    // Pop back to /payments
-    router.pop();
-    await tester.pumpAndSettle();
+    // Verify historical invoices display status pill instead of Pay now button
+    expect(find.text('Pay now'), findsNothing);
 
     // Test Receipt navigation (scroll down slightly if needed)
     await tester.ensureVisible(find.text('Receipt').first);

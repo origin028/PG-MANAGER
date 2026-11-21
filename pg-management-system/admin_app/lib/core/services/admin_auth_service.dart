@@ -94,7 +94,7 @@ class AdminAuthService {
 
   /// Registers a new PG owner account using Origin Common Super Key.
   static Future<Map<String, dynamic>> register({
-    required String businessName,
+    String? businessName,
     required String email,
     required String password,
     required String confirmPassword,
@@ -102,9 +102,13 @@ class AdminAuthService {
     String? fullName,
     String? phone,
   }) async {
+    final bName = (businessName != null && businessName.trim().isNotEmpty)
+        ? businessName.trim()
+        : '${email.split('@').first} PG';
+
     if (registerHandler != null) {
       return await registerHandler!(
-        businessName: businessName,
+        businessName: bName,
         email: email,
         password: password,
         confirmPassword: confirmPassword,
@@ -117,7 +121,7 @@ class AdminAuthService {
     final response = await ApiClient.post(
       '/auth/admin/register',
       body: {
-        'business_name': businessName.trim(),
+        'business_name': bName,
         'email': email.trim().toLowerCase(),
         'password': password.trim(),
         'confirm_password': confirmPassword.trim(),

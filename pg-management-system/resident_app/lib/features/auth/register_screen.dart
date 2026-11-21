@@ -254,82 +254,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
-  void _fillDemoData() {
-    // 64-byte valid sample JPEG header
-    final sampleJpegBytes = Uint8List.fromList([
-      0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
-      0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xFF, 0xDB, 0x00, 0x43,
-      0x00, 0x08, 0x06, 0x06, 0x07, 0x06, 0x05, 0x08, 0x07, 0x07, 0x07, 0x09,
-      0x09, 0x08, 0x0A, 0x0C, 0x14, 0x0D, 0x0C, 0x0B, 0x0B, 0x0C, 0x19, 0x12,
-      0x13, 0x0F, 0x14, 0x1D, 0x1A, 0x1F, 0x1E, 0x1D, 0x1A, 0x1C, 0x1C, 0x20,
-      0x24, 0x2E, 0x27, 0xFF, 0xD9
-    ]);
 
-    setState(() {
-      _nameController.text = 'Aarav Sharma';
-      _selectedDob = DateTime(1998, 6, 18);
-      _dobController.text = '18/06/1998';
-      _selectedGender = 'Male';
-      _occupationController.text = 'Software Engineer';
-      _phoneController.text = '9876500001';
-      _emailController.text = 'aarav.sharma@originpg.com';
-      _emergencyController.text = '9876599999';
-      _addressController.text =
-          'Flat 304, Green Glen Residency, Bellandur, Bengaluru, Karnataka';
-      _pincodeController.text = '560103';
-
-      if (_properties.isNotEmpty && _selectedPropertyId == null) {
-        _selectedPropertyId = _properties.first['id']?.toString();
-        _selectedPropertyName = _properties.first['name']?.toString();
-      }
-
-      if (_selectedDocType == 'Passport') {
-        _passportFile = PlatformFile(
-          name: 'passport_scan.jpg',
-          size: sampleJpegBytes.length,
-          bytes: sampleJpegBytes,
-        );
-        _aadhaarFrontFile = null;
-        _aadhaarBackFile = null;
-        _panCardFile = null;
-      } else {
-        _aadhaarFrontFile = PlatformFile(
-          name: 'aadhaar_front.jpg',
-          size: sampleJpegBytes.length,
-          bytes: sampleJpegBytes,
-        );
-        _aadhaarBackFile = PlatformFile(
-          name: 'aadhaar_back.jpg',
-          size: sampleJpegBytes.length,
-          bytes: sampleJpegBytes,
-        );
-        _panCardFile = PlatformFile(
-          name: 'pan_card.jpg',
-          size: sampleJpegBytes.length,
-          bytes: sampleJpegBytes,
-        );
-        _passportFile = null;
-      }
-
-      _selfieFile = PlatformFile(
-        name: 'resident_selfie.jpg',
-        size: sampleJpegBytes.length,
-        bytes: sampleJpegBytes,
-      );
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'Demo registration details and sample documents auto-filled!',
-        ),
-        backgroundColor: _RegisterPalette.of(context).teal,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
 
   Future<void> _selectDateOfBirth() async {
     final palette = _RegisterPalette.of(context);
@@ -1451,43 +1376,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.2,
                     color: palette.ink,
-                  ),
-                ),
-              ),
-              TactilePress(
-                scaleDown: 0.95,
-                child: Material(
-                  color: palette.softTeal,
-                  borderRadius: BorderRadius.circular(99),
-                  child: InkWell(
-                    onTap: _fillDemoData,
-                    borderRadius: BorderRadius.circular(99),
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 40),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.bolt_rounded,
-                            color: palette.teal,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Demo',
-                            style: HomeThemeTokens.manrope(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: palette.teal,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ),
                 ),
               ),

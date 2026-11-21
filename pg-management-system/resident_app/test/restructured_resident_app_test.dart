@@ -40,8 +40,8 @@ void main() {
     expect(find.text('Room Number'), findsOneWidget);
     expect(find.text('Floor'), findsOneWidget);
     expect(find.text('Full Property Address'), findsOneWidget);
-    expect(find.byTooltip('Copy Address'), findsOneWidget);
-    expect(find.byIcon(Icons.copy_rounded), findsWidgets);
+    expect(find.byTooltip('Copy Address'), findsNothing);
+    expect(find.text('Tap to copy full address for delivery or visitors'), findsOneWidget);
   });
 
   testWidgets('RaiseComplaintScreen displays category dropdown, description, and upload photo', (WidgetTester tester) async {
@@ -126,7 +126,7 @@ void main() {
     expect(find.text('No complaints found'), findsOneWidget);
   });
 
-  testWidgets('ProfileScreen displays Edit Profile button and camera icon badge for selfie', (WidgetTester tester) async {
+  testWidgets('ProfileScreen displays profile card and camera icon badge for selfie without edit profile button', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -135,13 +135,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('My Profile'), findsOneWidget);
-    expect(find.text('Edit Profile'), findsOneWidget);
+    expect(find.text('Edit Profile'), findsNothing);
     expect(find.byIcon(Icons.camera_alt_rounded), findsOneWidget);
     expect(find.text('Personal & Contact Details'), findsOneWidget);
     expect(find.text('KYC & Identity Verification'), findsOneWidget);
   });
 
-  testWidgets('RentDepositScreen displays Security Deposit and Fixed Rent inside card', (WidgetTester tester) async {
+  testWidgets('RentDepositScreen displays Security Deposit and Fixed Rent inside card without refund status', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(800, 1000);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -152,7 +152,8 @@ void main() {
     expect(find.text('Rent & Deposit Details'), findsOneWidget);
     expect(find.text('Security Deposit'), findsOneWidget);
     expect(find.text('TOTAL DEPOSIT'), findsOneWidget);
-    expect(find.text('50% Refundable'), findsOneWidget);
+    expect(find.text('50% Refundable'), findsNothing);
+    expect(find.text('Refund Status'), findsNothing);
     expect(find.text('Active & Secure'), findsOneWidget);
     expect(find.text('Fixed Rent'), findsOneWidget);
     expect(find.textContaining('8000 / month'), findsOneWidget);

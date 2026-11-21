@@ -547,10 +547,34 @@ class _LoginScreenState extends State<LoginScreen>
           initialCooldownSeconds: cooldownSeconds,
           onVerifyOtp: (otp) async {
             await ResidentAuthService.verifyLoginOtp(phone: phone, otp: otp);
-            final profile = await ResidentApiService.getProfile();
-            AppData.currentResident = profile;
-            await TokenStorage.saveResidentProfile(profile);
-            return profile;
+            final results = await Future.wait([
+              ResidentApiService.getProfile().catchError((_) => <String, dynamic>{}),
+              ResidentApiService.getDashboard().catchError((_) => <String, dynamic>{}),
+            ]);
+            final profile = results[0];
+            final dash = results[1];
+            final stay = (dash['stay_details'] as Map?)?.cast<String, dynamic>() ??
+                         (profile['stay_details'] as Map?)?.cast<String, dynamic>() ?? {};
+
+            final merged = {
+              ...AppData.currentResident,
+              ...profile,
+              ...dash,
+              ...stay,
+              if (stay['room_number'] != null) 'room_number': stay['room_number'],
+              if (stay['room'] != null) 'room': stay['room'],
+              if (stay['floor_number'] != null) 'floor_number': stay['floor_number'],
+              if (stay['living_since'] != null) 'living_since': stay['living_since'],
+              if (stay['check_in_date'] != null) 'check_in_date': stay['check_in_date'],
+            };
+            AppData.currentResident = merged;
+            if (profile.isNotEmpty) {
+              await TokenStorage.saveResidentProfile(merged);
+            }
+            if (dash.isNotEmpty) {
+              await TokenStorage.saveCachedDashboard(dash);
+            }
+            return merged;
           },
           onResendOtp: () => ResidentAuthService.requestLoginOtp(phone),
           onVerified: (otpContext, profile) {
@@ -642,15 +666,7 @@ class _LoginScreenState extends State<LoginScreen>
                   ],
                 ),
 
-                // Quick Demo Profiles Card
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  child: MotionEntrance(
-                    delay: const Duration(milliseconds: 160),
-                    slideOffset: const Offset(0, 0.03),
-                    child: _buildQuickDemoCard(palette),
-                  ),
-                ),
+
 
                 const SizedBox(height: 22),
 
@@ -1206,232 +1222,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-  Widget _buildQuickDemoCard(_LoginPalette palette) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 16, 12, 12),
-      decoration: _cardDecoration(palette),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
-            child: Row(
-              children: [
-                Icon(Icons.bolt_rounded, size: 18, color: palette.teal),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Quick demo profiles',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: HomeThemeTokens.manrope(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: palette.ink,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          ...AppData.residents.take(3).map((resident) {
-            final isPending = resident['room_number'] == null ||
-                resident['status'] == 'Pending';
-            final name = resident['name']?.toString() ?? 'Resident';
-            final initial = name.isNotEmpty ? name[0].toUpperCase() : 'R';
 
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () async {
-                  if (isPending) {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: BorderSide(color: palette.line),
-                        ),
-                        backgroundColor: palette.card,
-                        title: Row(
-                          children: [
-                            Icon(
-                              Icons.hourglass_top_rounded,
-                              color: palette.warning,
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                'Approval Pending',
-                                style: HomeThemeTokens.manrope(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w800,
-                                  color: palette.ink,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        content: Text(
-                          'Registration for $name is currently awaiting admin approval. Please wait for approval or select an active profile.',
-                          style: HomeThemeTokens.manrope(
-                            fontSize: 14,
-                            height: 1.45,
-                            color: palette.mute,
-                          ),
-                        ),
-                        actions: [
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(ctx),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: palette.teal,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text('OK'),
-                          ),
-                        ],
-                      ),
-                    );
-                    return;
-                  }
-
-                  final messenger = ScaffoldMessenger.of(context);
-                  final navigator = GoRouter.of(context);
-
-                  AppData.currentResident = Map<String, dynamic>.from(resident);
-                  await TokenStorage.saveTokens(
-                    accessToken: 'demo_token_${resident['phone'] ?? '123'}',
-                    refreshToken: 'demo_refresh_${resident['phone'] ?? '123'}',
-                    user: {
-                      'full_name': resident['name'],
-                      'phone': resident['phone'],
-                      'email': resident['email'],
-                    },
-                  );
-                  await TokenStorage.saveResidentProfile(
-                    Map<String, dynamic>.from(resident),
-                  );
-
-                  if (!mounted) return;
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text('Logged in as $name!'),
-                      backgroundColor: palette.teal,
-                      duration: const Duration(seconds: 1),
-                    ),
-                  );
-                  navigator.go('/home', extra: resident);
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: isPending
-                              ? palette.softWarning
-                              : palette.softSuccess,
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: Center(
-                          child: Text(
-                            initial,
-                            style: HomeThemeTokens.manrope(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: isPending
-                                  ? palette.warning
-                                  : palette.success,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: HomeThemeTokens.manrope(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 15,
-                                color: palette.ink,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            if (isPending)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 9,
-                                  vertical: 2.5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: palette.softWarning,
-                                  borderRadius: BorderRadius.circular(99),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 6,
-                                      height: 6,
-                                      decoration: BoxDecoration(
-                                        color: palette.warning,
-                                        shape: BoxShape.circle,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Flexible(
-                                      child: Text(
-                                        'Pending approval',
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: HomeThemeTokens.manrope(
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: palette.warning,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            else
-                              Text(
-                                'Active · Room ${resident['room_number'] ?? 101}',
-                                style: HomeThemeTokens.manrope(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: palette.mute,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        size: 20,
-                        color: palette.mute,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
 
   BoxDecoration _cardDecoration(_LoginPalette palette) {
     return BoxDecoration(

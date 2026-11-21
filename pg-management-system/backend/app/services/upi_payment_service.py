@@ -1,8 +1,10 @@
+import json
 import logging
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, override
 from urllib.parse import quote, urlencode
 
 from fastapi import HTTPException, status
@@ -22,6 +24,89 @@ logger = logging.getLogger(__name__)
 # Standard Android Package Identifiers for Direct Intent Routing
 GPAY_PACKAGE_NAME = "com.google.android.apps.nbu.paisa.user"
 PHONEPE_PACKAGE_NAME = "com.phonepe.app"
+PAYTM_PACKAGE_NAME = "net.one97.paytm"
+BHIM_PACKAGE_NAME = "in.org.npci.upiapp"
+
+
+def parse_upi_client_metadata(gateway_signature: Optional[str]) -> Dict[str, Optional[str]]:
+    """Safely extracts stored client-reported UPI telemetry without touching verified UTR."""
+    if not gateway_signature:
+        return {}
+    raw = gateway_signature.strip()
+    if raw.startswith("{"):
+        try:
+            decoded = json.loads(raw)
+            if isinstance(decoded, dict):
+                return {
+                    "client_upi_txn_id": decoded.get("utxn"),
+                    "app_package": decoded.get("app"),
+                    "response_code": decoded.get("code"),
+                    "client_status": decoded.get("st"),
+                }
+        except Exception:
+            pass
+    return {}
+
+
+def compute_reconciliation_status(payment_status: str) -> str:
+    st = (payment_status or "").upper()
+    if st in ("PAID", "SUCCESS"):
+        return "VERIFIED"
+    if st in ("PENDING_VERIFICATION", "PENDING"):
+        return "PENDING_RECONCILIATION"
+    if st == "FAILED":
+        return "FAILED"
+    if st == "CANCELLED":
+        return "CANCELLED"
+    if st == "EXPIRED":
+        return "EXPIRED"
+    return st or "UNKNOWN"
+
+
+def redact_vpa(vpa: Optional[str]) -> str:
+    """Masks VPA local-part for safe diagnostic logging without exposing full UPI ID."""
+    clean = (vpa or "").strip()
+    if "@" not in clean:
+        return "***"
+    local, domain = clean.split("@", 1)
+    if len(local) <= 3:
+        return f"{local[:1]}***@{domain}"
+    return f"{local[:2]}***{local[-2:]}@{domain}"
+
+
+def sanitize_upi_note(text: str, max_len: int = 50) -> str:
+    """Produces an NPCI-safe transaction note (strictly alphanumeric and spaces, <= 50 chars)."""
+    cleaned = re.sub(r"[^A-Za-z0-9 ]", " ", (text or "").strip())
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    if not cleaned:
+        return "Rent Payment"
+    return cleaned[:max_len].strip()
+
+
+def classify_upi_error_category(
+    reported_status: str,
+    response_code: Optional[str] = None,
+    raw_response: Optional[str] = None,
+) -> str:
+    st = (reported_status or "UNKNOWN").strip().upper()
+    code = (response_code or "").strip().upper()
+    raw = (raw_response or "").lower()
+
+    if st in ("PAID", "SUCCESS") and not raw and not code:
+        return "PENDING_TRANSACTION"
+    if st == "CANCELLED":
+        return "USER_CANCELLED"
+    if st == "NETWORK_ERROR" or "network" in raw:
+        return "NETWORK_FAILURE"
+    if "security reasons" in raw or "security policy" in raw or "risk" in raw or code in ("LAUNCH_ERROR", "SECURITY_DECLINED"):
+        return "SECURITY_REJECTION"
+    if code in ("Z9", "ZM", "ZA", "Z5", "U30", "U69", "XH", "XU", "B3", "LIMIT_EXCEEDED") or "limit" in raw:
+        return "BANK_LIMIT_REJECTION"
+    if st in ("FAILURE", "FAILED"):
+        return "BANK_TRANSACTION_REJECTION"
+    if st in ("SUCCESS", "SUBMITTED", "PENDING"):
+        return "PENDING_TRANSACTION"
+    return "UNKNOWN_ERROR"
 
 
 def build_upi_uri(
@@ -33,19 +118,26 @@ def build_upi_uri(
     merchant_code: Optional[str] = None,
 ) -> str:
     """
-    Builds a standard, properly URL-encoded NPCI UPI Deep Link URI.
+    Builds a standard, RFC-3986 URL-encoded (%20, never '+') NPCI UPI Deep Link URI.
     Format: upi://pay?pa=...&pn=...&am=...&cu=INR&tr=...&tn=...
+    Enforces strict NPCI alphanumeric mandate for transaction_ref (no hyphens/symbols).
     """
+    safe_note = sanitize_upi_note(description)
+    clean_tr = re.sub(r"[^A-Za-z0-9]", "", transaction_ref.strip())[:35]
+    if not clean_tr:
+        clean_tr = f"TXN{uuid.uuid4().hex[:12].upper()}"
+    clean_pn = re.sub(r"[']", "", payee_name.strip())
     params = [
         ("pa", payee_vpa.strip()),
-        ("pn", payee_name.strip()),
+        ("pn", clean_pn),
         ("am", f"{amount:.2f}"),
         ("cu", "INR"),
-        ("tr", transaction_ref.strip()),
-        ("tn", description.strip()),
+        ("tr", clean_tr),
+        ("tn", safe_note),
     ]
-    if merchant_code:
+    if merchant_code and re.fullmatch(r"\d{4}", merchant_code.strip()):
         params.append(("mc", merchant_code.strip()))
+    params.append(("mode", "04"))
 
     query_str = urlencode(params, quote_via=quote)
     return f"upi://pay?{query_str}"
@@ -91,6 +183,7 @@ class DefaultPendingVerificationProvider(BaseUpiVerificationProvider):
     client claims, user screenshots, or client-supplied references.
     """
 
+    @override
     def verify_payment(
         self, payment: Payment, client_data: Optional[Dict[str, Any]] = None
     ) -> UpiVerificationResult:
@@ -119,6 +212,8 @@ class UpiPaymentService:
         resident: Resident,
         invoice_id: uuid.UUID,
         idempotency_key: Optional[str] = None,
+        app_name: Optional[str] = None,
+        package_name: Optional[str] = None,
     ) -> Tuple[Payment, Dict[str, Any]]:
         """
         Initiates a direct UPI rent payment attempt.
@@ -129,7 +224,7 @@ class UpiPaymentService:
         merchant_code = settings.UPI_MERCHANT_CODE.strip() if getattr(settings, "UPI_MERCHANT_CODE", None) else None
         if getattr(settings, "UPI_MERCHANT_VPA", None) and settings.UPI_MERCHANT_VPA.strip():
             payee_vpa = settings.UPI_MERCHANT_VPA.strip()
-            payee_name = (getattr(settings, "UPI_MERCHANT_NAME", None) or settings.UPI_PAYEE_NAME or "Saukatali Masi").strip()
+            payee_name = (getattr(settings, "UPI_MERCHANT_NAME", None) or settings.UPI_PAYEE_NAME or "SMART GROUP PG'S").strip()
             is_merchant = True
         else:
             payee_vpa = settings.UPI_PAYEE_VPA.strip() if settings.UPI_PAYEE_VPA else ""
@@ -139,7 +234,7 @@ class UpiPaymentService:
                     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                     detail="PG business UPI ID (UPI_PAYEE_VPA) is not configured. Please contact the PG management.",
                 )
-            payee_name = settings.UPI_PAYEE_NAME.strip() if settings.UPI_PAYEE_NAME else "Saukatali Masi"
+            payee_name = settings.UPI_PAYEE_NAME.strip() if settings.UPI_PAYEE_NAME else "SMART GROUP PG'S"
             is_merchant = bool(merchant_code)
 
         # 2. Lock invoice row and validate ownership
@@ -182,7 +277,7 @@ class UpiPaymentService:
                     txn_ref = existing.gateway_order_id or f"TXN{existing.id.hex[:12].upper()}"
                     prop = self.db.get(Property, invoice.property_id)
                     prop_name = prop.name if prop else payee_name
-                    desc = f"Rent payment {invoice.billing_month} - {prop_name}"
+                    desc = sanitize_upi_note(f"Rent payment {invoice.billing_month} - {prop_name}")
                     upi_uri = build_upi_uri(
                         payee_vpa=payee_vpa,
                         payee_name=payee_name,
@@ -207,6 +302,11 @@ class UpiPaymentService:
         transaction_ref = f"TXN{uuid.uuid4().hex[:12].upper()}"
         payment_number = f"PAY-UPI-{uuid.uuid4().hex[:16].upper()}"
 
+        initial_sig = None
+        if package_name or app_name:
+            sig_obj = {k: v for k, v in {"app": (package_name or app_name or "")[:80], "st": "INITIATED"}.items() if v}
+            initial_sig = json.dumps(sig_obj)[:255]
+
         payment = Payment(
             property_id=invoice.property_id,
             invoice_id=invoice.id,
@@ -215,6 +315,7 @@ class UpiPaymentService:
             amount=outstanding,
             payment_mode="UPI",
             gateway_order_id=transaction_ref,  # UPI transaction reference
+            gateway_signature=initial_sig,
             status="PENDING",
             idempotency_key=idempotency_key or f"upi_{transaction_ref}",
             reservation_expires_at=now + timedelta(minutes=30),
@@ -225,7 +326,7 @@ class UpiPaymentService:
 
         prop = self.db.get(Property, invoice.property_id)
         prop_name = prop.name if prop else payee_name
-        description = f"Rent payment {invoice.billing_month} - {prop_name}"
+        description = sanitize_upi_note(f"Rent payment {invoice.billing_month} - {prop_name}")
 
         upi_uri = build_upi_uri(
             payee_vpa=payee_vpa,
@@ -234,6 +335,15 @@ class UpiPaymentService:
             transaction_ref=transaction_ref,
             description=description,
             merchant_code=merchant_code,
+        )
+
+        logger.info(
+            "[UpiPaymentService] Initiated UPI intent payment_ref=%s app=%s vpa=%s amount=%.2f merchant=%s",
+            transaction_ref,
+            package_name or app_name or "unspecified",
+            redact_vpa(payee_vpa),
+            float(outstanding),
+            is_merchant,
         )
 
         return payment, self._build_intent_payload(
@@ -260,9 +370,11 @@ class UpiPaymentService:
         is_merchant_configured: bool = False,
         merchant_code: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """Builds Google Pay and PhonePe specific intent URLs and metadata."""
+        """Builds app-specific intent URLs and metadata while keeping base upi_uri clean."""
         gpay_uri = f"{upi_uri}&package={GPAY_PACKAGE_NAME}"
         phonepe_uri = f"{upi_uri}&package={PHONEPE_PACKAGE_NAME}"
+        paytm_uri = f"{upi_uri}&package={PAYTM_PACKAGE_NAME}"
+        bhim_uri = f"{upi_uri}&package={BHIM_PACKAGE_NAME}"
 
         return {
             "payment_id": payment.id,
@@ -287,6 +399,16 @@ class UpiPaymentService:
                     "name": "PhonePe",
                     "package_name": PHONEPE_PACKAGE_NAME,
                     "intent_uri": phonepe_uri,
+                },
+                "paytm": {
+                    "name": "Paytm",
+                    "package_name": PAYTM_PACKAGE_NAME,
+                    "intent_uri": paytm_uri,
+                },
+                "bhim": {
+                    "name": "BHIM",
+                    "package_name": BHIM_PACKAGE_NAME,
+                    "intent_uri": bhim_uri,
                 },
             },
             "status": payment.status,
@@ -368,6 +490,115 @@ class UpiPaymentService:
 
         return payment
 
+    def record_upi_response(
+        self,
+        payment_id: uuid.UUID,
+        resident: Resident,
+        status_str: str,
+        txn_ref: Optional[str] = None,
+        upi_txn_id: Optional[str] = None,
+        approval_ref_no: Optional[str] = None,
+        response_code: Optional[str] = None,
+        raw_response: Optional[str] = None,
+        app_package: Optional[str] = None,
+    ) -> Payment:
+        """
+        Records Direct UPI Intent callback response from the mobile app.
+        Strict security rule: NEVER marks a payment PAID or settles an invoice from
+        client callback parameters alone. Client-claimed SUCCESS/SUBMITTED/PENDING
+        remains PENDING_VERIFICATION until authoritative bank/admin reconciliation.
+        """
+        from app.services.audit_service import record_audit_log
+
+        payment = self.db.scalar(
+            sa.select(Payment).where(Payment.id == payment_id).with_for_update()
+        )
+        if not payment:
+            raise NotFoundError("Payment not found.")
+
+        if payment.resident_id != resident.id:
+            raise PermissionDeniedError("Access denied.")
+
+        if txn_ref and payment.gateway_order_id and txn_ref.strip() != payment.gateway_order_id:
+            raise BadRequestError("Transaction reference mismatch.")
+
+        clean_upi_txn_id = upi_txn_id.strip() if upi_txn_id and upi_txn_id.strip() else None
+        if clean_upi_txn_id:
+            duplicate_settled = self.db.scalar(
+                sa.select(Payment).where(
+                    Payment.gateway_payment_id == clean_upi_txn_id,
+                    Payment.id != payment.id,
+                )
+            )
+            if duplicate_settled:
+                raise ConflictError(
+                    f"UPI transaction ID '{clean_upi_txn_id}' is already settled on another payment."
+                )
+
+        normalized = (status_str or "UNKNOWN").strip().upper()
+
+        # Never downgrade an already settled payment
+        if payment.status not in ("PAID", "SUCCESS"):
+            if normalized in ("FAILURE", "FAILED", "NETWORK_ERROR"):
+                payment.status = "FAILED"
+            elif normalized in ("CANCELLED", "CANCELED", "USER_CANCELLED"):
+                payment.status = "CANCELLED"
+            else:
+                # SUCCESS, SUBMITTED, PENDING, UNKNOWN -> fail closed in PENDING_VERIFICATION
+                payment.status = "PENDING_VERIFICATION"
+
+            existing_meta = parse_upi_client_metadata(payment.gateway_signature)
+            meta_payload = {
+                "st": normalized[:24],
+                "app": (app_package or existing_meta.get("app_package") or "")[:64],
+                "code": (response_code or existing_meta.get("response_code") or "")[:24],
+                "utxn": (clean_upi_txn_id or approval_ref_no or existing_meta.get("client_upi_txn_id") or "")[:80],
+            }
+            compact = json.dumps({k: v for k, v in meta_payload.items() if v}, separators=(",", ":"))
+            payment.gateway_signature = compact[:255]
+
+        self.db.commit()
+        self.db.refresh(payment)
+
+        error_category = classify_upi_error_category(normalized, response_code, raw_response)
+        logger.info(
+            "[UpiPaymentService] UPI response recorded ref=%s app=%s status=%s code=%s category=%s resulting=%s has_utxn=%s",
+            payment.gateway_order_id,
+            app_package or "unknown",
+            normalized,
+            response_code or "-",
+            error_category,
+            payment.status,
+            bool(clean_upi_txn_id),
+        )
+
+        try:
+            record_audit_log(
+                db=self.db,
+                action="UPI_INTENT_RESPONSE",
+                resource_type="payment",
+                user_id=resident.user_id,
+                user_role="RESIDENT",
+                property_id=payment.property_id,
+                resource_id=str(payment.id),
+                details={
+                    "payment_number": payment.payment_number,
+                    "transaction_ref": payment.gateway_order_id,
+                    "reported_status": normalized,
+                    "error_category": error_category,
+                    "resulting_status": payment.status,
+                    "upi_txn_id": clean_upi_txn_id,
+                    "approval_ref_no": approval_ref_no,
+                    "response_code": response_code,
+                    "app_package": app_package,
+                    "raw_response": (raw_response or "")[:500] if raw_response else None,
+                },
+            )
+        except Exception as audit_err:
+            logger.warning(f"[UpiPaymentService] Failed to write UPI response audit log: {audit_err}")
+
+        return payment
+
     def get_payment_status(
         self, payment_id: uuid.UUID, resident_or_user_id: uuid.UUID, is_admin: bool = False
     ) -> Tuple[Payment, Optional[Receipt]]:
@@ -445,6 +676,7 @@ class UpiPaymentService:
         bank_reference: str,
         event_id: Optional[str] = None,
         admin_user: Optional[Any] = None,
+        notes: Optional[str] = None,
     ) -> Tuple[Payment, Optional[Receipt], bool]:
         """
         Atomically settles a trusted/verified UPI payment, updates invoice balance and status,
@@ -515,7 +747,7 @@ class UpiPaymentService:
 
         # 5. Update invoice paid amount and status
         new_paid = current_paid + paid_amount_decimal
-        invoice.paid_amount = new_paid
+        invoice.paid_amount = float(new_paid)
 
         invoice_total = Decimal(str(invoice.amount))
         if new_paid >= invoice_total:
@@ -565,6 +797,7 @@ class UpiPaymentService:
                     "invoice_id": str(invoice.id),
                     "invoice_status": invoice.status,
                     "receipt_number": receipt.receipt_number if receipt else None,
+                    **({"notes": notes} if notes else {}),
                 },
             )
         except Exception as audit_err:
@@ -588,3 +821,47 @@ class UpiPaymentService:
             logger.warning(f"[UpiPaymentService] Failed to queue settlement notification: {notif_err}")
 
         return payment, receipt, True
+
+    def reject_pending_payment(
+        self,
+        payment_id: uuid.UUID,
+        admin_user: Any,
+        notes: Optional[str] = None,
+    ) -> Payment:
+        """Marks an unverified/pending UPI payment as FAILED after admin statement review."""
+        from app.services.audit_service import record_audit_log
+
+        payment = self.db.scalar(
+            sa.select(Payment).where(Payment.id == payment_id).with_for_update()
+        )
+        if not payment:
+            raise NotFoundError("Payment record not found.")
+
+        if payment.status in ("PAID", "SUCCESS"):
+            raise ConflictError("Cannot reject an already settled payment.")
+
+        payment.status = "FAILED"
+        self.db.commit()
+        self.db.refresh(payment)
+
+        try:
+            record_audit_log(
+                db=self.db,
+                action="UPI_PAYMENT_REJECTED",
+                resource_type="payment",
+                user_id=admin_user.id if admin_user else None,
+                user_email=admin_user.email if admin_user else None,
+                user_role=admin_user.role.name if admin_user and getattr(admin_user, "role", None) else None,
+                property_id=payment.property_id,
+                resource_id=str(payment.id),
+                details={
+                    "payment_number": payment.payment_number,
+                    "transaction_ref": payment.gateway_order_id,
+                    "amount": float(payment.amount),
+                    "notes": notes or "Bank credit not found during reconciliation.",
+                },
+            )
+        except Exception as audit_err:
+            logger.warning(f"[UpiPaymentService] Failed to write rejection audit log: {audit_err}")
+
+        return payment

@@ -9,7 +9,7 @@ import 'package:resident_app/core/widgets/main_layout.dart';
 import 'package:resident_app/features/home/home_screen.dart';
 
 void main() {
-  testWidgets('HomeScreen renders redesigned Header, Hero Rent & Stay Card, Today, and Recent payments for Active Resident (Light & Dark)', (WidgetTester tester) async {
+  testWidgets('HomeScreen renders redesigned Header, Hero Rent & Stay Card, Notices, and Complaint Status (Light & Dark)', (WidgetTester tester) async {
     AppData.currentResident = AppData.residents[1]; // Priya Sharma (Active, Room 101)
 
     for (final width in [360.0, 375.0, 390.0, 412.0]) {
@@ -30,7 +30,8 @@ void main() {
       expect(find.text('Welcome back'), findsOneWidget);
       expect(find.text('Priya Sharma'), findsOneWidget);
       expect(find.text('PS'), findsOneWidget);
-      expect(find.byIcon(Icons.notifications_none_rounded), findsOneWidget);
+      // Notification bell completely removed from header
+      expect(find.byIcon(Icons.notifications_none_rounded), findsNothing);
 
       // Verify pure white background in Light Theme
       final homeScaffold = tester.widget<Scaffold>(find.descendant(
@@ -39,9 +40,10 @@ void main() {
       ));
       expect(homeScaffold.backgroundColor, const Color(0xFFFFFFFF));
 
-      // Hero Rent & Stay section
+      // Hero Rent & Stay section focused purely on rent details (NO action buttons)
       expect(find.text('8,000'), findsWidgets);
-      expect(find.text('Pay now'), findsOneWidget);
+      expect(find.text('Pay now'), findsNothing);
+      expect(find.text('View receipt'), findsNothing);
       expect(find.text('BNR Luxury PG'), findsOneWidget);
       expect(find.text('Room 101'), findsOneWidget);
       expect(find.text('Floor'), findsOneWidget);
@@ -49,14 +51,15 @@ void main() {
       expect(find.text('Resident since'), findsOneWidget);
       expect(find.text('01 Oct 2026'), findsOneWidget);
 
-      // Today section (Notices + Today's Food)
-      expect(find.text('Today'), findsOneWidget);
+      // Notices section
       expect(find.text('Notices'), findsOneWidget);
-      expect(find.textContaining('Today\'s'), findsOneWidget);
 
-      // Recent payments section
-      expect(find.text('Recent payments'), findsOneWidget);
-      expect(find.text('See all'), findsOneWidget);
+      // Complaint Status section replaces Today's Dinner
+      expect(find.text('Complaint Status'), findsOneWidget);
+      expect(find.textContaining("Today's Dinner"), findsNothing);
+
+      // Recent payments section completely removed
+      expect(find.text('Recent payments'), findsNothing);
 
       // Bottom navigation bar
       expect(find.text('Home'), findsOneWidget);
@@ -77,13 +80,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Priya Sharma'), findsOneWidget);
-      expect(find.text('Pay now'), findsOneWidget);
+      expect(find.text('Pay now'), findsNothing);
     }
 
     tester.view.resetPhysicalSize();
   });
 
-  testWidgets('HomeScreen displays Pending state for unassigned resident and opens Notifications sheet', (WidgetTester tester) async {
+  testWidgets('HomeScreen displays Pending state for unassigned resident and shows Complaint Status', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -102,15 +105,9 @@ void main() {
     expect(find.text('RM'), findsOneWidget);
     expect(find.text('Pending'), findsWidgets);
     expect(find.text('Room Pending'), findsOneWidget);
-    expect(find.text('Pay now'), findsOneWidget);
-    expect(find.text('No payments recorded yet'), findsOneWidget);
-
-    // Tap bell icon to verify Notifications sheet still opens cleanly
-    await tester.tap(find.byIcon(Icons.notifications_none_rounded));
-    await tester.pumpAndSettle();
-
-    expect(find.text('Notifications'), findsOneWidget);
-    expect(find.text('Rent Due Reminder'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
+    expect(find.text('Recent payments'), findsNothing);
+    expect(find.text('Complaint Status'), findsOneWidget);
   });
 
   testWidgets('HomeScreen respects reduced motion accessibility setting without issues', (WidgetTester tester) async {
@@ -132,10 +129,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Priya Sharma'), findsOneWidget);
-    expect(find.text('Pay now'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
+    expect(find.text('Complaint Status'), findsOneWidget);
   });
 
-  testWidgets('HomeScreen Paid status renders View receipt and preserves all existing routes', (WidgetTester tester) async {
+  testWidgets('HomeScreen Paid status renders Paid chip and preserves navigation routes', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -184,20 +182,6 @@ void main() {
             return const Scaffold(body: Center(child: Text('Notices Page')));
           },
         ),
-        GoRoute(
-          path: '/receipt',
-          builder: (context, state) {
-            visitedRoutes.add('/receipt');
-            return const Scaffold(body: Center(child: Text('Receipt Page')));
-          },
-        ),
-        GoRoute(
-          path: '/property-details',
-          builder: (context, state) {
-            visitedRoutes.add('/property-details');
-            return const Scaffold(body: Center(child: Text('Property Details Page')));
-          },
-        ),
       ],
     );
 
@@ -210,10 +194,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Paid'), findsOneWidget);
-    expect(find.text('View receipt'), findsOneWidget);
+    expect(find.text('View receipt'), findsNothing);
 
     // Verify Notices navigation
-    await tester.tap(find.text('Notices'));
+    await tester.tap(find.text('Property Announcements'));
     await tester.pumpAndSettle();
     expect(visitedRoutes.contains('/notices'), isTrue);
 
@@ -221,77 +205,27 @@ void main() {
     testRouter.go('/home');
     await tester.pumpAndSettle();
 
-    // Verify Today's Food navigation
-    await tester.tap(find.textContaining("Today's"));
+    // Verify Payments bottom nav item
+    await tester.tap(find.text('Payments'));
+    await tester.pumpAndSettle();
+    expect(visitedRoutes.contains('/payments'), isTrue);
+
+    // Go back to Home and test Food bottom nav item
+    testRouter.go('/home');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Food'));
     await tester.pumpAndSettle();
     expect(visitedRoutes.contains('/food-menu'), isTrue);
 
     // Verify Menu bottom nav item
+    testRouter.go('/home');
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Menu'));
     await tester.pumpAndSettle();
     expect(visitedRoutes.contains('/menu'), isTrue);
-
-    // Back to Home and test See all -> /payments
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('See all'));
-    await tester.pumpAndSettle();
-    expect(visitedRoutes.contains('/payments'), isTrue);
-
-    // Back to Home and verify View receipt -> /receipt
-    await tester.tap(find.text('Home'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('View receipt'));
-    await tester.pumpAndSettle();
-    expect(visitedRoutes.contains('/receipt'), isTrue);
   });
 
-  testWidgets('HomeScreen Pay now navigates to existing /payments flow when unpaid', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
-
-    AppData.currentResident = {
-      ...AppData.residents[1],
-      'rent_status': 'Unpaid',
-    };
-
-    String? navigatedRoute;
-    final router = GoRouter(
-      initialLocation: '/home',
-      routes: [
-        ShellRoute(
-          builder: (context, state, child) => MainLayout(child: child),
-          routes: [
-            GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-            GoRoute(
-              path: '/payments',
-              builder: (context, state) {
-                navigatedRoute = '/payments';
-                return const Scaffold(body: Center(child: Text('Payments Route')));
-              },
-            ),
-            GoRoute(path: '/food-menu', builder: (context, state) => const SizedBox()),
-            GoRoute(path: '/menu', builder: (context, state) => const SizedBox()),
-          ],
-        ),
-      ],
-    );
-
-    await tester.pumpWidget(
-      MaterialApp.router(
-        theme: AppTheme.lightTheme,
-        routerConfig: router,
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Pay now'));
-    await tester.pumpAndSettle();
-    expect(navigatedRoute, '/payments');
-  });
-
-  testWidgets('HomeScreen parses nested getProfile response (resident_info & stay_details) and shows Pay now', (WidgetTester tester) async {
+  testWidgets('HomeScreen parses nested getProfile response (resident_info & stay_details)', (WidgetTester tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
@@ -325,7 +259,7 @@ void main() {
     expect(find.text('2nd'), findsOneWidget);
     expect(find.text('01 Sep 2026'), findsOneWidget);
     expect(find.text('9,500'), findsWidgets);
-    expect(find.text('Pay now'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
   });
 
   testWidgets('HomeScreen prefers saved TokenStorage.residentProfile over unassigned Pending placeholder', (WidgetTester tester) async {
@@ -365,6 +299,35 @@ void main() {
     expect(find.text('Room 204'), findsOneWidget);
     expect(find.text('Room Pending'), findsNothing);
     expect(find.text('9,500'), findsWidgets);
-    expect(find.text('Pay now'), findsOneWidget);
+    expect(find.text('Pay now'), findsNothing);
+  });
+
+  testWidgets('HomeScreen renders Rent Payment Warning card exactly when due in <= 2 days', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() => tester.view.resetPhysicalSize());
+
+    final now = DateTime.now();
+    final twoDaysLater = now.add(const Duration(days: 2));
+    final dueDateStr = '${twoDaysLater.year}-${twoDaysLater.month.toString().padLeft(2, '0')}-${twoDaysLater.day.toString().padLeft(2, '0')}';
+
+    AppData.currentResident = {
+      ...AppData.residents[1],
+      'rent_status': 'Unpaid',
+      'due_date': dueDateStr,
+      'amount': 8000,
+    };
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const MainLayout(child: HomeScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify the warning card is displayed
+    expect(find.textContaining('Rent payment due in 2 days'), findsOneWidget);
+    expect(find.textContaining('Upcoming rent payment is due on'), findsOneWidget);
   });
 }

@@ -200,20 +200,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Go Settings'), findsOneWidget);
 
-    // Re-enter Settings & test POC navigation
+    // Re-enter Settings & verify POC options are completely removed
     await tester.tap(find.text('Go Settings'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(
-      find.text('UPI Package POC (flutter_upi_india)'),
-    );
-    await tester.tap(find.text('UPI Package POC (flutter_upi_india)'));
-    await tester.pumpAndSettle();
-    expect(find.text('POC India Page'), findsOneWidget);
+    expect(find.text('UPI Package POC (flutter_upi_india)'), findsNothing);
+    expect(find.text('UPI Pay Package POC (upi_pay)'), findsNothing);
 
-    // Pop back to Settings, open Logout dialog -> Cancel -> Logout
-    router.pop();
-    await tester.pumpAndSettle();
-
+    // Open Logout dialog -> Cancel -> Logout
     await tester.ensureVisible(find.text('Log Out'));
     await tester.tap(find.text('Log Out'));
     await tester.pumpAndSettle();

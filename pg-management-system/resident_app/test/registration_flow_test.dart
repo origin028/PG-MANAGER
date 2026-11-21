@@ -110,7 +110,7 @@ void main() {
       expect(find.text('Enter permanent address'), findsOneWidget);
     });
 
-    testWidgets('RegisterScreen demo button populates mock files, updates progress, and switches KYC method cleanly',
+    testWidgets('RegisterScreen has zero demo buttons and switches KYC method cleanly',
         (WidgetTester tester) async {
       tester.view.physicalSize = const Size(800, 1400);
       tester.view.devicePixelRatio = 1.0;
@@ -124,21 +124,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap Demo auto-fill
-      final demoButton = find.text('Demo');
-      expect(demoButton, findsOneWidget);
-      await tester.tap(demoButton);
-      await tester.pumpAndSettle();
-
-      // Verify auto-filled resident information and uploaded state
-      expect(find.text('Aarav Sharma'), findsOneWidget);
-      expect(find.text('Software Engineer'), findsOneWidget);
-      expect(find.text('9876500001'), findsOneWidget);
-      expect(find.text('Change'), findsNWidgets(4));
-
-      // Progress bar reaches 100% (widthFactor 1.0)
-      final fullProgressBox = tester.widget<FractionallySizedBox>(find.byType(FractionallySizedBox));
-      expect(fullProgressBox.widthFactor, 1.0);
+      // Verify Demo button is completely removed
+      expect(find.text('Demo'), findsNothing);
 
       // Switch to Passport
       final passportTab = find.text('Passport');

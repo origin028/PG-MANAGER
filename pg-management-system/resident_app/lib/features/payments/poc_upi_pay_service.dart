@@ -169,8 +169,8 @@ class DefaultPocUpiPayRunner implements PocUpiPayRunner {
 /// Isolated Diagnostic & Evaluation Service for upi_pay package.
 class PocUpiPayService {
   // Verified PG Owner details (strictly preserved)
-  static const String verifiedPayeeVpa = 'masisokatali90900@okaxis';
-  static const String verifiedPayeeName = 'Saukatali Masi';
+  static const String verifiedPayeeVpa = '9886699258-3@ybl';
+  static const String verifiedPayeeName = "SMART GROUP PG'S";
   static const String defaultCurrency = 'INR';
 
   // Well-known packages

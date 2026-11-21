@@ -4,6 +4,7 @@ import '../../core/data/app_data.dart';
 import '../../core/services/admin_api_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/premium_dialogs.dart';
 import '../residents/residents_screen.dart';
 
 class RoomsBedsScreen extends StatefulWidget {
@@ -119,111 +120,45 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
     String selectedFloor = '1st Floor';
     String selectedType = '2-Sharing';
     final bedCountController = TextEditingController(text: '2');
+    bool isSubmitting = false;
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (builderCtx, setModalState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              title: const Text('Add New Room', style: TextStyle(fontWeight: FontWeight.bold)),
-              content: SizedBox(
-                width: 420,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: numberController,
-                        decoration: const InputDecoration(
-                          labelText: 'Room Number (e.g. 104) *',
-                          hintText: 'e.g. 104',
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedFloor,
-                        decoration: AppTheme.formDropdownDecoration(labelText: 'Select Floor'),
-                        borderRadius: BorderRadius.circular(12),
-                        elevation: 2,
-                        dropdownColor: Colors.white,
-                        icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.textGrey),
-                        items: ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor'].map((floor) {
-                          return DropdownMenuItem(value: floor, child: Text(floor));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedFloor = val);
-                        },
-                      ),
-                      const SizedBox(height: 14),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              initialValue: selectedType,
-                              decoration: AppTheme.formDropdownDecoration(labelText: 'Room Type'),
-                              borderRadius: BorderRadius.circular(12),
-                              elevation: 2,
-                              dropdownColor: Colors.white,
-                              icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.textGrey),
-                              items: ['Single Sharing', '2-Sharing', '3-Sharing', '4-Sharing'].map((t) {
-                                return DropdownMenuItem(value: t, child: Text(t));
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setModalState(() {
-                                    selectedType = val;
-                                    if (val == 'Single Sharing') bedCountController.text = '1';
-                                    if (val == '2-Sharing') bedCountController.text = '2';
-                                    if (val == '3-Sharing') bedCountController.text = '3';
-                                    if (val == '4-Sharing') bedCountController.text = '4';
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          SizedBox(
-                            width: 100,
-                            child: TextField(
-                              controller: bedCountController,
-                              keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Beds'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            return PremiumDialog(
+              maxWidth: 460,
+              title: 'Add New Room',
+              subtitle: 'Configure room and bed capacity',
+              icon: Icons.meeting_room_outlined,
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
+                  onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
                   child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
                 ),
-                ElevatedButton(
-                  onPressed: () async {
+                ElevatedButton.icon(
+                  onPressed: isSubmitting ? null : () async {
                     String roomNo = numberController.text.trim();
 
                     if (roomNo.isEmpty) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(content: Text('Please enter a room number!'), backgroundColor: Colors.red),
+                        const SnackBar(content: Text('Please enter a room number!'), backgroundColor: AppTheme.statusRed),
                       );
                       return;
                     }
 
                     if (AppData.roomExists(roomNo)) {
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        SnackBar(content: Text('Error: Room $roomNo already exists!'), backgroundColor: Colors.red),
+                        SnackBar(content: Text('Error: Room $roomNo already exists!'), backgroundColor: AppTheme.statusRed),
                       );
                       return;
                     }
 
                     int bedCount = int.tryParse(bedCountController.text) ?? 1;
                     if (bedCount < 1) bedCount = 1;
+
+                    setModalState(() => isSubmitting = true);
 
                     List<Map<String, dynamic>> newBeds = List.generate(bedCount, (index) {
                       return {
@@ -271,9 +206,10 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                           _loadRoomsFromApi();
                         }
                       } catch (e) {
+                        setModalState(() => isSubmitting = false);
                         if (dialogContext.mounted) {
                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text('Failed to add room: $e'), backgroundColor: Colors.red),
+                            SnackBar(content: Text('Failed to add room: $e'), backgroundColor: AppTheme.statusRed),
                           );
                         }
                         return;
@@ -299,13 +235,219 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Room $roomNo added on $selectedFloor!'), backgroundColor: Colors.green),
+                        SnackBar(content: Text('Room $roomNo added on $selectedFloor!'), backgroundColor: AppTheme.statusOk),
                       );
                     }
                   },
-                  child: const Text('Add Room'),
+                  icon: isSubmitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.add_rounded, size: 18),
+                  label: Text(isSubmitting ? 'Creating...' : 'Add Room'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
               ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PremiumFormField(
+                    controller: numberController,
+                    label: 'Room Number (e.g. 104)',
+                    hintText: 'e.g. 104',
+                    prefixIcon: Icons.meeting_room_rounded,
+                    isRequired: true,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Floor', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedFloor,
+                    decoration: InputDecoration(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.primaryTeal, width: 1.5)),
+                    ),
+                    items: ['Ground Floor', '1st Floor', '2nd Floor', '3rd Floor', '4th Floor'].map((floor) {
+                      return DropdownMenuItem(value: floor, child: Text(floor, style: const TextStyle(fontSize: 13)));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedFloor = val);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 2,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Room Type', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+                            const SizedBox(height: 6),
+                            DropdownButtonFormField<String>(
+                              initialValue: selectedType,
+                              decoration: InputDecoration(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                filled: true,
+                                fillColor: const Color(0xFFF8FAFC),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.primaryTeal, width: 1.5)),
+                              ),
+                              items: ['Single Sharing', '2-Sharing', '3-Sharing', '4-Sharing'].map((t) {
+                                return DropdownMenuItem(value: t, child: Text(t, style: const TextStyle(fontSize: 13)));
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setModalState(() {
+                                    selectedType = val;
+                                    if (val == 'Single Sharing') bedCountController.text = '1';
+                                    if (val == '2-Sharing') bedCountController.text = '2';
+                                    if (val == '3-Sharing') bedCountController.text = '3';
+                                    if (val == '4-Sharing') bedCountController.text = '4';
+                                  });
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: PremiumFormField(
+                          controller: bedCountController,
+                          label: 'Beds',
+                          keyboardType: TextInputType.number,
+                          prefixIcon: Icons.bed_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showEditRoomDialog(BuildContext context, Map<String, dynamic> room) {
+    final roomNumberCtrl = TextEditingController(text: room['number']?.toString() ?? '');
+    final floorCtrl = TextEditingController(text: room['floor']?.toString() ?? '1st Floor');
+    final typeCtrl = TextEditingController(text: room['type']?.toString() ?? 'Standard');
+    bool isSaving = false;
+
+    showPremiumDialog(
+      context: context,
+      builder: (editCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return PremiumDialog(
+              maxWidth: 460,
+              title: 'Edit Room ${room['number']}',
+              subtitle: 'Update room specifications and allocation data',
+              icon: Icons.edit_note_rounded,
+              actions: [
+                TextButton(
+                  onPressed: isSaving ? null : () => Navigator.pop(editCtx),
+                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
+                ),
+                ElevatedButton.icon(
+                  onPressed: isSaving
+                      ? null
+                      : () async {
+                          final newNumber = roomNumberCtrl.text.trim();
+                          final newFloor = floorCtrl.text.trim();
+                          final newType = typeCtrl.text.trim();
+
+                          if (newNumber.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please enter a valid room number'), backgroundColor: AppTheme.statusRed),
+                            );
+                            return;
+                          }
+
+                          setDialogState(() => isSaving = true);
+                          final roomId = room['id']?.toString();
+                          if (roomId != null && roomId.isNotEmpty && !roomId.startsWith('r-')) {
+                            try {
+                              await AdminApiService.updateRoom(roomId, {
+                                'room_number': newNumber,
+                                'floor_number': int.tryParse(newFloor.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1,
+                                'room_type': newType,
+                              });
+                            } catch (e) {
+                              setDialogState(() => isSaving = false);
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Failed to update room: $e'), backgroundColor: AppTheme.statusRed),
+                                );
+                              }
+                              return;
+                            }
+                          }
+
+                          setState(() {
+                            room['number'] = newNumber;
+                            room['floor'] = newFloor;
+                            room['type'] = newType;
+                            AppData.saveRoomsToStorage();
+                          });
+
+                          if (editCtx.mounted) Navigator.pop(editCtx);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Room $newNumber updated successfully!'), backgroundColor: AppTheme.statusOk),
+                            );
+                          }
+                        },
+                  icon: isSaving
+                      ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_rounded, size: 16),
+                  label: Text(isSaving ? 'Saving...' : 'Save Changes'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  PremiumFormField(
+                    label: 'Room Number',
+                    controller: roomNumberCtrl,
+                    hintText: 'e.g. 101, 202',
+                    prefixIcon: Icons.meeting_room_outlined,
+                    isRequired: true,
+                  ),
+                  const SizedBox(height: 12),
+                  PremiumFormField(
+                    label: 'Floor',
+                    controller: floorCtrl,
+                    hintText: 'e.g. 1st Floor, 2nd Floor',
+                    prefixIcon: Icons.layers_outlined,
+                  ),
+                  const SizedBox(height: 12),
+                  PremiumFormField(
+                    label: 'Room Type',
+                    controller: typeCtrl,
+                    hintText: 'e.g. Single, 2-Sharing, 3-Sharing',
+                    prefixIcon: Icons.king_bed_outlined,
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -321,143 +463,129 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
     final occupiedBeds = beds.where((b) => b['status'] == 'Occupied').length;
     final vacantBeds = beds.length - occupiedBeds;
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (modalCtx) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.meeting_room, color: AppTheme.primaryBlue, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Manage Room $roomNumber',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                ),
-              ),
-            ],
-          ),
-          content: SizedBox(
-            width: 420,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildManageDetailRow('Room Number', 'Room $roomNumber'),
-                const Divider(height: 18, color: Color(0xFFF1F5F9)),
-                _buildManageDetailRow('Floor', floor),
-                const Divider(height: 18, color: Color(0xFFF1F5F9)),
-                _buildManageDetailRow('Sharing Type', type),
-                const Divider(height: 18, color: Color(0xFFF1F5F9)),
-                _buildManageDetailRow(
-                  'Bed Status',
-                  '$occupiedBeds Occupied, $vacantBeds Vacant (${beds.length} Total)',
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (confirmCtx) {
-                          return AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            title: const Row(
-                              children: [
-                                Icon(Icons.warning_amber_rounded, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Delete Room', style: TextStyle(fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                            content: const Text(
-                              'Are you sure? This will remove all bed data',
-                              style: TextStyle(fontSize: 14),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(confirmCtx),
-                                child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                onPressed: () async {
-                                  Navigator.pop(confirmCtx);
-                                  Navigator.pop(modalCtx);
-                                  final roomId = room['id']?.toString();
-                                  if (roomId != null && roomId.isNotEmpty && !roomId.startsWith('r-')) {
-                                    try {
-                                      await AdminApiService.deleteRoom(roomId);
-                                      _loadRoomsFromApi();
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Room $roomNumber deleted successfully'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                    } catch (e) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('Cannot delete Room $roomNumber: $e'),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      }
-                                      return;
-                                    }
-                                  } else {
-                                    setState(() {
-                                      AppData.rooms.removeWhere((r) => r['number'].toString() == roomNumber);
-                                      AppData.saveRoomsToStorage();
-                                    });
-                                    if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Room $roomNumber deleted successfully'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  }
-                                },
-                                child: const Text('Delete Room', style: TextStyle(color: Colors.white)),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
-                    icon: const Icon(Icons.delete_outline, color: Colors.white, size: 18),
-                    label: const Text('Delete Room', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        return PremiumDialog(
+          maxWidth: 460,
+          title: 'Manage Room $roomNumber',
+          subtitle: '$floor • $type',
+          icon: Icons.meeting_room_outlined,
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(modalCtx),
               child: const Text('Close', style: TextStyle(color: AppTheme.textGrey)),
             ),
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(modalCtx);
+                _showEditRoomDialog(context, room);
+              },
+              icon: const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryTeal),
+              label: const Text('Edit Room', style: TextStyle(color: AppTheme.primaryTeal)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppTheme.primaryTeal),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () {
+                showPremiumConfirmDialog(
+                  context: context,
+                  title: 'Delete Room $roomNumber?',
+                  subtitle: 'Permanent Action',
+                  message: 'Are you sure you want to delete Room $roomNumber? This will permanently remove all bed and allocation data.',
+                  confirmLabel: 'Delete Room',
+                  isDestructive: true,
+                  icon: Icons.delete_forever_rounded,
+                  details: [
+                    {'label': 'Room Number', 'value': 'Room $roomNumber'},
+                    {'label': 'Floor', 'value': floor},
+                    {'label': 'Sharing Type', 'value': type},
+                    {'label': 'Total Beds', 'value': '${beds.length}'},
+                  ],
+                  onConfirm: () async {
+                    Navigator.pop(modalCtx);
+                    final roomId = room['id']?.toString();
+                    if (roomId != null && roomId.isNotEmpty && !roomId.startsWith('r-')) {
+                      try {
+                        await AdminApiService.deleteRoom(roomId);
+                        _loadRoomsFromApi();
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Room $roomNumber deleted successfully'),
+                              backgroundColor: AppTheme.statusRed,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Cannot delete Room $roomNumber: $e'),
+                              backgroundColor: AppTheme.statusRed,
+                            ),
+                          );
+                        }
+                        return;
+                      }
+                    } else {
+                      setState(() {
+                        AppData.rooms.removeWhere((r) => r['number'].toString() == roomNumber);
+                        AppData.saveRoomsToStorage();
+                      });
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Room $roomNumber deleted successfully'),
+                            backgroundColor: AppTheme.statusRed,
+                          ),
+                        );
+                      }
+                    }
+                  },
+                );
+              },
+              icon: const Icon(Icons.delete_outline_rounded, size: 18),
+              label: const Text('Delete Room'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.statusRed,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
           ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    _buildManageDetailRow('Room Number', 'Room $roomNumber'),
+                    const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                    _buildManageDetailRow('Floor', floor),
+                    const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                    _buildManageDetailRow('Sharing Type', type),
+                    const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                    _buildManageDetailRow(
+                      'Bed Status',
+                      '$occupiedBeds Occupied, $vacantBeds Vacant (${beds.length} Total)',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
@@ -507,163 +635,148 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
       );
     }
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogCtx) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Container(
-            width: 500,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+        return PremiumDialog(
+          maxWidth: 540,
+          title: 'Room ${room['number']}',
+          subtitle: '${room['type'] ?? 'Standard'} • ${room['floor'] ?? 'Floor 1'}',
+          icon: Icons.single_bed_rounded,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: const Text('Close', style: TextStyle(color: AppTheme.textGrey)),
             ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Room ${room['number']}',
-                              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                            ),
-                            Text(
-                              '${room['type'] ?? 'Standard'} • ${room['floor'] ?? 'Floor 1'}',
-                              style: const TextStyle(color: AppTheme.textGrey),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // 'Add Resident' button in Deep Purple (Colors.deepPurple)
-                      ElevatedButton.icon(
-                        onPressed: () => openAddResident(dialogCtx),
-                        icon: const Icon(Icons.person_add, size: 18, color: Colors.white),
-                        label: const Text('Add Resident', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.deepPurple,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(0, 38),
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 32),
-                  
-                  // Bed List
-                  ...beds.map((bed) {
-                    final isOccupied = bed['status'] == 'Occupied';
-                    final occupantName = bed['occupant'] ?? 'Unknown';
+            ElevatedButton.icon(
+              onPressed: () => openAddResident(dialogCtx),
+              icon: const Icon(Icons.person_add_rounded, size: 16),
+              label: const Text('Add Resident'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryTeal,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...beds.map((bed) {
+                final isOccupied = bed['status'] == 'Occupied';
+                final occupantName = bed['occupant'] ?? 'Unknown';
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: AppTheme.inputBorder),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: isOccupied
-                            ? () {
-                                Navigator.pop(dialogCtx);
-                                _showResidentProfileModal(context, occupantName);
-                              }
-                            : () => openAddResident(dialogCtx),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: isOccupied
+                        ? () {
+                            Navigator.pop(dialogCtx);
+                            _showResidentProfileModal(context, occupantName);
+                          }
+                        : () => openAddResident(dialogCtx),
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
                                 (bed['name'] ?? 'Bed').toString().toUpperCase(),
-                                style: const TextStyle(color: AppTheme.textGrey, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: AppTheme.textGrey, fontSize: 11, fontWeight: FontWeight.bold),
                               ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.king_bed_rounded,
-                                    size: 24,
-                                    color: isOccupied ? const Color(0xFF16A34A) : const Color(0xFF94A3B8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: isOccupied ? const Color(0xFFECFDF5) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: isOccupied ? const Color(0xFFA7F3D0) : const Color(0xFFE2E8F0)),
+                                ),
+                                child: Text(
+                                  isOccupied ? 'Occupied' : 'Available',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: isOccupied ? AppTheme.statusOk : AppTheme.textGrey,
                                   ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isOccupied ? AppTheme.lightTeal : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.king_bed_rounded,
+                                  size: 20,
+                                  color: isOccupied ? AppTheme.primaryTeal : const Color(0xFF94A3B8),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
                                       isOccupied ? occupantName : 'Empty Bed',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
+                                        fontSize: 13.5,
                                         color: isOccupied ? AppTheme.textDark : AppTheme.textGrey,
                                       ),
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                  if (isOccupied) ...[
-                                    // Rent text in Deep Purple (Colors.deepPurple), NOT Orange
-                                    Text(
-                                      '₹${bed['rent'] ?? 7000}/mo',
-                                      style: const TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold, fontSize: 13),
-                                    ),
-                                    const SizedBox(width: 8),
+                                    if (isOccupied)
+                                      Text(
+                                        '₹${bed['rent'] ?? 7000}/mo',
+                                        style: const TextStyle(color: AppTheme.primaryTeal, fontWeight: FontWeight.w600, fontSize: 12),
+                                      ),
                                   ],
-                                  // Hamburger Icon Action (Icons.drag_handle) wrapped in IconButton
-                                  if (isOccupied)
-                                    IconButton(
-                                      icon: const Icon(Icons.drag_handle, color: AppTheme.textGrey),
-                                      tooltip: 'View Resident Profile',
-                                      onPressed: () {
-                                        Navigator.pop(dialogCtx);
-                                        _showResidentProfileModal(context, occupantName);
-                                      },
-                                    )
-                                  else
-                                    ElevatedButton.icon(
-                                      onPressed: () => openAddResident(dialogCtx),
-                                      icon: const Icon(Icons.person_add_alt_1, size: 14, color: Colors.white),
-                                      label: const Text(
-                                        'Add Resident',
-                                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.deepPurple,
-                                        foregroundColor: Colors.white,
-                                        minimumSize: const Size(0, 32),
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                                        elevation: 0,
-                                      ),
-                                    ),
-                                ],
+                                ),
                               ),
+                              if (isOccupied)
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textGrey),
+                                  tooltip: 'View Resident Profile',
+                                  onPressed: () {
+                                    Navigator.pop(dialogCtx);
+                                    _showResidentProfileModal(context, occupantName);
+                                  },
+                                )
+                              else
+                                TextButton.icon(
+                                  onPressed: () => openAddResident(dialogCtx),
+                                  icon: const Icon(Icons.person_add_alt_1, size: 14, color: AppTheme.primaryTeal),
+                                  label: const Text(
+                                    'Assign',
+                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
+                                  ),
+                                ),
                             ],
                           ),
-                        ),
+                        ],
                       ),
-                    );
-                  }),
-                  
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(dialogCtx),
-                      child: const Text('Close', style: TextStyle(color: AppTheme.textDark)),
                     ),
                   ),
-                ],
-              ),
-            ),
+                );
+              }),
+            ],
           ),
         );
       },
@@ -945,42 +1058,28 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                   ),
                 );
 
-                final legend = Wrap(
-                  spacing: 14,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    _buildLegend(const Color(0xFF16A34A), 'Occupied'),
-                    _buildLegend(const Color(0xFF94A3B8), 'Vacant'),
-                  ],
-                );
-
                 if (isNarrow) {
                   return Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      searchField,
-                      const SizedBox(height: 12),
-                      Wrap(
-                        alignment: WrapAlignment.spaceBetween,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 12,
-                        runSpacing: 10,
-                        children: [
-                          addBtn,
-                          legend,
-                        ],
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 380),
+                        child: searchField,
                       ),
+                      const SizedBox(height: 12),
+                      addBtn,
                     ],
                   );
                 }
 
                 return Row(
                   children: [
-                    Expanded(child: searchField),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 380),
+                      child: searchField,
+                    ),
                     const SizedBox(width: 14),
                     addBtn,
-                    const SizedBox(width: 16),
-                    legend,
                   ],
                 );
               },
@@ -1073,6 +1172,7 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(14),
                                     onTap: () => _showBedManagerModal(context, mainIndex),
+                                    onLongPress: () => _showManageRoomModal(context, room),
                                     child: Container(
                                       padding: EdgeInsets.symmetric(
                                         horizontal: isMobile ? 8 : 14,
@@ -1132,14 +1232,17 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
                                                     ),
                                                     const SizedBox(width: 4),
                                                     InkWell(
-                                                      onTap: () => _showManageRoomModal(context, room),
+                                                      onTap: () => _showEditRoomDialog(context, room),
                                                       borderRadius: BorderRadius.circular(6),
-                                                      child: Padding(
-                                                        padding: const EdgeInsets.all(2),
-                                                        child: Icon(
-                                                          Icons.edit_outlined,
-                                                          size: isMobile ? 15 : 17,
-                                                          color: AppTheme.textGrey,
+                                                      child: Tooltip(
+                                                        message: 'Edit Room',
+                                                        child: Padding(
+                                                          padding: const EdgeInsets.all(3),
+                                                          child: Icon(
+                                                            Icons.edit_outlined,
+                                                            size: isMobile ? 18 : 20,
+                                                            color: AppTheme.primaryTeal,
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
@@ -1262,17 +1365,6 @@ class _RoomsBedsScreenState extends State<RoomsBedsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildLegend(Color color, String text) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.king_bed_rounded, color: color, size: 20),
-        const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textDark)),
-      ],
     );
   }
 }

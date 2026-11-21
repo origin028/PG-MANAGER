@@ -43,11 +43,11 @@ class _OtpPalette {
       return const _OtpPalette(
         isDark: true,
         bg: Color(0xFF0B1417),
-        card: Color(0xFF121E24),
+        card: Color(0xFF16252C),
         ink: Color(0xFFE8F0EF),
         mute: Color(0xFF93A5A8),
-        line: Color(0xFF1F2F35),
-        field: Color(0xFF172830),
+        line: Color(0xFF283B44),
+        field: Color(0xFF16252C),
         teal: Color(0xFF14998B),
         softTeal: Color(0xFF12312F),
         error: Color(0xFFFF9A8F),
@@ -62,8 +62,8 @@ class _OtpPalette {
       card: Color(0xFFFFFFFF),
       ink: Color(0xFF0E1A1F),
       mute: Color(0xFF56626B),
-      line: Color(0xFFE6ECEA),
-      field: Color(0xFFF2F6F5),
+      line: Color(0xFFCBD5E1),
+      field: Color(0xFFFFFFFF),
       teal: Color(0xFF0B6B63),
       softTeal: Color(0xFFE2F0EE),
       error: Color(0xFFB42318),
@@ -171,6 +171,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
 
     _secondsRemaining = math.max(0, widget.initialCooldownSeconds);
     _startCountdownTimer();
+
+    // Automatically focus the first OTP cell immediately when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _cellFocusNodes.isNotEmpty) {
+        _cellFocusNodes.first.requestFocus();
+      }
+    });
   }
 
   @override
@@ -806,8 +813,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     final isFocused = focusNode.hasFocus;
     final isFilled = controller.text.isNotEmpty;
 
-    Color cellBg = palette.field;
-    Color borderCol = Colors.transparent;
+    Color cellBg = palette.card;
+    Color borderCol = palette.line;
     if (_isVerified) {
       cellBg = palette.softSuccess;
       borderCol = palette.success;
@@ -849,16 +856,22 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         decoration: BoxDecoration(
           color: cellBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: borderCol, width: 1.5),
-          boxShadow: isFocused && !_hasErrorState && !_isVerified
-              ? [
-                  BoxShadow(
-                    color: palette.teal.withValues(alpha: 0.14),
-                    blurRadius: 0,
-                    spreadRadius: 4,
-                  ),
-                ]
-              : const [],
+          border: Border.all(
+            color: borderCol,
+            width: isFocused ? 2.0 : 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isFocused
+                  ? palette.teal.withValues(alpha: 0.18)
+                  : (palette.isDark
+                      ? const Color(0x33000000)
+                      : const Color(0x0D000000)),
+              blurRadius: isFocused ? 8 : 4,
+              spreadRadius: isFocused ? 1 : 0,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Focus(
           onKeyEvent: (_, event) => _handleCellKeyEvent(index, event),

@@ -11,6 +11,7 @@ import 'package:admin_app/features/leads/leads_screen.dart';
 import 'package:admin_app/features/reports/reports_screen.dart';
 import 'package:admin_app/features/dashboard/dashboard_screen.dart';
 import 'package:admin_app/core/data/app_data.dart';
+import 'package:admin_app/core/widgets/premium_dialogs.dart';
 
 void main() {
   testWidgets('Room Cards show Edit icon and opens Manage Room modal with Delete Room confirmation', (WidgetTester tester) async {
@@ -28,13 +29,27 @@ void main() {
     final editIcons = find.byIcon(Icons.edit_outlined);
     expect(editIcons, findsWidgets);
 
-    // Tap first Edit icon to open 'Manage Room' modal
+    // Tap first Edit icon to open 'Edit Room' modal directly (per redesign specs)
     await tester.tap(editIcons.first);
+    await tester.pumpAndSettle();
+
+    // Verify Edit Room modal opens
+    expect(find.text('Edit Room 101'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is PremiumFormField && w.label == 'Room Number'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is PremiumFormField && w.label == 'Floor'), findsOneWidget);
+    expect(find.byWidgetPredicate((w) => w is PremiumFormField && w.label == 'Room Type'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+
+    // Close edit modal
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    // Long press on Room 101 card to open 'Manage Room' modal
+    await tester.longPress(find.text('Room 101'));
     await tester.pumpAndSettle();
 
     // Verify Manage Room modal opens
     expect(find.text('Manage Room 101'), findsOneWidget);
-    expect(find.text('Room 101'), findsWidgets);
     expect(find.text('Floor'), findsOneWidget);
     expect(find.text('Sharing Type'), findsOneWidget);
 
@@ -46,8 +61,8 @@ void main() {
     await tester.tap(deleteRoomBtn);
     await tester.pumpAndSettle();
 
-    // Verify Confirmation Dialog with exact prompt text
-    expect(find.text('Are you sure? This will remove all bed data'), findsOneWidget);
+    // Verify Confirmation Dialog with prompt text
+    expect(find.textContaining('delete Room 101'), findsOneWidget);
     expect(find.text('Cancel'), findsOneWidget);
 
     // Click Delete Room in confirmation
@@ -111,7 +126,7 @@ void main() {
     // Expenses screen
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ExpensesScreen())));
     await tester.pumpAndSettle();
-    expect(find.text('Expenses & Salaries'), findsOneWidget);
+    expect(find.text('Expenses'), findsOneWidget);
     expect(find.text('Track operational overheads, utilities, and staff salaries'), findsNothing);
 
     // Staff screen
@@ -175,9 +190,16 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: Scaffold(body: ResidentsScreen())));
     await tester.pumpAndSettle();
 
-    final addResidentBtn = find.text('Add Resident');
-    expect(addResidentBtn, findsOneWidget);
-    await tester.tap(addResidentBtn);
+    // Verify Add Resident button is removed from header row
+    expect(find.text('Add Resident'), findsNothing);
+
+    // Open Add Resident modal via static method with onComplete callback
+    ResidentsScreen.showAddResidentDialog(
+      tester.element(find.byType(ResidentsScreen)),
+      onComplete: () {
+        (tester.state(find.byType(ResidentsScreen)) as dynamic).setState(() {});
+      },
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Onboard New Resident'), findsOneWidget);

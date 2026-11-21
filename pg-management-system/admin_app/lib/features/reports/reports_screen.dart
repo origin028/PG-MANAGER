@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-import '../../core/widgets/app_dropdown.dart';
-import '../../core/data/app_data.dart';
+import '../../core/widgets/app_dropdown.dart';
+import '../../core/widgets/month_year_selector.dart';
+import '../../core/data/app_data.dart';
 import '../../core/services/admin_api_service.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -37,18 +38,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
-  String _paymentMonth = 'September 2026';
+  int _paymentMonth = DateTime.now().month;
+  int _paymentYear = DateTime.now().year;
   String _paymentProperty = 'All Properties';
 
-  String _occupancyMonth = 'September 2026';
+  int _occupancyMonth = DateTime.now().month;
+  int _occupancyYear = DateTime.now().year;
   String _occupancyProperty = 'All Properties';
 
-  final List<String> _months = [
-    'September 2026',
-    'August 2026',
-    'July 2026',
-    'June 2026',
-    'All of 2026',
+  static const List<String> _monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December',
   ];
 
   final List<String> _properties = [
@@ -58,6 +58,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'Skyline Girls PG',
     'Green Nest PG',
   ];
+
+  String _formatCurrency(int amount) {
+    final str = amount.abs().toString();
+    if (str.length <= 3) {
+      return '${amount < 0 ? "-" : ""}₹ $str';
+    }
+    final lastThree = str.substring(str.length - 3);
+    final rest = str.substring(0, str.length - 3);
+    final buffer = StringBuffer();
+    for (int i = 0; i < rest.length; i++) {
+      if (i > 0 && (rest.length - i) % 2 == 0) {
+        buffer.write(',');
+      }
+      buffer.write(rest[i]);
+    }
+    return '${amount < 0 ? "-" : ""}₹ ${buffer.toString()},$lastThree';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +120,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Executive Performance & Profitability',
+                              'Financial Performance & Profitability',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -145,12 +162,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textGrey, letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          '₹ 1,56,800',
-                          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                        Text(
+                          _formatCurrency(grossCollections),
+                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: AppTheme.textDark),
                         ),
-                        const SizedBox(height: 2),
-                        const Text('98% of total billed', style: TextStyle(fontSize: 12, color: Color(0xFF059669))),
                       ],
                     );
 
@@ -171,12 +186,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textGrey, letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          '₹ 45,000',
-                          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
+                        Text(
+                          _formatCurrency(operationalExpenses),
+                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFFDC2626)),
                         ),
-                        const SizedBox(height: 2),
-                        const Text('Utilities & payroll included', style: TextStyle(fontSize: 12, color: AppTheme.textGrey)),
                       ],
                     );
 
@@ -197,11 +210,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textGrey, letterSpacing: 0.5),
                         ),
                         const SizedBox(height: 6),
-                        const Text(
-                          '₹ 1,11,800',
-                          style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
+                        Text(
+                          _formatCurrency(netProfit),
+                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                           decoration: BoxDecoration(
@@ -283,14 +296,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 iconColor: const Color(0xFF2563EB),
                 iconBgColor: const Color(0xFFEFF6FF),
                 selectedMonth: _paymentMonth,
+                selectedYear: _paymentYear,
                 selectedProperty: _paymentProperty,
-                onMonthChanged: (val) => setState(() => _paymentMonth = val),
+                onMonthYearChanged: (m, y) => setState(() {
+                  _paymentMonth = m;
+                  _paymentYear = y;
+                }),
                 onPropertyChanged: (val) => setState(() => _paymentProperty = val),
                 onDownload: () async {
+                  final monthStr = '${_monthNames[_paymentMonth - 1]} $_paymentYear';
                   final propId = AppData.selectedPropertyId;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Exporting Payment Statement for $_paymentMonth ($_paymentProperty)...'),
+                      content: Text('Exporting Payment Statement for $monthStr ($_paymentProperty)...'),
                       backgroundColor: AppTheme.primaryBlue,
                     ),
                   );
@@ -318,14 +336,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 iconColor: const Color(0xFF059669),
                 iconBgColor: const Color(0xFFECFDF5),
                 selectedMonth: _occupancyMonth,
+                selectedYear: _occupancyYear,
                 selectedProperty: _occupancyProperty,
-                onMonthChanged: (val) => setState(() => _occupancyMonth = val),
+                onMonthYearChanged: (m, y) => setState(() {
+                  _occupancyMonth = m;
+                  _occupancyYear = y;
+                }),
                 onPropertyChanged: (val) => setState(() => _occupancyProperty = val),
                 onDownload: () async {
+                  final monthStr = '${_monthNames[_occupancyMonth - 1]} $_occupancyYear';
                   final propId = AppData.selectedPropertyId ?? (AppData.properties.isNotEmpty ? AppData.properties.first['id']?.toString() : null);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Exporting Occupancy Statement for $_occupancyMonth ($_occupancyProperty)...'),
+                      content: Text('Exporting Occupancy Statement for $monthStr ($_occupancyProperty)...'),
                       backgroundColor: const Color(0xFF059669),
                     ),
                   );
@@ -380,9 +403,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required IconData icon,
     required Color iconColor,
     required Color iconBgColor,
-    required String selectedMonth,
+    required int selectedMonth,
+    required int selectedYear,
     required String selectedProperty,
-    required ValueChanged<String> onMonthChanged,
+    required void Function(int month, int year) onMonthYearChanged,
     required ValueChanged<String> onPropertyChanged,
     required VoidCallback onDownload,
   }) {
@@ -430,40 +454,53 @@ class _ReportsScreenState extends State<ReportsScreen> {
           const SizedBox(height: 18),
 
           // Dropdowns: Month/Year & Property
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isStacked = constraints.maxWidth < 450;
+              final periodCol = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Billing Period', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textGrey)),
+                  const SizedBox(height: 6),
+                  MonthYearSelector(
+                    selectedMonth: selectedMonth,
+                    selectedYear: selectedYear,
+                    onChanged: onMonthYearChanged,
+                  ),
+                ],
+              );
+              final propCol = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Property', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textGrey)),
+                  const SizedBox(height: 6),
+                  AppDropdown.simple(
+                    height: 38,
+                    value: selectedProperty,
+                    items: _properties,
+                    onChanged: onPropertyChanged,
+                  ),
+                ],
+              );
+
+              if (isStacked) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Billing Period', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textGrey)),
-                    const SizedBox(height: 6),
-                    AppDropdown.simple(
-                      height: 38,
-                      value: selectedMonth,
-                      items: _months,
-                      onChanged: onMonthChanged,
-                    ),
+                    periodCol,
+                    const SizedBox(height: 12),
+                    propCol,
                   ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Property', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.textGrey)),
-                    const SizedBox(height: 6),
-                    AppDropdown.simple(
-                      height: 38,
-                      value: selectedProperty,
-                      items: _properties,
-                      onChanged: onPropertyChanged,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: periodCol),
+                  const SizedBox(width: 12),
+                  Expanded(child: propCol),
+                ],
+              );
+            },
           ),
           const SizedBox(height: 20),
 

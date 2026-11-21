@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/data/app_data.dart';
 import '../../core/services/admin_api_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/empty_state.dart';
+import '../../core/widgets/premium_dialogs.dart';
 import '../../core/widgets/table_components.dart';
 
 class LeadsScreen extends StatefulWidget {
@@ -66,123 +68,179 @@ class _LeadsScreenState extends State<LeadsScreen> {
     String selectedSource = 'Walk-in';
     String selectedStatus = 'New';
     const statusOptions = ['New', 'Contacted', 'Visit Scheduled', 'Converted', 'Lost'];
+    bool isSubmitting = false;
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (modalCtx, setModalState) {
-            return AlertDialog(
-              title: const Text('Add New Lead'),
-              content: SizedBox(
-                width: 400,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextField(
-                        controller: nameController,
-                        decoration: const InputDecoration(labelText: 'Full Name', hintText: 'e.g. Rahul Sharma'),
-                      ),
-                      const SizedBox(height: 16),
-                      TextField(
-                        controller: phoneController,
-                        keyboardType: TextInputType.phone,
-                        decoration: const InputDecoration(labelText: 'Phone Number', hintText: 'e.g. 9876543210'),
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedSource,
-                        decoration: const InputDecoration(labelText: 'Source'),
-                        items: ['Walk-in', 'Instagram', 'Referral', 'MagicBricks', 'Other'].map((String src) {
-                          return DropdownMenuItem(value: src, child: Text(src));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedSource = val);
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+
+            return PremiumDialog(
+              maxWidth: 460,
+              icon: Icons.person_add_rounded,
+              title: 'Add New Lead',
+              subtitle: 'Capture inquiry from prospective resident',
+              actions: [
+                OutlinedButton(
+                  onPressed: isSubmitting ? null : () => Navigator.pop(dialogContext),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                    side: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          final name = nameController.text.trim();
+                          final phone = phoneController.text.trim();
+                          if (name.isEmpty || phone.isEmpty) {
+                            ScaffoldMessenger.of(dialogContext).showSnackBar(
+                              const SnackBar(content: Text('Please fill all required fields'), backgroundColor: AppTheme.statusRed),
+                            );
+                            return;
+                          }
+
+                          setModalState(() => isSubmitting = true);
+
+                          final propId = AppData.selectedPropertyId;
+                          String? createdLeadId;
+                          if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
+                            try {
+                              final created = await AdminApiService.createLead({
+                                'property_id': propId,
+                                'name': name,
+                                'phone': phone,
+                                'source': selectedSource.toUpperCase().replaceAll('-', '_'),
+                                'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
+                              });
+                              if (created.isNotEmpty && created['id'] != null) {
+                                createdLeadId = created['id'].toString();
+                              }
+                              _loadLeadsFromApi();
+                            } catch (e) {
+                              setModalState(() => isSubmitting = false);
+                              if (dialogContext.mounted) {
+                                ScaffoldMessenger.of(dialogContext).showSnackBar(
+                                  SnackBar(content: Text('Failed to save lead: $e'), backgroundColor: AppTheme.statusRed),
+                                );
+                              }
+                              return;
+                            }
+                          }
+
+                          final newLead = <String, dynamic>{
+                            'name': name,
+                            'phone': phone,
+                            'source': selectedSource,
+                            'status': selectedStatus,
+                            'date': 'Today',
+                          };
+                          if (createdLeadId != null) {
+                            newLead['id'] = createdLeadId;
+                          }
+
+                          if (!mounted) return;
+                          setState(() {
+                            _leads.insert(0, newLead);
+                          });
+
+                          if (dialogContext.mounted) Navigator.pop(dialogContext);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Lead added successfully!'), backgroundColor: AppTheme.successGreen),
+                            );
+                          }
                         },
-                      ),
-                      const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedStatus,
-                        decoration: const InputDecoration(labelText: 'Status'),
-                        items: statusOptions.map((String stat) {
-                          return DropdownMenuItem(value: stat, child: Text(stat));
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedStatus = val);
-                        },
-                      ),
-                    ],
+                  icon: isSubmitting
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_rounded, size: 16),
+                  label: Text(isSubmitting ? 'Saving...' : 'Save Lead', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final name = nameController.text.trim();
-                    final phone = phoneController.text.trim();
-                    if (name.isEmpty || phone.isEmpty) {
-                      ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(content: Text('Please fill all fields'), backgroundColor: Colors.red),
-                      );
-                      return;
-                    }
-
-                    final propId = AppData.selectedPropertyId;
-                    String? createdLeadId;
-                    if (propId != null && propId.isNotEmpty && !propId.startsWith('p')) {
-                      try {
-                        final created = await AdminApiService.createLead({
-                          'property_id': propId,
-                          'name': name,
-                          'phone': phone,
-                          'source': selectedSource.toUpperCase().replaceAll('-', '_'),
-                          'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
-                        });
-                        if (created.isNotEmpty && created['id'] != null) {
-                          createdLeadId = created['id'].toString();
-                        }
-                        _loadLeadsFromApi();
-                      } catch (e) {
-                        if (dialogContext.mounted) {
-                          ScaffoldMessenger.of(dialogContext).showSnackBar(
-                            SnackBar(content: Text('Failed to save lead: $e'), backgroundColor: Colors.red),
-                          );
-                        }
-                        return;
-                      }
-                    }
-
-                    final newLead = <String, dynamic>{
-                      'name': name,
-                      'phone': phone,
-                      'source': selectedSource,
-                      'status': selectedStatus,
-                      'date': 'Today',
-                    };
-                    if (createdLeadId != null) {
-                      newLead['id'] = createdLeadId;
-                    }
-
-                    if (!mounted) return;
-                    setState(() {
-                      _leads.insert(0, newLead);
-                    });
-
-                    if (dialogContext.mounted) Navigator.pop(dialogContext);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Lead added successfully!'), backgroundColor: Colors.green),
-                      );
-                    }
-                  },
-                  child: const Text('Save Lead'),
-                ),
               ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  PremiumFormField(
+                    label: 'Full Name',
+                    isRequired: true,
+                    controller: nameController,
+                    hintText: 'e.g. Rahul Sharma',
+                    prefixIcon: const Icon(Icons.person_outline_rounded, size: 18),
+                  ),
+                  const SizedBox(height: 16),
+                  PremiumFormField(
+                    label: 'Phone Number',
+                    isRequired: true,
+                    controller: phoneController,
+                    keyboardType: TextInputType.phone,
+                    hintText: 'e.g. 9876543210',
+                    prefixIcon: const Icon(Icons.phone_outlined, size: 18),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Lead Source',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedSource,
+                    decoration: AppTheme.formDropdownDecoration(
+                      fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                    ),
+                    dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                    items: ['Walk-in', 'Instagram', 'Referral', 'MagicBricks', 'Other'].map((String src) {
+                      return DropdownMenuItem(value: src, child: Text(src, style: GoogleFonts.manrope(fontSize: 13)));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedSource = val);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Pipeline Status',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedStatus,
+                    decoration: AppTheme.formDropdownDecoration(
+                      fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                    ).copyWith(
+                      labelText: 'Status',
+                    ),
+                    dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                    items: statusOptions.map((String stat) {
+                      return DropdownMenuItem(value: stat, child: Text(stat, style: GoogleFonts.manrope(fontSize: 13)));
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedStatus = val);
+                    },
+                  ),
+                ],
+              ),
             );
           },
         );
@@ -195,31 +253,55 @@ class _LeadsScreenState extends State<LeadsScreen> {
     final leadPhone = lead['phone']?.toString() ?? '';
     final leadEmail = lead['email']?.toString() ?? '';
     final propertyId = lead['property_id']?.toString() ?? AppData.selectedPropertyId ?? '';
-    final confirmed = await showDialog<bool>(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final confirmed = await showPremiumConfirmDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Convert $leadName to Resident'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+      title: 'Convert to Resident',
+      message: 'Convert $leadName from a sales inquiry into an onboarded resident record.',
+      confirmText: 'Convert Now',
+      cancelText: 'Cancel',
+      icon: Icons.how_to_reg_rounded,
+      type: PremiumDialogType.success,
+      detailsWidget: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+        ),
+        child: Column(
           children: [
-            const Text('Convert this prospect into an onboarded resident record with prefilled details:'),
-            const SizedBox(height: 12),
-            Text('Name: $leadName', style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text('Phone: $leadPhone'),
-            if (leadEmail.isNotEmpty) Text('Email: $leadEmail'),
-            const SizedBox(height: 12),
-            const Text('The lead status will automatically be updated to Converted in CRM.'),
+            Row(
+              children: [
+                const Icon(Icons.person_rounded, size: 16, color: AppTheme.primaryTeal),
+                const SizedBox(width: 8),
+                Text('Name: ', style: GoogleFonts.manrope(fontSize: 13, color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText)),
+                Text(leadName, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.phone_rounded, size: 16, color: AppTheme.primaryTeal),
+                const SizedBox(width: 8),
+                Text('Phone: ', style: GoogleFonts.manrope(fontSize: 13, color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText)),
+                Text(leadPhone, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText)),
+              ],
+            ),
+            if (leadEmail.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Icon(Icons.email_rounded, size: 16, color: AppTheme.primaryTeal),
+                  const SizedBox(width: 8),
+                  Text('Email: ', style: GoogleFonts.manrope(fontSize: 13, color: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText)),
+                  Text(leadEmail, style: GoogleFonts.manrope(fontSize: 13, fontWeight: FontWeight.w700, color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText)),
+                ],
+              ),
+            ],
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF059669)),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Convert Now'),
-          ),
-        ],
       ),
     );
 
@@ -281,153 +363,100 @@ class _LeadsScreenState extends State<LeadsScreen> {
       'Lost',
     ];
 
-    showDialog(
+    showPremiumDialog(
       context: context,
       builder: (dialogContext) {
         return StatefulBuilder(
           builder: (modalCtx, setModalState) {
             final isDark = Theme.of(context).brightness == Brightness.dark;
-            final cardBg = isDark ? const Color(0xFF1E293B) : Colors.white;
-            final textPri = isDark ? Colors.white : AppTheme.textDark;
 
-            return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              backgroundColor: cardBg,
-              clipBehavior: Clip.antiAlias,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Header with Prospect text aligned perfectly below title
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.edit_note_rounded, color: AppTheme.primaryBlue, size: 22),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Update Lead Status',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: textPri,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Prospect: ${lead['name']} • ${lead['phone']}',
-                                  style: const TextStyle(fontSize: 13, color: AppTheme.textGrey),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close, color: Color(0xFF94A3B8), size: 20),
-                            onPressed: () => Navigator.pop(dialogContext),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
+            return PremiumDialog(
+              maxWidth: 440,
+              icon: Icons.edit_note_rounded,
+              title: 'Update Lead Status',
+              subtitle: 'Prospect: ${lead['name']} • ${lead['phone']}',
+              actions: [
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText,
+                    side: BorderSide(color: isDark ? AppTheme.borderColorDark : AppTheme.borderColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text('Cancel', style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final leadId = lead['id']?.toString();
+                    if (leadId != null && leadId.isNotEmpty && !leadId.startsWith('lead-')) {
+                      AdminApiService.updateLead(leadId, {
+                        'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
+                      }).then((_) {
+                        _loadLeadsFromApi();
+                      }).catchError((e) {
+                        debugPrint('API updateLead error: $e');
+                      });
+                    }
+                    setState(() {
+                      lead['status'] = selectedStatus;
+                    });
+                    Navigator.pop(dialogContext);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Status for ${lead['name']} updated to "$selectedStatus"!'),
+                        backgroundColor: AppTheme.successGreen,
                       ),
-                      const SizedBox(height: 20),
-
-                      // Pipeline Status Dropdown
-                      const Text(
-                        'Pipeline Status *',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
-                      ),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        initialValue: selectedStatus,
-                        decoration: AppTheme.formDropdownDecoration(
-                          labelText: 'Select Status',
-                          prefixIcon: const Icon(Icons.flag_outlined, size: 20, color: AppTheme.textGrey),
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        dropdownColor: Colors.white,
-                        items: statuses.map((String s) {
-                          return DropdownMenuItem<String>(
-                            value: s,
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: StatusPill(status: s),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => selectedStatus = val);
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Actions
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          OutlinedButton(
-                            onPressed: () => Navigator.pop(dialogContext),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF374151),
-                              side: const BorderSide(color: Color(0xFFD1D5DB)),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            child: const Text('Cancel'),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton(
-                            onPressed: () {
-                              final leadId = lead['id']?.toString();
-                              if (leadId != null && leadId.isNotEmpty && !leadId.startsWith('lead-')) {
-                                AdminApiService.updateLead(leadId, {
-                                  'status': selectedStatus.toUpperCase().replaceAll(' ', '_'),
-                                }).then((_) {
-                                  _loadLeadsFromApi();
-                                }).catchError((e) {
-                                  debugPrint('API updateLead error: $e');
-                                });
-                              }
-                              setState(() {
-                                lead['status'] = selectedStatus;
-                              });
-                              Navigator.pop(dialogContext);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Status for ${lead['name']} updated to "$selectedStatus"!'),
-                                  backgroundColor: const Color(0xFF16A34A),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryBlue,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              elevation: 0,
-                            ),
-                            child: const Text('Save Status', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                    ],
+                    );
+                  },
+                  icon: const Icon(Icons.check_rounded, size: 16),
+                  label: Text('Save Status', style: GoogleFonts.manrope(fontWeight: FontWeight.w700, fontSize: 13.5)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryTeal,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
                   ),
                 ),
+              ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pipeline Status *',
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? AppTheme.primaryTextDark : AppTheme.primaryText,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedStatus,
+                    decoration: AppTheme.formDropdownDecoration(
+                      labelText: 'Select Status',
+                      prefixIcon: const Icon(Icons.flag_outlined, size: 20, color: AppTheme.secondaryText),
+                      fillColor: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+                    items: statuses.map((String s) {
+                      return DropdownMenuItem<String>(
+                        value: s,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: StatusPill(status: s),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedStatus = val);
+                    },
+                  ),
+                ],
               ),
             );
           },
@@ -443,7 +472,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
     final activeEnquiries = _leads.where((l) => l['status'] != 'Lost').length;
     final lostCount = _leads.where((l) => l['status'] == 'Lost').length;
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -523,9 +552,8 @@ class _LeadsScreenState extends State<LeadsScreen> {
           const SizedBox(height: 20),
 
           // 2. Data Table
-          Expanded(
-            child: Container(
-              decoration: modernTableDecoration,
+          Container(
+            decoration: modernTableDecoration,
               child: _leads.isEmpty
                   ? EmptyState(
                       icon: Icons.trending_up,
@@ -644,7 +672,6 @@ class _LeadsScreenState extends State<LeadsScreen> {
                       },
                     ),
             ),
-          ),
         ],
       ),
     );

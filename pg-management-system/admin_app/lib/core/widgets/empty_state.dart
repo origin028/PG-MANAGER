@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class EmptyState extends StatelessWidget {
@@ -19,6 +20,10 @@ class EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textPri = isDark ? AppTheme.primaryTextDark : AppTheme.primaryText;
+    final textSec = isDark ? AppTheme.secondaryTextDark : AppTheme.secondaryText;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -27,39 +32,46 @@ class EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                color: isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 48, color: AppTheme.primaryBlue),
+              child: Icon(icon, size: 40, color: AppTheme.primaryTeal),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
             Text(
               title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
+              style: GoogleFonts.manrope(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: textPri,
+                letterSpacing: -0.3,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               subtitle,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textGrey,
+              style: GoogleFonts.manrope(
+                fontSize: 13.5,
+                color: textSec,
+                height: 1.4,
               ),
             ),
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               ElevatedButton.icon(
                 onPressed: onAction,
-                icon: const Icon(Icons.add, size: 18),
-                label: Text(actionLabel!),
+                icon: const Icon(Icons.add_rounded, size: 17),
+                label: Text(
+                  actionLabel!,
+                  style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
+                ),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(160, 42),
+                  backgroundColor: AppTheme.primaryTeal,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
               ),
             ],

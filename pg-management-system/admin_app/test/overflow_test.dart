@@ -184,6 +184,6 @@ void main() {
     appRouter.go('/payments');
     await tester.pumpAndSettle();
     expect(find.text('Rent & Payments'), findsOneWidget);
-    expect(find.text('Create Test Invoice'), findsOneWidget);
+    expect(find.text('Rent Invoices'), findsOneWidget);
   });
 }

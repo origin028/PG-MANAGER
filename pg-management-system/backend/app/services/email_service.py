@@ -381,14 +381,61 @@ class EmailService:
             f"{footer_note}\n\n"
             f"=================================================================\n"
         )
+        return self.provider.send_email(
+            to_email=to_email,
+            subject=subject,
+            body_text=body_text,
+            body_html=body_html,
+        )
+
+    def send_password_change_otp(
+        self,
+        to_email: str,
+        otp: str,
+        admin_name: Optional[str] = None,
+    ) -> bool:
+        """Dispatches 6-digit Admin Password Change Verification OTP via email."""
+        name_greeting = f"Hello {admin_name}," if admin_name else "Hello Administrator,"
+        title = "Password Change Verification Code"
+        subject = "PG Management — Password Change Verification Code"
+        purpose_desc = (
+            "A password change request was initiated for your administrator account. "
+            "Please enter the 6-digit one-time password (OTP) below to verify your identity and update your credentials."
+        )
+        security_warning = (
+            "This OTP authorizes a password update for your administrative account. "
+            "Never share this code with anyone. If you did not request this, please contact support immediately."
+        )
+        footer_note = "If you did not request a password change, please ignore this email. Your current password remains secure."
+
+        body_text = (
+            f"=================================================================\n"
+            f"                    PG MANAGEMENT CONSOLE\n"
+            f"=================================================================\n\n"
+            f"{title}\n\n"
+            f"{name_greeting}\n\n"
+            f"{purpose_desc}\n\n"
+            f"-----------------------------------------------------------------\n"
+            f"YOUR VERIFICATION CODE:  {otp}\n"
+            f"-----------------------------------------------------------------\n"
+            f"(Valid for 10 minutes only)\n\n"
+            f"SECURITY WARNING:\n"
+            f"{security_warning}\n\n"
+            f"{footer_note}\n\n"
+            f"-----------------------------------------------------------------\n"
+            f"This is an automated system notification. Please do not reply.\n"
+            f"=================================================================\n"
+        )
+
         body_html = self._render_email_html(
             title=title,
             greeting=name_greeting,
             purpose_desc=purpose_desc,
-            otp="REJECTED",
+            otp=otp,
             security_warning=security_warning,
             footer_note=footer_note,
         )
+
         return self.provider.send_email(
             to_email=to_email,
             subject=subject,

@@ -25,6 +25,17 @@ class Settings(BaseSettings):
     # PostgreSQL Connection String (Psycopg 3 driver)
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/pg_management"
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_database_url(cls, v: str) -> str:
+        """Adapts cloud-provided PostgreSQL URLs (postgres:// or postgresql://) to psycopg 3 driver."""
+        if isinstance(v, str):
+            if v.startswith("postgres://"):
+                return v.replace("postgres://", "postgresql+psycopg://", 1)
+            elif v.startswith("postgresql://") and "+psycopg" not in v:
+                return v.replace("postgresql://", "postgresql+psycopg://", 1)
+        return v
+
     # Payment Gateway Configuration (AUTO, MOCK, or RAZORPAY)
     PAYMENT_GATEWAY_PROVIDER: str = "AUTO"
     RAZORPAY_KEY_ID: str = ""
@@ -41,14 +52,14 @@ class Settings(BaseSettings):
     PAYMENT_LINK_BASE_URL: str = "http://localhost:3000/pay"
 
     # Business UPI Configuration for Direct Resident Payments (No Payment Gateway)
-    # 1. Existing Personal Payee Account (Direct Peer Transfers)
-    UPI_PAYEE_VPA: str = "masisokatali90900@okaxis"
-    UPI_PAYEE_NAME: str = "Saukatali Masi"
+    # Official Origin PG Merchant Details (SMART GROUP PG'S)
+    UPI_PAYEE_VPA: str = "9886699258-3@ybl"
+    UPI_PAYEE_NAME: str = "SMART GROUP PG'S"
 
-    # 2. Bank Merchant Acquiring Configuration (Bank of Baroda Direct UPI Intent)
-    UPI_MERCHANT_VPA: Optional[str] = None  # Assigned upon Bank of Baroda merchant onboarding
-    UPI_MERCHANT_NAME: Optional[str] = None
-    UPI_MERCHANT_CODE: Optional[str] = None  # e.g., '6513' for Rentals / PG Management
+    # Merchant Acquiring Configuration (PhonePe / Direct Bank UPI Intent)
+    UPI_MERCHANT_VPA: Optional[str] = "9886699258-3@ybl"
+    UPI_MERCHANT_NAME: Optional[str] = "SMART GROUP PG'S"
+    UPI_MERCHANT_CODE: Optional[str] = None  # None: Direct in-app intent MUST NOT pass unsigned mc (prevents security/bank limits)
     UPI_BANK_NAME: str = "Bank of Baroda"
     UPI_BANK_TERMINAL_ID: Optional[str] = None
     UPI_BANK_WEBHOOK_SECRET: str = ""
@@ -95,8 +106,10 @@ class Settings(BaseSettings):
                 return json.loads(v)
             except Exception:
                 return [v]
-        elif isinstance(v, (list, str)):
-            return v
+        elif isinstance(v, list):
+            return [str(i) for i in v]
+        elif isinstance(v, str):
+            return [v]
         raise ValueError(v)
 
     @model_validator(mode="after")

@@ -142,7 +142,7 @@ The resident checkout flow provides seven comprehensive payment options:
 
 #### UPI Note Formatting Verification
 - **Issue Tested:** Previous builds displayed transaction notes formatted with raw plus signs (`Rent+Payment+08bd684a...`).
-- **Correction Verified:** `RentPaymentScreen` now utilizes `Uri.encodeComponent` with UTF-8 encoding. Notes are correctly rendered as readable prose (`Rent Payment - 08bd684a - Saukatali Masi`).
+- **Correction Verified:** `RentPaymentScreen` now utilizes `Uri.encodeComponent` with UTF-8 encoding. Notes are correctly rendered as readable prose (`Rent Payment 08bd684a SMART GROUP PGS`).
 - **Test Invoices:** Verified using the ₹1 test invoice mechanism and demo payment sandbox endpoint (`POST /api/v1/payments/demo-pay`).
 
 ---

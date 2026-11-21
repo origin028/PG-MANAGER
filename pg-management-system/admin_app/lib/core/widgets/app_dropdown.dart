@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class AppDropdownItem<T> {
@@ -69,9 +70,9 @@ class AppDropdown<T> extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final borderColor = isDark ? const Color(0xFF334155) : AppTheme.inputBorder;
-    final effectiveBgColor = backgroundColor ?? (isDark ? const Color(0xFF1E293B) : Colors.white);
-    final textColor = isDark ? const Color(0xFFF1F5F9) : AppTheme.textDark;
+    final borderColor = isDark ? AppTheme.borderColorDark : AppTheme.borderColor;
+    final effectiveBgColor = backgroundColor ?? (isDark ? AppTheme.softBackgroundDark : AppTheme.softBackground);
+    final textColor = isDark ? AppTheme.primaryTextDark : AppTheme.primaryText;
 
     return Container(
       height: height,
@@ -79,7 +80,7 @@ class AppDropdown<T> extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: effectiveBgColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: borderColor),
       ),
       child: DropdownButtonHideUnderline(
@@ -89,15 +90,15 @@ class AppDropdown<T> extends StatelessWidget {
           icon: const Icon(
             Icons.keyboard_arrow_down,
             size: 20,
-            color: AppTheme.textGrey,
+            color: AppTheme.secondaryText,
           ),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           elevation: 3,
-          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
-          style: TextStyle(
+          dropdownColor: isDark ? AppTheme.cardBackgroundDark : AppTheme.cardBackground,
+          style: GoogleFonts.manrope(
             color: textColor,
             fontSize: 13,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.w700,
           ),
           items: items.map((item) {
             return DropdownMenuItem<T>(

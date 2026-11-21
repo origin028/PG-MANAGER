@@ -167,7 +167,7 @@ Throughout Phase 1, strict non-regression controls were applied to the Resident 
 - **Direct UPI Intent Integration Preserved:** Google Pay, PhonePe, Navi, and generic UPI intent handlers are intact.
 - **UPI URI Encoding Preserved:** Standard RFC 3986 percent-encoding with `%20` for spaces in transaction notes (`tn=Rent%20Payment%20-%20...`) was verified in automated widget tests:
   ```
-  [PhonePe Diagnostics] Standard UPI URI: upi://pay?pa=masisokatali90900%40okaxis&pn=Saukatali%20Masi&am=1.00&cu=INR&tn=Rent%20Payment%20-%20INV-TEST-PHONEPE-TAP%20-%20Saukatali%20Masi&tr=UPI-20261107-536043
+  [PhonePe Diagnostics] Standard UPI URI: upi://pay?pa=9886699258-3%40ybl&pn=SMART%20GROUP%20PGS&mc=5411&am=1.00&cu=INR&tn=Rent%20Payment%20INVTEST001%20SMART%20GROUP%20PGS&tr=UPI20261107536043
   ```
 - **Zero Incompatible Dependencies:** Verification that `upi_india` remains completely removed and native Android builds (`assembleDebug`) succeed reliably.
 

@@ -87,8 +87,8 @@ void main() {
 
   group('PocUpiPayService Unit Tests', () {
     test('Payee configuration matches verified PG credentials', () {
-      expect(PocUpiPayService.verifiedPayeeVpa, 'masisokatali90900@okaxis');
-      expect(PocUpiPayService.verifiedPayeeName, 'Saukatali Masi');
+      expect(PocUpiPayService.verifiedPayeeVpa, '9886699258-3@ybl');
+      expect(PocUpiPayService.verifiedPayeeName, "SMART GROUP PG'S");
       expect(PocUpiPayService.defaultCurrency, 'INR');
       expect(PocUpiPayService.googlePayPackage, 'com.google.android.apps.nbu.paisa.user');
       expect(PocUpiPayService.phonePePackage, 'com.phonepe.app');
@@ -159,7 +159,7 @@ void main() {
       expect(result.responseCode, '00');
       expect(result.approvalRefNo, 'AUTH123');
       expect(result.verificationState, 'pendingVerification');
-      expect(result.generatedUri, contains('pa=masisokatali90900@okaxis'));
+      expect(result.generatedUri, contains('pa=9886699258-3@ybl'));
       expect(result.generatedUri, contains('am=1.00'));
       expect(result.generatedUri, contains('mode=00'));
 
@@ -302,8 +302,8 @@ void main() {
       // Banner checks
       expect(find.text('upi_pay Package Evaluation POC'), findsOneWidget);
       expect(find.text('Test Invoice: INV-2026-TEST (₹1.00)'), findsOneWidget);
-      expect(find.textContaining('Saukatali Masi'), findsWidgets);
-      expect(find.textContaining('masisokatali90900@okaxis'), findsWidgets);
+      expect(find.textContaining("SMART GROUP PG'S"), findsWidgets);
+      expect(find.textContaining('9886699258-3@ybl'), findsWidgets);
 
       // Discovered Apps checks
       expect(find.textContaining('Discovered UPI Apps'), findsOneWidget);

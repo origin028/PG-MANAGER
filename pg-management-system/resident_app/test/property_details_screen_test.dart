@@ -49,13 +49,13 @@ void main() {
       expect(find.text('CO-LIVING PG'), findsOneWidget);
       expect(find.text('BNR Luxury PG'), findsOneWidget);
       expect(find.text('Koramangala 6th Block, Bengaluru'), findsOneWidget);
-      expect(find.text('Verified PG'), findsOneWidget);
+      expect(find.text('Verified PG'), findsNothing);
       expect(find.text('Room Number'), findsOneWidget);
       expect(find.text('101 · B'), findsOneWidget);
       expect(find.text('Floor'), findsOneWidget);
       expect(find.text('1st Floor'), findsOneWidget);
       expect(find.text('Full Property Address'), findsOneWidget);
-      expect(find.byTooltip('Copy Address'), findsOneWidget);
+      expect(find.byTooltip('Copy Address'), findsNothing);
       expect(
         find.text('Tap to copy full address for delivery or visitors'),
         findsOneWidget,
@@ -111,23 +111,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Tap top-right icon button
-    await tester.tap(find.byTooltip('Copy Address'));
-    await tester.pumpAndSettle();
+    // Verify address-copy icon is removed from header
+    expect(find.byTooltip('Copy Address'), findsNothing);
 
-    expect(
-      copiedText,
-      '#124, 5th Cross, 6th Block, Near Sony World Signal, Koramangala, Bengaluru, Karnataka - 560095',
-    );
-    expect(find.text('Address copied to clipboard!'), findsOneWidget);
-
-    // Dismiss snackbar and test bottom copy helper strip
-    ScaffoldMessenger.of(
-      tester.element(find.byType(PropertyDetailsScreen)),
-    ).clearSnackBars();
-    await tester.pumpAndSettle();
-
-    copiedText = null;
+    // Test address copy via tap helper strip
     await tester.tap(
       find.text('Tap to copy full address for delivery or visitors'),
     );

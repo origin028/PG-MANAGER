@@ -70,16 +70,16 @@ void main() {
 
   group('PocFlutterUpiService Multi-Approach Unit Tests', () {
     test('Payee configuration matches verified PG Management credentials', () {
-      expect(PocFlutterUpiService.verifiedPayeeVpa, 'masisokatali90900@okaxis');
-      expect(PocFlutterUpiService.verifiedPayeeName, "Saukatali Masi");
+      expect(PocFlutterUpiService.verifiedPayeeVpa, '9886699258-3@ybl');
+      expect(PocFlutterUpiService.verifiedPayeeName, "SMART GROUP PG'S");
       expect(PocFlutterUpiService.defaultCurrency, 'INR');
       expect(PocFlutterUpiService.googlePayPackage, 'com.google.android.apps.nbu.paisa.user');
     });
 
     test('buildStandardUpiUri builds RFC compliant NPCI URI with package option', () {
       final uri = PocFlutterUpiService.buildStandardUpiUri(
-        payeeVpa: 'masisokatali90900@okaxis',
-        payeeName: "Saukatali Masi",
+        payeeVpa: '9886699258-3@ybl',
+        payeeName: "SMART GROUP PG'S",
         amount: 1.00,
         transactionRef: 'TXN-TEST-1',
         transactionNote: 'Test Note',
@@ -88,8 +88,8 @@ void main() {
 
       expect(uri.scheme, 'upi');
       expect(uri.host, 'pay');
-      expect(uri.queryParameters['pa'], 'masisokatali90900@okaxis');
-      expect(uri.queryParameters['pn'], "Saukatali Masi");
+      expect(uri.queryParameters['pa'], '9886699258-3@ybl');
+      expect(uri.queryParameters['pn'], "SMART GROUP PG'S");
       expect(uri.queryParameters['am'], '1.00');
       expect(uri.queryParameters['cu'], 'INR');
       expect(uri.queryParameters['tr'], 'TXN-TEST-1');
@@ -171,7 +171,7 @@ void main() {
       );
 
       expect(qrString.startsWith('upi://pay?'), isTrue);
-      expect(qrString.contains('pa=masisokatali90900@okaxis'), isTrue);
+      expect(qrString.contains('pa=9886699258-3@ybl'), isTrue);
       expect(qrString.contains('am=1.00'), isTrue);
     });
 
@@ -212,8 +212,8 @@ void main() {
 
       expect(find.text('UPI Integration Workbench'), findsOneWidget);
       expect(find.text('₹ 1.00'), findsOneWidget);
-      expect(find.text('masisokatali90900@okaxis'), findsOneWidget);
-      expect(find.text("Saukatali Masi"), findsOneWidget);
+      expect(find.text('9886699258-3@ybl'), findsOneWidget);
+      expect(find.text("SMART GROUP PG'S"), findsOneWidget);
       expect(find.text('1. Targeted Intent'), findsWidgets);
       expect(find.text('2. Generic Chooser'), findsOneWidget);
       expect(find.text('3. Result Intent'), findsOneWidget);

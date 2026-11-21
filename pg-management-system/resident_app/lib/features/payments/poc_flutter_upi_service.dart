@@ -156,8 +156,8 @@ class DefaultPocUpiRunner implements PocUpiRunner {
 /// Isolated Diagnostic Service evaluating all technically supported UPI approaches
 /// for Google Pay & Bank of Baroda.
 class PocFlutterUpiService {
-  static const String verifiedPayeeVpa = 'masisokatali90900@okaxis';
-  static const String verifiedPayeeName = "Saukatali Masi";
+  static const String verifiedPayeeVpa = '9886699258-3@ybl';
+  static const String verifiedPayeeName = "SMART GROUP PG'S";
   static const String defaultCurrency = 'INR';
   static const String googlePayPackage = 'com.google.android.apps.nbu.paisa.user';
 

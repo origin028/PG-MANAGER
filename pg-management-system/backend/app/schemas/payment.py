@@ -32,9 +32,13 @@ class PaymentStatusRead(BaseModel):
     invoice_id: uuid.UUID
     amount: float
     status: str
+    reconciliation_status: Optional[str] = None
     payment_mode: str
     gateway_order_id: Optional[str] = None
     gateway_payment_id: Optional[str] = None
+    transaction_ref: Optional[str] = None
+    bank_reference: Optional[str] = None
+    client_upi_txn_id: Optional[str] = None
     paid_at: Optional[datetime] = None
     is_settled: bool
     receipt_id: Optional[uuid.UUID] = None
@@ -124,6 +128,8 @@ class PublicPaymentCheckoutDetails(BaseModel):
 class UpiPaymentInitiateRequest(BaseModel):
     invoice_id: uuid.UUID
     idempotency_key: Optional[str] = Field(None, max_length=128)
+    app_name: Optional[str] = Field(None, max_length=60)
+    package_name: Optional[str] = Field(None, max_length=120)
 
 
 class UpiAppOption(BaseModel):
@@ -157,15 +163,54 @@ class UpiPaymentStatusRead(BaseModel):
     payment_id: uuid.UUID
     payment_number: str
     invoice_id: uuid.UUID
+    invoice_number: Optional[str] = None
     amount: float
     status: str
+    reconciliation_status: Optional[str] = None
     payment_mode: str
     transaction_ref: Optional[str] = None
     bank_reference: Optional[str] = None
+    client_upi_txn_id: Optional[str] = None
+    app_package: Optional[str] = None
+    response_code: Optional[str] = None
     is_settled: bool
     paid_at: Optional[datetime] = None
     receipt_id: Optional[uuid.UUID] = None
     receipt_number: Optional[str] = None
+
+
+class UpiPaymentResponseRequest(BaseModel):
+    payment_id: uuid.UUID
+    status: str = Field(
+        ...,
+        description="UPI Intent result status: SUCCESS, FAILURE, SUBMITTED, PENDING, CANCELLED, NETWORK_ERROR, UNKNOWN",
+    )
+    txn_ref: Optional[str] = Field(None, max_length=120)
+    upi_txn_id: Optional[str] = Field(None, max_length=150)
+    approval_ref_no: Optional[str] = Field(None, max_length=150)
+    response_code: Optional[str] = Field(None, max_length=50)
+    raw_response: Optional[str] = Field(None, max_length=2000)
+    app_package: Optional[str] = Field(None, max_length=120)
+
+    @field_validator("status")
+    @classmethod
+    def normalize_status(cls, v: str) -> str:
+        clean = (v or "").strip().upper()
+        allowed = {
+            "SUCCESS",
+            "FAILURE",
+            "FAILED",
+            "SUBMITTED",
+            "PENDING",
+            "CANCELLED",
+            "CANCELED",
+            "USER_CANCELLED",
+            "NETWORK_ERROR",
+            "UNKNOWN",
+        }
+        if clean not in allowed:
+            raise ValueError(f"Unsupported UPI status '{v}'.")
+        return clean
 
 
 class UpiClientVerifyRequest(BaseModel):
@@ -183,7 +228,7 @@ class UpiClientVerifyResponse(BaseModel):
 
 class UpiAdminSettleRequest(BaseModel):
     bank_reference: str = Field(min_length=1, max_length=100, description="Bank UTR or transaction reference number")
-    notes: Optional[str] = Field(None, max_length=255)
+    notes: Optional[str] = Field(None, max_length=500)
 
     @field_validator("bank_reference")
     @classmethod
@@ -192,6 +237,49 @@ class UpiAdminSettleRequest(BaseModel):
         if not s:
             raise ValueError("Bank reference / UTR cannot be empty or whitespace.")
         return s
+
+
+class UpiAdminReconcileRequest(BaseModel):
+    action: str = Field(default="APPROVE", description="APPROVE or REJECT")
+    bank_reference: Optional[str] = Field(None, max_length=100, description="Verified Bank UTR / RRN when approving")
+    notes: Optional[str] = Field(None, max_length=500)
+
+    @field_validator("action")
+    @classmethod
+    def validate_action(cls, v: str) -> str:
+        clean = (v or "APPROVE").strip().upper()
+        if clean not in ("APPROVE", "REJECT"):
+            raise ValueError("Action must be APPROVE or REJECT.")
+        return clean
+
+
+class PaymentHistoryItemRead(BaseModel):
+    id: uuid.UUID
+    payment_id: uuid.UUID
+    payment_number: str
+    property_id: uuid.UUID
+    invoice_id: uuid.UUID
+    invoice_number: Optional[str] = None
+    billing_month: Optional[str] = None
+    due_date: Optional[str] = None
+    resident_id: uuid.UUID
+    resident_name: Optional[str] = None
+    resident_phone: Optional[str] = None
+    amount: float
+    payment_mode: str
+    status: str
+    reconciliation_status: str
+    transaction_ref: Optional[str] = None
+    bank_reference: Optional[str] = None
+    client_upi_txn_id: Optional[str] = None
+    app_package: Optional[str] = None
+    response_code: Optional[str] = None
+    receipt_id: Optional[uuid.UUID] = None
+    receipt_number: Optional[str] = None
+    paid_at: Optional[datetime] = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 
