@@ -14,9 +14,11 @@ from app.core.exceptions import (
     AuthenticationError,
     BadRequestError,
     ConflictError,
+    EmailDeliveryError,
     NotFoundError,
     TooManyRequestsError,
 )
+from app.core.logging import logger
 from app.integrations.email import get_email_provider, mask_email
 from app.integrations.sms import get_sms_provider
 from app.models.otp_verification import OTPVerification
@@ -122,6 +124,18 @@ class OTPService:
         )
 
         # Dispatch OTP strictly via email BEFORE saving to database
+        provider = get_email_provider()
+        clean_env = getattr(settings, "ENVIRONMENT", "").strip().lower()
+        if getattr(provider, "is_mock", False) and clean_env == "production":
+            logger.error(
+                "[OTPService] Registration OTP delivery attempted in production environment "
+                "but EMAIL_PROVIDER is set to MOCK or SMTP credentials are missing."
+            )
+            raise EmailDeliveryError(
+                "Email delivery service is not configured on this server. "
+                "Please configure EMAIL_PROVIDER=SMTP and SMTP credentials in the deployment environment."
+            )
+
         try:
             self.email_service.send_registration_otp(
                 to_email=norm_email,
@@ -239,6 +253,18 @@ class OTPService:
         )
 
         # 4. Dispatch strictly via email BEFORE saving to database
+        provider = get_email_provider()
+        clean_env = getattr(settings, "ENVIRONMENT", "").strip().lower()
+        if getattr(provider, "is_mock", False) and clean_env == "production":
+            logger.error(
+                "[OTPService] Login OTP delivery attempted in production environment "
+                "but EMAIL_PROVIDER is set to MOCK or SMTP credentials are missing."
+            )
+            raise EmailDeliveryError(
+                "Email delivery service is not configured on this server. "
+                "Please configure EMAIL_PROVIDER=SMTP and SMTP credentials in the deployment environment."
+            )
+
         try:
             self.email_service.send_login_otp(
                 to_email=user.email,

@@ -133,6 +133,10 @@ class SMTPEmailProvider(EmailProvider):
             logger.error("[SMTPEmailProvider] SMTP_HOST is not configured.")
             raise EmailDeliveryError("Email delivery service host is not configured.")
 
+        if not self.password and self.host != "localhost":
+            logger.error("[SMTPEmailProvider] SMTP_PASSWORD is not configured.")
+            raise EmailDeliveryError("Failed to send verification email: SMTP password is not configured on the server.")
+
         msg = EmailMessage()
         msg["Subject"] = subject
         msg["From"] = f"{self.from_name} <{self.from_email}>"
@@ -179,6 +183,12 @@ class SMTPEmailProvider(EmailProvider):
 def get_email_provider() -> EmailProvider:
     """Factory returning active EmailProvider based on configuration and environment."""
     provider_name = getattr(settings, "EMAIL_PROVIDER", "MOCK").strip().upper()
-    if provider_name == "SMTP":
+    env = getattr(settings, "ENVIRONMENT", "").strip().lower()
+    has_smtp_creds = bool(
+        settings.SMTP_HOST
+        and settings.SMTP_HOST != "localhost"
+        and (settings.SMTP_PASSWORD or settings.SMTP_USERNAME or settings.SMTP_USER)
+    )
+    if provider_name == "SMTP" or (env == "production" and has_smtp_creds):
         return SMTPEmailProvider()
     return DevMockEmailProvider()

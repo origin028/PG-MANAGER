@@ -731,3 +731,84 @@ def test_unauthenticated_user_cannot_specify_arbitrary_email_for_login(client: T
         assert sent_msg["To"] == legitimate_email
         assert sent_msg["To"] != "attacker@evil.com"
 
+
+# =============================================================================
+# 6. Regression: body_html Defined in All EmailService Methods & Mock Safety
+# =============================================================================
+
+def test_rejection_email_template_contains_body_html_without_name_error():
+    """Verifies send_resident_rejection_notification defines and passes body_html."""
+    captured = []
+
+    class CapturingProvider:
+        def send_email(self, to_email, subject, body_text, body_html=None):
+            captured.append({
+                "to_email": to_email,
+                "subject": subject,
+                "body_text": body_text,
+                "body_html": body_html,
+            })
+            return True
+
+    service = EmailService(provider=CapturingProvider())
+    # This must NOT raise NameError: name 'body_html' is not defined
+    result = service.send_resident_rejection_notification(
+        to_email="rejected.applicant@example.com",
+        resident_name="Sunil Patil",
+        property_name="Origin Prime PG",
+        reason="Incomplete Aadhaar documentation",
+    )
+    assert result is True
+    assert len(captured) == 1
+    assert captured[0]["body_html"] is not None
+    assert "Sunil Patil" in captured[0]["body_html"]
+    assert "Incomplete Aadhaar documentation" in captured[0]["body_text"]
+
+
+def test_all_email_service_methods_generate_both_plain_and_html_bodies():
+    """Verifies that every method on EmailService properly generates both body_text and body_html."""
+    dispatches = []
+
+    class DispatchTracker:
+        def send_email(self, to_email, subject, body_text, body_html=None):
+            assert body_text is not None and len(body_text) > 0, "body_text must be non-empty"
+            assert body_html is not None and len(body_html) > 0, "body_html must be non-empty"
+            dispatches.append((to_email, subject))
+            return True
+
+    service = EmailService(provider=DispatchTracker())
+
+    service.send_registration_otp("test1@example.com", "123456", "User One")
+    service.send_login_otp("test2@example.com", "654321", "User Two")
+    service.send_admin_registration_super_key("test3@example.com", "998877", "Test PG Corp")
+    service.send_admin_login_super_key("test4@example.com", "112233", "Admin User")
+    service.send_resident_approval_notification("test5@example.com", "User Five", "Origin PG", "101", "A")
+    service.send_resident_rejection_notification("test6@example.com", "User Six", "Origin PG", "Docs unclear")
+    service.send_password_change_otp("test7@example.com", "554433", "Admin Seven")
+
+    assert len(dispatches) == 7
+
+
+def test_production_mode_mock_otp_request_raises_email_delivery_error(client: TestClient, seed_data):
+    """
+    CRITICAL SAFETY REQUIREMENT:
+    In a production environment, if EMAIL_PROVIDER is set to MOCK or SMTP is unconfigured,
+    the API MUST NOT return 200 and falsely claim an email was delivered.
+    Instead, it must raise EmailDeliveryError (HTTP 500) and roll back.
+    """
+    payload = make_registration_payload(seed_data, phone="9876599020", email="fake.prod@example.com")
+
+    with patch.object(settings, "ENVIRONMENT", "production"), \
+         patch.object(settings, "EMAIL_PROVIDER", "MOCK"), \
+         patch.object(settings, "SMTP_PASSWORD", ""), \
+         patch.object(settings, "SMTP_USERNAME", ""), \
+         patch.object(settings, "SMTP_USER", ""):
+
+        resp = client.post(
+            "/api/v1/auth/resident/register/otp/request",
+            json=payload,
+        )
+        assert resp.status_code == 500
+        assert "Email delivery service is not configured" in resp.text
+
+

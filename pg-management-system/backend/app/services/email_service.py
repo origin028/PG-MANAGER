@@ -381,6 +381,14 @@ class EmailService:
             f"{footer_note}\n\n"
             f"=================================================================\n"
         )
+        body_html = self._render_email_html(
+            title=title,
+            greeting=name_greeting,
+            purpose_desc=purpose_desc,
+            otp="REJECTED",
+            security_warning=security_warning,
+            footer_note=footer_note,
+        )
         return self.provider.send_email(
             to_email=to_email,
             subject=subject,

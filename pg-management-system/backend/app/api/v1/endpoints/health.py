@@ -45,6 +45,8 @@ def health_check(db: Session = Depends(get_db)):
         "alembic_version": alembic_rev,
         "environment": settings.ENVIRONMENT,
         "version": settings.VERSION,
+        "email_provider": getattr(settings, "EMAIL_PROVIDER", "MOCK"),
+        "smtp_configured": bool(getattr(settings, "SMTP_PASSWORD", "") and getattr(settings, "SMTP_HOST", "") not in ("localhost", "")),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return APIResponse(
