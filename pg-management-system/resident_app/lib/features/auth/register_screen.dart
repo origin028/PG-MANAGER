@@ -124,6 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   String? _selectedPropertyId;
   String? _selectedPropertyName;
   bool _isLoadingProperties = false;
+  String? _propertiesError;
 
   // Dropdowns & Verification Methods
   String _selectedGender = 'Male';
@@ -236,23 +237,35 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Future<void> _loadProperties() async {
-    setState(() => _isLoadingProperties = true);
+    setState(() {
+      _isLoadingProperties = true;
+      _propertiesError = null;
+    });
     try {
       final props = await ResidentAuthService.getAvailableProperties();
-      if (mounted && props.isNotEmpty) {
+      if (mounted) {
         setState(() {
           _properties = props;
-          _selectedPropertyId = props.first['id']?.toString();
-          _selectedPropertyName = props.first['name']?.toString();
+          if (props.isNotEmpty) {
+            if (_selectedPropertyId == null ||
+                !props.any((p) => p['id']?.toString() == _selectedPropertyId)) {
+              _selectedPropertyId = props.first['id']?.toString();
+              _selectedPropertyName = props.first['name']?.toString();
+            }
+          } else {
+            _selectedPropertyId = null;
+            _selectedPropertyName = null;
+          }
           _isLoadingProperties = false;
         });
-        return;
       }
     } catch (_) {
-      // Fallback handles default properties
-    }
-    if (mounted) {
-      setState(() => _isLoadingProperties = false);
+      if (mounted) {
+        setState(() {
+          _propertiesError = 'Unable to load PG properties. Tap to retry.';
+          _isLoadingProperties = false;
+        });
+      }
     }
   }
 
@@ -838,94 +851,195 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     palette,
                                     'Target PG property',
                                   ),
-                                  _isLoadingProperties
-                                      ? Padding(
-                                          padding: const EdgeInsets.all(14.0),
-                                          child: Center(
-                                            child: SizedBox(
-                                              width: 22,
-                                              height: 22,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2.2,
+                                  if (_isLoadingProperties)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                        horizontal: 16,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: palette.field,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: palette.line),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: palette.teal,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(
+                                              'Loading available PG properties...',
+                                              style: HomeThemeTokens.manrope(
+                                                fontSize: 14,
+                                                color: palette.mute,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else if (_propertiesError != null)
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: palette.softError,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(
+                                          color: palette.error.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.error_outline_rounded,
+                                            size: 20,
+                                            color: palette.error,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              _propertiesError!,
+                                              style: HomeThemeTokens.manrope(
+                                                fontSize: 13,
+                                                color: palette.error,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                          TextButton(
+                                            onPressed: _loadProperties,
+                                            child: Text(
+                                              'Retry',
+                                              style: HomeThemeTokens.manrope(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w700,
                                                 color: palette.teal,
                                               ),
                                             ),
                                           ),
-                                        )
-                                      : _FocusGlowField(
-                                          palette: palette,
-                                          child: DropdownButtonFormField<String>(
-                                            key: ValueKey(
-                                              'prop_$_selectedPropertyId',
+                                        ],
+                                      ),
+                                    )
+                                  else if (_properties.isEmpty)
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: palette.field,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: palette.line),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.info_outline_rounded,
+                                            size: 20,
+                                            color: palette.mute,
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: Text(
+                                              'No active properties available.',
+                                              style: HomeThemeTokens.manrope(
+                                                fontSize: 13,
+                                                color: palette.mute,
+                                                fontWeight: FontWeight.w500,
+                                              ),
                                             ),
-                                            initialValue: _selectedPropertyId,
-                                            isExpanded: true,
+                                          ),
+                                          IconButton(
                                             icon: Icon(
-                                              Icons.keyboard_arrow_down_rounded,
-                                              color: palette.mute,
+                                              Icons.refresh_rounded,
                                               size: 20,
+                                              color: palette.teal,
                                             ),
-                                            dropdownColor: palette.card,
-                                            style: HomeThemeTokens.manrope(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                              color: palette.ink,
-                                            ),
-                                            decoration: _buildInputDecoration(
-                                              palette: palette,
-                                              prefixIcon: Icons.home_outlined,
-                                            ),
-                                            items: _properties.map((p) {
-                                              final id =
-                                                  p['id']?.toString() ?? '';
-                                              final name =
-                                                  p['name']?.toString() ??
-                                                  'PG Property';
-                                              final city =
-                                                  p['city']?.toString() ?? '';
-                                              return DropdownMenuItem<String>(
-                                                value: id,
-                                                child: Text(
-                                                  city.isNotEmpty
-                                                      ? '$name ($city)'
-                                                      : name,
-                                                  style:
-                                                      HomeThemeTokens.manrope(
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: palette.ink,
-                                                      ),
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              );
-                                            }).toList(),
-                                            onChanged: (val) {
-                                              if (val != null) {
-                                                setState(() {
-                                                  _selectedPropertyId = val;
-                                                  final matched = _properties
-                                                      .firstWhere(
-                                                        (p) =>
-                                                            p['id']
-                                                                ?.toString() ==
-                                                            val,
-                                                        orElse: () => {},
-                                                      );
-                                                  _selectedPropertyName =
-                                                      matched['name']
-                                                          ?.toString() ??
-                                                      '';
-                                                });
-                                              }
-                                            },
-                                            validator: (val) =>
-                                                (val == null || val.isEmpty)
-                                                ? 'Please select a PG property'
-                                                : null,
+                                            onPressed: _loadProperties,
+                                            tooltip: 'Retry',
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  else
+                                    _FocusGlowField(
+                                      palette: palette,
+                                      child: DropdownButtonFormField<String>(
+                                        key: ValueKey('prop_'),
+                                        initialValue: _selectedPropertyId,
+                                        isExpanded: true,
+                                        hint: Text(
+                                          'Select a PG property',
+                                          style: HomeThemeTokens.manrope(
+                                            fontSize: 15,
+                                            color: palette.mute,
                                           ),
                                         ),
+                                        icon: Icon(
+                                          Icons.keyboard_arrow_down_rounded,
+                                          color: palette.mute,
+                                          size: 20,
+                                        ),
+                                        dropdownColor: palette.card,
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          color: palette.ink,
+                                        ),
+                                        decoration: _buildInputDecoration(
+                                          palette: palette,
+                                          prefixIcon: Icons.home_outlined,
+                                        ),
+                                        items: _properties.map((p) {
+                                          final id = p['id']?.toString() ?? '';
+                                          final name =
+                                              p['name']?.toString() ??
+                                              'PG Property';
+                                          final city =
+                                              p['city']?.toString() ?? '';
+                                          return DropdownMenuItem<String>(
+                                            value: id,
+                                            child: Text(
+                                              city.isNotEmpty ? ' ()' : name,
+                                              style: HomeThemeTokens.manrope(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                color: palette.ink,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          );
+                                        }).toList(),
+                                        onChanged: (val) {
+                                          if (val != null) {
+                                            setState(() {
+                                              _selectedPropertyId = val;
+                                              final matched = _properties
+                                                  .firstWhere(
+                                                    (p) =>
+                                                        p['id']?.toString() ==
+                                                        val,
+                                                    orElse: () => {},
+                                                  );
+                                              _selectedPropertyName =
+                                                  matched['name']?.toString() ??
+                                                  '';
+                                            });
+                                          }
+                                        },
+                                        validator: (val) =>
+                                            (val == null || val.isEmpty)
+                                            ? 'Please select a PG property'
+                                            : null,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),

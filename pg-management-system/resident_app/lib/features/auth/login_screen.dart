@@ -640,110 +640,118 @@ class _LoginScreenState extends State<LoginScreen>
     final palette = _LoginPalette.of(context);
     final topInset = MediaQuery.of(context).padding.top;
 
-    return Scaffold(
-      key: const ValueKey('login_mode'),
-      backgroundColor: palette.bg,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 28),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Overlapping Hero + Main Login Card
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 52,
-                      child: _buildHeroBackground(),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        key: const ValueKey('login_mode'),
+        backgroundColor: palette.bg,
+        body: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Overlapping Hero + Main Login Card
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 52,
+                        child: _buildHeroBackground(),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHeroContent(topInset, disableAnim),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: MotionEntrance(
+                              delay: const Duration(milliseconds: 90),
+                              slideOffset: const Offset(0, 0.03),
+                              child: _buildLoginCard(palette, disableAnim),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  // Bottom Registration Prompt
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 210),
+                    slideOffset: const Offset(0, 0.02),
+                    child: Column(
                       children: [
-                        _buildHeroContent(topInset, disableAnim),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: MotionEntrance(
-                            delay: const Duration(milliseconds: 90),
-                            slideOffset: const Offset(0, 0.03),
-                            child: _buildLoginCard(palette, disableAnim),
+                        Center(
+                          child: Wrap(
+                            alignment: WrapAlignment.center,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              Text(
+                                'New to the PG? ',
+                                style: HomeThemeTokens.manrope(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: palette.mute,
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () =>
+                                    setState(() => _isRegisterMode = true),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 2,
+                                    vertical: 2,
+                                  ),
+                                  child: Text(
+                                    'Create your account',
+                                    style: HomeThemeTokens.manrope(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: palette.teal,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Center(
+                          child: TextButton.icon(
+                            onPressed: () => _showNewRegistrationModal(context),
+                            icon: Icon(
+                              Icons.person_add_alt_1_rounded,
+                              size: 15,
+                              color: palette.teal,
+                            ),
+                            label: Text(
+                              'New Registration',
+                              style: HomeThemeTokens.manrope(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: palette.teal,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 22),
-
-                // Bottom Registration Prompt
-                MotionEntrance(
-                  delay: const Duration(milliseconds: 210),
-                  slideOffset: const Offset(0, 0.02),
-                  child: Column(
-                    children: [
-                      Center(
-                        child: Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            Text(
-                              'New to the PG? ',
-                              style: HomeThemeTokens.manrope(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: palette.mute,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () =>
-                                  setState(() => _isRegisterMode = true),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 2,
-                                  vertical: 2,
-                                ),
-                                child: Text(
-                                  'Create your account',
-                                  style: HomeThemeTokens.manrope(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: palette.teal,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Center(
-                        child: TextButton.icon(
-                          onPressed: () => _showNewRegistrationModal(context),
-                          icon: Icon(
-                            Icons.person_add_alt_1_rounded,
-                            size: 15,
-                            color: palette.teal,
-                          ),
-                          label: Text(
-                            'New Registration',
-                            style: HomeThemeTokens.manrope(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: palette.teal,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -813,7 +821,7 @@ class _LoginScreenState extends State<LoginScreen>
     );
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, topInset + 32, 24, 34),
+      padding: EdgeInsets.fromLTRB(24, topInset + 16, 24, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

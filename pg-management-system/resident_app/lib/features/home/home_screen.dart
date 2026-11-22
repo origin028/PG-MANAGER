@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _rentSummary = profileRent.isNotEmpty
             ? profileRent
             : {
-                if (monthlyRent != null) 'current_rent_amount': monthlyRent,
+                'current_rent_amount': ?monthlyRent,
                 if (monthlyRent != null &&
                     source['rent_status']?.toString().toLowerCase() != 'paid')
                   'total_due': monthlyRent,
