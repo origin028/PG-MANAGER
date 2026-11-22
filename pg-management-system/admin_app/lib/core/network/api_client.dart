@@ -13,10 +13,10 @@ class ApiClient {
       return 'http://10.0.2.2:8000/api/v1';
     }
     if (kIsWeb) {
-      if (Uri.base.host.isNotEmpty && Uri.base.host != 'localhost' && Uri.base.host != '127.0.0.1') {
-        return '${Uri.base.origin}/api/v1';
+      if (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1') {
+        return 'http://localhost:8000/api/v1';
       }
-      return 'http://localhost:8000/api/v1';
+      return 'https://pg-management-api-sw09.onrender.com/api/v1';
     }
     return 'http://localhost:8000/api/v1';
   }

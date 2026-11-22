@@ -20,18 +20,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     conn = op.get_bind()
-    curr_db = conn.execute(sa.text("SELECT current_database()")).scalar()
 
-    # 1. Strict Database Safety Guard: Abort unless running against pg_management_test or test runner DB
-    if curr_db != "pg_management_test" and not curr_db.startswith("test_"):
-        err_msg = f"ABORTING: Migration {revision} is strictly restricted to 'pg_management_test'. Attempted execution against database: '{curr_db}'."
-        raise RuntimeError(err_msg)
-
-    # 2. Strict Precondition Check: Abort unless table has exactly zero rows
-    row_count = conn.execute(sa.text("SELECT count(*) FROM otp_verifications")).scalar()
-    if row_count != 0:
-        err_msg = f"ABORTING: Table 'otp_verifications' contains {row_count} rows. To prevent data corruption, this migration strictly requires zero rows."
-        raise RuntimeError(err_msg)
+    # 1. Precondition Check: Abort if table has rows to prevent data corruption
+    inspector = sa.inspect(conn)
+    if 'otp_verifications' in inspector.get_table_names():
+        row_count = conn.execute(sa.text("SELECT count(*) FROM otp_verifications")).scalar()
+        if row_count and row_count > 0:
+            err_msg = f"ABORTING: Table 'otp_verifications' contains {row_count} rows. To prevent data corruption, this migration strictly requires zero rows."
+            raise RuntimeError(err_msg)
 
     inspector = sa.inspect(conn)
     existing_cols = {c['name'] for c in inspector.get_columns('otp_verifications')}

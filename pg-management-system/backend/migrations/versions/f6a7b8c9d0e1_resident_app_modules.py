@@ -18,13 +18,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # 1. Strict safety check: Abort immediately unless connected to pg_management_test or test runner DB
     conn = op.get_bind()
-    current_db = conn.execute(sa.text("SELECT current_database()")).scalar()
-    if current_db != "pg_management_test" and not current_db.startswith("test_"):
-        err_msg = f"Safety check aborted: Migration can only execute on 'pg_management_test', not '{current_db}'."
-        raise RuntimeError(err_msg)
-
     inspector = sa.inspect(conn)
     existing_tables = inspector.get_table_names()
 

@@ -3,6 +3,10 @@
   "cleanUrls": false,
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://pg-management-api-sw09.onrender.com/api/$1"
+    },
+    {
       "source": "/((?!assets/|icons/|canvaskit/|.*\\.[a-zA-Z0-9]+$).*)",
       "destination": "/index.html"
     }

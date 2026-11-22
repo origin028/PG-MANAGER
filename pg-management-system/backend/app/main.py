@@ -18,6 +18,17 @@ async def lifespan(app: FastAPI):
     # Startup lifecycle
     setup_logging()
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
+
+    # Non-destructive database connectivity ping (schema migrations are exclusively managed via preDeployCommand)
+    try:
+        from app.db.session import engine
+        import sqlalchemy as sa
+        with engine.connect() as conn:
+            conn.execute(sa.text("SELECT 1"))
+        logger.info("Database connection verified successfully.")
+    except Exception as exc:
+        logger.error(f"Database connectivity verification check failed: {type(exc).__name__}")
+
     yield
     # Shutdown lifecycle
     logger.info("Application shutdown completed.")
@@ -40,12 +51,8 @@ def redirect_to_swagger():
     return RedirectResponse(url="/api/v1/docs")
 
 # Configure Cross-Origin Resource Sharing (CORS)
-cors_origins = (
-    settings.CORS_ORIGINS
-    if isinstance(settings.CORS_ORIGINS, list)
-    else [str(settings.CORS_ORIGINS)]
-)
 base_origins = [
+    "https://pg-admin-web-nu.vercel.app",
     "http://localhost:8080",
     "http://localhost:8000",
     "http://localhost:5173",
@@ -55,20 +62,38 @@ base_origins = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174",
 ]
-if "*" not in cors_origins:
-    for o in base_origins:
-        if o not in cors_origins:
-            cors_origins.append(o)
+configured_origins = (
+    settings.CORS_ORIGINS
+    if isinstance(settings.CORS_ORIGINS, list)
+    else [str(settings.CORS_ORIGINS)]
+)
+# Do not use unrestricted "*" when credentials are enabled. Expand to valid origin list.
+cors_origins = [o for o in configured_origins if o != "*"]
+for o in base_origins:
+    if o not in cors_origins:
+        cors_origins.append(o)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if "*" in cors_origins else cors_origins,
-    allow_origin_regex=r"^https?://.*$" if "*" in cors_origins else r"^https?://(localhost|127\.0\.0\.1|.*\.vercel\.app)(:[0-9]+)?$",
+    allow_origins=cors_origins,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|.*\.vercel\.app)(:[0-9]+)?$",
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
     expose_headers=["*"],
 )
+
+
+def _attach_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
+    """Explicitly attaches CORS headers to error responses to ensure client receives meaningful errors."""
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Expose-Headers"] = "*"
+        response.headers["Vary"] = "Origin"
+    return response
+
 
 @app.middleware("http")
 async def add_pna_and_cors_headers(request: Request, call_next):
@@ -96,7 +121,7 @@ async def add_pna_and_cors_headers(request: Request, call_next):
 # Global Exception Handlers
 @app.exception_handler(PGException)
 async def pg_exception_handler(request: Request, exc: PGException):
-    return JSONResponse(
+    res = JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
             success=False,
@@ -107,6 +132,7 @@ async def pg_exception_handler(request: Request, exc: PGException):
             ),
         ).model_dump(mode="json"),
     )
+    return _attach_cors_headers(request, res)
 
 
 @app.exception_handler(RequestValidationError)
@@ -115,7 +141,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     for err in exc.errors():
         field_loc = " -> ".join(str(loc) for loc in err.get("loc", []))
         errors.append(f"{field_loc}: {err.get('msg')}")
-    return JSONResponse(
+    res = JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content=ErrorResponse(
             success=False,
@@ -126,11 +152,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             ),
         ).model_dump(mode="json"),
     )
+    return _attach_cors_headers(request, res)
 
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    return JSONResponse(
+    res = JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
             success=False,
@@ -141,12 +168,13 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             ),
         ).model_dump(mode="json"),
     )
+    return _attach_cors_headers(request, res)
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled error processing {request.method} {request.url.path}: {exc}", exc_info=True)
-    return JSONResponse(
+    res = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ErrorResponse(
             success=False,
@@ -157,6 +185,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             ),
         ).model_dump(mode="json"),
     )
+    return _attach_cors_headers(request, res)
 
 
 # Root discovery endpoint

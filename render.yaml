@@ -2,13 +2,21 @@ services:
   - type: web
     name: pg-management-api
     runtime: python
+    rootDir: pg-management-system/backend
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    preDeployCommand: alembic upgrade head
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4 --proxy-headers --forwarded-allow-ips=*"
     healthCheckPath: /api/v1/health
     envVars:
       - key: ENVIRONMENT
         value: production
+      - key: DEBUG
+        value: "false"
+      - key: PROJECT_NAME
+        value: "Origin PG Management System API"
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
         sync: false
+      - key: CORS_ORIGINS
+        value: '["https://pg-admin-web-nu.vercel.app"]'
