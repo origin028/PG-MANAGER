@@ -9,4 +9,6 @@ flutter config --enable-web
 flutter pub get
 
 flutter build web --release \
-  --dart-define=API_BASE_URL=https://pg-management-api.onrender.com/api/v1
+  --dart-define=API_BASE_URL=https://pg-management-api-sw09.onrender.com/api/v1
+
+
