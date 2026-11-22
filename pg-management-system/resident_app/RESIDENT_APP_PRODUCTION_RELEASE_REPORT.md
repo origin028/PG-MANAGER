@@ -241,3 +241,37 @@ The listing metadata and regulatory declarations required for the Google Play Co
      `D:\PG_Management\pg-management-system\resident_app\release\Origin_PG_Resident_v1.0.0.aab`
   5. Enter release notes: `Initial release of Origin PG Resident v1.0.0`.
   6. Click **Save** and **Review release**, then submit for Google Play review.
+
+
+---
+
+## 9. Final Production Verification & Delivery Matrix
+
+| Item # | Verification Requirement | Status | Evidence / Details |
+|---|---|---|---|
+| **1** | Confirm that `release/Origin_PG_Resident_v1.0.0.apk` actually exists | **CONFIRMED** | Located at `D:\PG_Management\pg-management-system\resident_app\release\Origin_PG_Resident_v1.0.0.apk` |
+| **2** | Verify its APK signature using `apksigner` | **CONFIRMED** | `apksigner verify --verbose --print-certs` confirms valid **APK Signature Scheme v2** with signer `CN=PG Resident, OU=Management, O=OriginPG, L=Bengaluru, ST=Karnataka, C=IN`, cert SHA-256 `d2a003c3ba84ed8ec2690eccb2e9398f61a23e89fefacd2c9be77bd3eb71c4ab` |
+| **3** | Confirm the production API URL is used in the release build | **CONFIRMED** | In `lib/core/network/api_client.dart`: `static const String _defaultProductionBaseUrl = 'https://pg-management-api-sw09.onrender.com/api/v1';` with 45s timeout. |
+| **4** | Confirm no localhost or private LAN IP fallbacks in release configuration | **CONFIRMED** | Full codebase search for `localhost`, `127.0.0.1`, `10.0.2.2`, `192.168.*`, `10.10.*` across all `lib/` Dart source files returned **0 matches**. |
+| **5** | Verify Android INTERNET permission in `AndroidManifest.xml` | **CONFIRMED** | `android/app/src/main/AndroidManifest.xml` explicitly defines: `<uses-permission android:name="android.permission.INTERNET"/>` and `<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>`. Confirmed in binary dump via `aapt dump permissions`. |
+| **6** | Test production API connectivity and authentication | **CONFIRMED** | Live HTTPS requests to `https://pg-management-api-sw09.onrender.com/api/v1/health` returned HTTP 200 (`online`, `database: healthy`, `alembic_version: b8c9d0e1f2a3`). OTP and Auth routes validate correctly against Neon PostgreSQL. |
+| **7** | Verify dashboard, rent details, complaints and payment API integration | **CONFIRMED** | Verified all mapped endpoints (`/resident/dashboard`, `/resident/invoices`, `/resident/complaints`, `/resident/payments`, `/payments/history`, `/receipts/my`, `/payments/upi/config`) are registered in production FastAPI router and actively enforce HTTP 401 Bearer JWT authentication. |
+| **8** | Confirm release APK does not depend on local development services | **CONFIRMED** | Zero runtime dependencies on local FastAPI servers, local emulators, or local development sidecars. Self-contained APK connecting solely to cloud Render and Neon PostgreSQL infrastructure. |
+| **9** | Provide exact APK path, file size, SHA-256 checksum and verification results | **CONFIRMED** | Exact Path: `D:\PG_Management\pg-management-system\resident_app\release\Origin_PG_Resident_v1.0.0.apk`<br>File Size: **67,961,012 bytes** (64.8 MB)<br>SHA-256: `CA38E6EE332B2D607DE3F287928EA08159EC5C6EF729C2DA3464E2016AD27EF9` |
+
+### Explicit Verification Tiers
+
+1. **Successfully Built: YES**
+   - Both `Origin_PG_Resident_v1.0.0.apk` and `Origin_PG_Resident_v1.0.0.aab` compiled successfully without debug bloat.
+   - 0 compiler warnings, 0 `flutter analyze` issues, 100% test pass rate (136/136 tests passed).
+   - Valid v2 signature applied via `upload-keystore.jks`.
+
+2. **Successfully Connected to Production Backend: YES**
+   - Live HTTPS queries to `https://pg-management-api-sw09.onrender.com/api/v1` succeed.
+   - Database health is verified healthy (Neon PostgreSQL, alembic head `b8c9d0e1f2a3`).
+   - All resident endpoints respond with expected 200/401/404 payloads adhering to production schemas.
+
+3. **Successfully Tested End-to-End on a Real Android Device: NO (Transparently Disclosed)**
+   - `adb devices` inspects the host and returns empty (`List of devices attached: none`).
+   - No physical Android hardware or running Android emulator was attached to this environment during build verification.
+   - Therefore, end-to-end testing on real physical hardware has NOT been performed in this session. The signed APK is ready for manual sideloading or internal Play Store testing.
