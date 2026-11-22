@@ -66,6 +66,9 @@ class OTPService:
         norm_phone = normalize_phone(phone)
         norm_email = email.strip().lower()
 
+        if not re.match(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", norm_email):
+            raise BadRequestError("Invalid email address format.")
+
         # Prevent duplicate registration with existing active verified account
         existing_user = self.db.scalar(
             sa.select(User).where(
@@ -108,6 +111,7 @@ class OTPService:
 
         otp_record = OTPVerification(
             phone=norm_phone,
+            email=norm_email,
             otp_hash=digest,
             salt=salt,
             purpose="RESIDENT_REGISTRATION",
@@ -224,6 +228,7 @@ class OTPService:
 
         otp_record = OTPVerification(
             phone=norm_phone,
+            email=user.email.strip().lower(),
             otp_hash=digest,
             salt=salt,
             purpose="RESIDENT_LOGIN",

@@ -6,7 +6,7 @@ from email.message import EmailMessage
 from typing import Dict, Optional
 
 from app.core.config import settings
-from app.core.exceptions import InternalServerError
+from app.core.exceptions import BadRequestError, EmailDeliveryError, InternalServerError
 from app.core.logging import logger
 
 ALLOWED_DEV_ENVIRONMENTS = {"development", "dev", "demo", "test", "testing", "local"}
@@ -129,9 +129,9 @@ class SMTPEmailProvider(EmailProvider):
         body_text: str,
         body_html: Optional[str] = None,
     ) -> bool:
-        if not self.host:
+        if not self.host or self.host == "localhost":
             logger.error("[SMTPEmailProvider] SMTP_HOST is not configured.")
-            raise InternalServerError("Email delivery service is currently misconfigured.")
+            raise EmailDeliveryError("Email delivery service host is not configured.")
 
         msg = EmailMessage()
         msg["Subject"] = subject
@@ -162,15 +162,23 @@ class SMTPEmailProvider(EmailProvider):
             masked = mask_email(to_email)
             logger.info(f"[SMTPEmailProvider] Email delivered successfully to {masked} | Subject: '{subject}'")
             return True
+        except smtplib.SMTPAuthenticationError as exc:
+            masked = mask_email(to_email)
+            logger.error(f"[SMTPEmailProvider] SMTP authentication error delivering to {masked}: {exc}")
+            raise EmailDeliveryError("Failed to send verification email: SMTP authentication failed. Please check server credentials.") from exc
+        except smtplib.SMTPRecipientsRefused as exc:
+            masked = mask_email(to_email)
+            logger.error(f"[SMTPEmailProvider] SMTP recipient refused {masked}: {exc}")
+            raise BadRequestError("Invalid email address. The recipient was refused by mail server.") from exc
         except (smtplib.SMTPException, OSError) as exc:
             masked = mask_email(to_email)
             logger.error(f"[SMTPEmailProvider] Failed to deliver email to {masked}: {exc}")
-            raise InternalServerError("Failed to send verification email. Please verify SMTP configuration.") from exc
+            raise EmailDeliveryError("Failed to send verification email. Please try again later.") from exc
 
 
 def get_email_provider() -> EmailProvider:
     """Factory returning active EmailProvider based on configuration and environment."""
     provider_name = getattr(settings, "EMAIL_PROVIDER", "MOCK").strip().upper()
-    if provider_name == "SMTP" and settings.SMTP_HOST:
+    if provider_name == "SMTP":
         return SMTPEmailProvider()
     return DevMockEmailProvider()

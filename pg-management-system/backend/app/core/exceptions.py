@@ -97,6 +97,16 @@ class InternalServerError(PGException):
         )
 
 
+class EmailDeliveryError(InternalServerError):
+    def __init__(
+        self,
+        message: str = "Failed to send verification email. Please try again later.",
+        details: Optional[Any] = None,
+    ):
+        super().__init__(message=message, details=details)
+        self.code = "EMAIL_DELIVERY_FAILED"
+
+
 class AccountPendingApprovalError(PGException):
     def __init__(
         self,

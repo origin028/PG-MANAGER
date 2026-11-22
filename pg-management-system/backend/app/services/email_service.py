@@ -29,9 +29,9 @@ class EmailService:
       <td align="center">
         <table role="presentation" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0;" cellspacing="0" cellpadding="0">
           <tr>
-            <td style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); padding: 30px 24px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">SMART GROUP PG'S</h1>
-              <p style="margin: 6px 0 0 0; color: #bfdbfe; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Smart Living &amp; Residence Management</p>
+            <td style="background: linear-gradient(135deg, #0B6B63 0%, #14998B 100%); padding: 30px 24px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; letter-spacing: 0.5px;">SMART GROUP PG'S &bull; Origin PG Living</h1>
+              <p style="margin: 6px 0 0 0; color: #ccfbf1; font-size: 13px; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Smart Living &amp; Residence Management</p>
             </td>
           </tr>
           <tr>
@@ -76,12 +76,12 @@ class EmailService:
         title = "Resident Registration Verification Code"
         subject = "SMART GROUP PG'S — Resident Registration Verification Code"
         purpose_desc = (
-            "Thank you for registering with SMART GROUP PG'S. "
+            "Thank you for registering with Origin PG. "
             "Please use the one-time verification code (OTP) below to verify your email address and submit your registration application."
         )
         security_warning = (
             "Never share this OTP with anyone, including PG managers, caretakers, or staff. "
-            "SMART GROUP PG'S team members will NEVER ask for your verification code."
+            "Origin PG team members will NEVER ask for your verification code."
         )
         footer_note = "If you did not initiate this resident registration, please disregard this email safely."
 
@@ -133,12 +133,12 @@ class EmailService:
         title = "Resident Login Verification Code"
         subject = "SMART GROUP PG'S — Resident Login Verification Code"
         purpose_desc = (
-            "A login request was initiated for your SMART GROUP PG'S resident account. "
+            "A login request was initiated for your Origin PG resident account. "
             "Please use the one-time verification code (OTP) below to securely authenticate into your resident portal."
         )
         security_warning = (
             "Never share this OTP with anyone, including PG managers, caretakers, or staff. "
-            "SMART GROUP PG'S team members will NEVER ask for your verification code."
+            "Origin PG team members will NEVER ask for your verification code."
         )
         footer_note = (
             "If you did not request this verification code, please secure your account immediately "

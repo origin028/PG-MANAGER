@@ -31,7 +31,21 @@ services:
       - key: UPI_BANK_NAME
         value: "Bank of Baroda"
       - key: EMAIL_PROVIDER
-        value: "MOCK"
+        value: "SMTP"
+      - key: SMTP_HOST
+        value: "smtp.gmail.com"
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        sync: false
+      - key: SMTP_FROM_NAME
+        value: "Origin PG Living"
+      - key: SMTP_USE_TLS
+        value: "true"
 
 databases:
   - name: pg-management-db
