@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -8,11 +9,7 @@ class UpiApp {
   final String packageName;
   final Uint8List? icon;
 
-  const UpiApp({
-    required this.name,
-    required this.packageName,
-    this.icon,
-  });
+  const UpiApp({required this.name, required this.packageName, this.icon});
 
   static const UpiApp googlePay = UpiApp(
     name: 'Google Pay',
@@ -53,7 +50,9 @@ class UpiApp {
     return UpiApp(
       name: (map['name'] as String?)?.trim() ?? '',
       packageName: (map['packageName'] as String?)?.trim() ?? '',
-      icon: map['icon'] != null ? Uint8List.fromList(List<int>.from(map['icon'] as List)) : null,
+      icon: map['icon'] != null
+          ? Uint8List.fromList(List<int>.from(map['icon'] as List))
+          : null,
     );
   }
 
@@ -158,7 +157,9 @@ class UpiIndiaService {
     String? merchantId,
   }) async {
     final cleanPn = receiverName.replaceAll("'", '').trim();
-    final cleanTr = transactionRefId.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').trim();
+    final cleanTr = transactionRefId
+        .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
+        .trim();
     final cleanNote = (transactionNote ?? 'Rent Payment')
         .replaceAll('+', ' ')
         .replaceAll("'", '')
@@ -170,14 +171,18 @@ class UpiIndiaService {
       'app': app.packageName,
       'receiverUpiId': receiverUpiId.trim(),
       'receiverName': cleanPn,
-      'transactionRefId': cleanTr.length > 35 ? cleanTr.substring(0, 35) : cleanTr,
-      'transactionNote': cleanNote.length > 50 ? cleanNote.substring(0, 50) : cleanNote,
+      'transactionRefId': cleanTr.length > 35
+          ? cleanTr.substring(0, 35)
+          : cleanTr,
+      'transactionNote': cleanNote.length > 50
+          ? cleanNote.substring(0, 50)
+          : cleanNote,
       'amount': amount.toStringAsFixed(2),
       'currency': currency,
-      if (merchantId != null && merchantId.trim().isNotEmpty) 'merchantId': merchantId.trim(),
+      if (merchantId != null && merchantId.trim().isNotEmpty)
+        'merchantId': merchantId.trim(),
     });
 
     return UpiResponse(response ?? '');
   }
 }
-

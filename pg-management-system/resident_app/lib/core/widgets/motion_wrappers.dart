@@ -31,10 +31,14 @@ class _MotionEntranceState extends State<MotionEntrance>
   void initState() {
     super.initState();
     final totalMs =
-        (widget.delay.inMilliseconds + widget.duration.inMilliseconds)
-            .clamp(1, 3000);
-    final beginFraction =
-        (widget.delay.inMilliseconds / totalMs).clamp(0.0, 0.92);
+        (widget.delay.inMilliseconds + widget.duration.inMilliseconds).clamp(
+          1,
+          3000,
+        );
+    final beginFraction = (widget.delay.inMilliseconds / totalMs).clamp(
+      0.0,
+      0.92,
+    );
 
     _controller = AnimationController(
       vsync: this,
@@ -77,10 +81,7 @@ class _MotionEntranceState extends State<MotionEntrance>
 
     return FadeTransition(
       opacity: _curved,
-      child: SlideTransition(
-        position: _slide,
-        child: widget.child,
-      ),
+      child: SlideTransition(position: _slide, child: widget.child),
     );
   }
 }
@@ -122,4 +123,3 @@ class _TactilePressState extends State<TactilePress> {
     );
   }
 }
-

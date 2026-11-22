@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class TokenStorage {
@@ -28,7 +29,8 @@ class TokenStorage {
       }
       final residentJson = prefs.getString(_residentProfileKey);
       if (residentJson != null) {
-        _cachedResidentProfile = jsonDecode(residentJson) as Map<String, dynamic>?;
+        _cachedResidentProfile =
+            jsonDecode(residentJson) as Map<String, dynamic>?;
       }
       final dashJson = prefs.getString(_dashboardKey);
       if (dashJson != null) {
@@ -45,7 +47,8 @@ class TokenStorage {
   static Map<String, dynamic>? get userProfile => _cachedUserProfile;
   static Map<String, dynamic>? get residentProfile => _cachedResidentProfile;
   static Map<String, dynamic>? get cachedDashboard => _cachedDashboard;
-  static bool get isAuthenticated => _cachedAccessToken != null && _cachedAccessToken!.isNotEmpty;
+  static bool get isAuthenticated =>
+      _cachedAccessToken != null && _cachedAccessToken!.isNotEmpty;
 
   static Future<void> saveTokens({
     required String accessToken,

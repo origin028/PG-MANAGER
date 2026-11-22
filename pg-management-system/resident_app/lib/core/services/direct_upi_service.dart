@@ -1,8 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_upi_india/flutter_upi_india.dart' as fupi;
 import 'package:upi_intent/upi_intent.dart' as upiint;
+
 import 'resident_api_service.dart';
 import 'upi_india_service.dart';
 
@@ -166,7 +168,9 @@ abstract class DirectUpiGateway {
 }
 
 class DefaultDirectUpiGateway implements DirectUpiGateway {
-  static const MethodChannel _channel = MethodChannel('com.originpg.resident/native_upi');
+  static const MethodChannel _channel = MethodChannel(
+    'com.originpg.resident/native_upi',
+  );
 
   const DefaultDirectUpiGateway();
 
@@ -194,14 +198,19 @@ class DefaultDirectUpiGateway implements DirectUpiGateway {
     if (apps.isEmpty) {
       bool hasNativeChannel = true;
       try {
-        final rawList = await _channel.invokeMethod<List<dynamic>>('getInstalledUpiApps');
+        final rawList = await _channel.invokeMethod<List<dynamic>>(
+          'getInstalledUpiApps',
+        );
         if (rawList != null) {
           for (final item in rawList) {
             if (item is Map) {
               final pkg = item['packageName']?.toString().trim() ?? '';
               final name = item['name']?.toString().trim() ?? pkg;
               if (pkg.isNotEmpty) {
-                apps[pkg] = InstalledUpiApp(name: name.isEmpty ? pkg : name, packageName: pkg);
+                apps[pkg] = InstalledUpiApp(
+                  name: name.isEmpty ? pkg : name,
+                  packageName: pkg,
+                );
               }
             }
           }
@@ -234,7 +243,11 @@ class DefaultDirectUpiGateway implements DirectUpiGateway {
     }
 
     final result = apps.values.toList();
-    result.sort((a, b) => _appSortWeight(a.packageName).compareTo(_appSortWeight(b.packageName)));
+    result.sort(
+      (a, b) =>
+          _appSortWeight(a.packageName)
+              .compareTo(_appSortWeight(b.packageName)),
+    );
     return result;
   }
 
@@ -266,11 +279,17 @@ class DefaultDirectUpiGateway implements DirectUpiGateway {
     if (packageName != null && packageName.isNotEmpty) {
       final uriParsed = Uri.parse(uri);
       final pa = uriParsed.queryParameters['pa'] ?? '9886699258-3@ybl';
-      final pn = (uriParsed.queryParameters['pn'] ?? 'SMART GROUP PGS').replaceAll("'", '').trim();
+      final pn = (uriParsed.queryParameters['pn'] ?? 'SMART GROUP PGS')
+          .replaceAll("'", '')
+          .trim();
       final amStr = uriParsed.queryParameters['am'] ?? '1.00';
       final am = double.tryParse(amStr) ?? 1.0;
-      final tn = (uriParsed.queryParameters['tn'] ?? 'Rent Payment').replaceAll("'", '').trim();
-      final tr = uriParsed.queryParameters['tr'] ?? 'UPI${DateTime.now().millisecondsSinceEpoch}';
+      final tn = (uriParsed.queryParameters['tn'] ?? 'Rent Payment')
+          .replaceAll("'", '')
+          .trim();
+      final tr =
+          uriParsed.queryParameters['tr'] ??
+          'UPI${DateTime.now().millisecondsSinceEpoch}';
 
       // 1. Try upi_intent package
       try {
@@ -281,16 +300,22 @@ class DefaultDirectUpiGateway implements DirectUpiGateway {
           transactionNote: tn.isNotEmpty ? tn : 'Rent Payment',
           transactionRefId: tr,
         );
-        final targetApp = upiint.UpiApp(name: packageName, packageName: packageName);
+        final targetApp = upiint.UpiApp(
+          name: packageName,
+          packageName: packageName,
+        );
         final upiRes = await upiint.UpiIntent.payWithApp(
           payment: payment,
           app: targetApp,
         );
         if (upiRes != null) {
           final isSuccess = upiRes.isSuccess;
-          final isSubmitted = upiRes.status == upiint.UpiTransactionStatus.submitted;
+          final isSubmitted =
+              upiRes.status == upiint.UpiTransactionStatus.submitted;
           return {
-            'status': isSuccess ? 'SUCCESS' : (isSubmitted ? 'SUBMITTED' : 'FAILURE'),
+            'status': isSuccess
+                ? 'SUCCESS'
+                : (isSubmitted ? 'SUBMITTED' : 'FAILURE'),
             'rawResponse': upiRes.rawResponse,
             'approvalRefNo': upiRes.approvalRefNo,
             'txnRef': tr,
@@ -321,14 +346,20 @@ class DefaultDirectUpiGateway implements DirectUpiGateway {
           'responseCode': upiRes.responseCode,
         };
       } catch (e) {
-        debugPrint('[DefaultDirectUpiGateway] UpiIndiaService failed, falling back to native channel: $e');
+        debugPrint(
+          '[DefaultDirectUpiGateway] UpiIndiaService failed, falling back to native channel: $e',
+        );
       }
     }
 
-    final res = await _channel.invokeMapMethod<String, dynamic>('launchUpiIntent', {
-      'uri': uri,
-      if (packageName != null && packageName.isNotEmpty) 'packageName': packageName,
-    });
+    final res = await _channel.invokeMapMethod<String, dynamic>(
+      'launchUpiIntent',
+      {
+        'uri': uri,
+        if (packageName != null && packageName.isNotEmpty)
+          'packageName': packageName,
+      },
+    );
     return res != null ? Map<String, dynamic>.from(res) : <String, dynamic>{};
   }
 
@@ -428,7 +459,9 @@ class DirectUpiService {
       if (cleanKey == 'tr') {
         final cleanTr = cleanVal.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').trim();
         if (cleanTr.isNotEmpty) {
-          orderedParams[cleanKey] = cleanTr.length > 35 ? cleanTr.substring(0, 35) : cleanTr;
+          orderedParams[cleanKey] = cleanTr.length > 35
+              ? cleanTr.substring(0, 35)
+              : cleanTr;
         }
       } else if (cleanKey == 'pn') {
         orderedParams[cleanKey] = cleanVal.replaceAll("'", '').trim();
@@ -439,8 +472,9 @@ class DirectUpiService {
             .replaceAll(RegExp(r'[^A-Za-z0-9 ]'), ' ')
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
-        orderedParams[cleanKey] =
-            sanitized.length > 50 ? sanitized.substring(0, 50).trim() : sanitized;
+        orderedParams[cleanKey] = sanitized.length > 50
+            ? sanitized.substring(0, 50).trim()
+            : sanitized;
       } else {
         orderedParams[cleanKey] = cleanVal;
       }
@@ -449,14 +483,13 @@ class DirectUpiService {
     orderedParams['mode'] = '04';
 
     final encodedQuery = orderedParams.entries
-        .map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}')
+        .map(
+          (e) =>
+              '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}',
+        )
         .join('&');
 
-    return Uri(
-      scheme: parsed.scheme,
-      host: parsed.host,
-      query: encodedQuery,
-    );
+    return Uri(scheme: parsed.scheme, host: parsed.host, query: encodedQuery);
   }
 
   /// Parses raw Android Activity result map or NPCI key=value response string.
@@ -471,7 +504,9 @@ class DirectUpiService {
       for (final part in rawResponseStr.split('&')) {
         final idx = part.indexOf('=');
         if (idx > 0) {
-          final k = Uri.decodeComponent(part.substring(0, idx)).trim().toLowerCase();
+          final k = Uri.decodeComponent(part.substring(0, idx))
+              .trim()
+              .toLowerCase();
           final v = Uri.decodeComponent(part.substring(idx + 1)).trim();
           parsedKv[k] = v;
         }
@@ -479,14 +514,22 @@ class DirectUpiService {
     }
 
     final statusRaw =
-        (rawMap['status']?.toString() ?? parsedKv['status'] ?? 'UNKNOWN').trim().toUpperCase();
+        (rawMap['status']?.toString() ?? parsedKv['status'] ?? 'UNKNOWN')
+            .trim()
+            .toUpperCase();
     final txnId = _nonEmpty(rawMap['txnId']?.toString() ?? parsedKv['txnid']);
-    final txnRef = _nonEmpty(rawMap['txnRef']?.toString() ?? parsedKv['txnref']);
-    final approvalRef =
-        _nonEmpty(rawMap['approvalRefNo']?.toString() ?? parsedKv['approvalrefno']);
-    final responseCode =
-        _nonEmpty(rawMap['responseCode']?.toString() ?? parsedKv['responsecode']);
-    final extraMsg = _nonEmpty(rawMap['message']?.toString() ?? parsedKv['message']);
+    final txnRef = _nonEmpty(
+      rawMap['txnRef']?.toString() ?? parsedKv['txnref'],
+    );
+    final approvalRef = _nonEmpty(
+      rawMap['approvalRefNo']?.toString() ?? parsedKv['approvalrefno'],
+    );
+    final responseCode = _nonEmpty(
+      rawMap['responseCode']?.toString() ?? parsedKv['responsecode'],
+    );
+    final extraMsg = _nonEmpty(
+      rawMap['message']?.toString() ?? parsedKv['message'],
+    );
 
     final restricted = isLimitOrSecurityRestriction(
       responseCode: responseCode,
@@ -537,7 +580,10 @@ class DirectUpiService {
         text.contains('risk')) {
       return DirectUpiErrorCategory.securityRejection;
     }
-    if (isLimitOrSecurityRestriction(responseCode: responseCode, rawResponse: rawText)) {
+    if (isLimitOrSecurityRestriction(
+      responseCode: responseCode,
+      rawResponse: rawText,
+    )) {
       return DirectUpiErrorCategory.bankLimitRejection;
     }
     switch (outcomeStatus) {
@@ -563,7 +609,18 @@ class DirectUpiService {
     String? rawResponse,
   }) {
     final code = (responseCode ?? '').trim().toUpperCase();
-    const limitCodes = {'Z9', 'ZM', 'ZA', 'Z5', 'U30', 'U69', 'XH', 'XU', 'B3', 'LIMIT_EXCEEDED'};
+    const limitCodes = {
+      'Z9',
+      'ZM',
+      'ZA',
+      'Z5',
+      'U30',
+      'U69',
+      'XH',
+      'XU',
+      'B3',
+      'LIMIT_EXCEEDED',
+    };
     if (limitCodes.contains(code)) {
       return true;
     }
@@ -583,10 +640,13 @@ class DirectUpiService {
     String? extraMsg,
   ) {
     final msg = (extraMsg ?? '').toLowerCase();
-    if (statusRaw == 'APP_NOT_INSTALLED' || statusRaw == 'PACKAGE_NOT_INSTALLED') {
+    if (statusRaw == 'APP_NOT_INSTALLED' ||
+        statusRaw == 'PACKAGE_NOT_INSTALLED') {
       return DirectUpiOutcomeStatus.appNotInstalled;
     }
-    if (statusRaw == 'NETWORK_ERROR' || msg.contains('network') || responseCode == 'NETWORK_ERROR') {
+    if (statusRaw == 'NETWORK_ERROR' ||
+        msg.contains('network') ||
+        responseCode == 'NETWORK_ERROR') {
       return DirectUpiOutcomeStatus.networkError;
     }
     if (statusRaw == 'SUCCESS') return DirectUpiOutcomeStatus.success;
@@ -672,7 +732,9 @@ class DirectUpiService {
           packageName: selectedApp.packageName,
         );
       } catch (e) {
-        debugPrint('[DirectUpi] Backend initiation unavailable (proceeding with local parameters): $e');
+        debugPrint(
+          '[DirectUpi] Backend initiation unavailable (proceeding with local parameters): $e',
+        );
       }
 
       final paymentId = initData['payment_id']?.toString();
@@ -681,7 +743,8 @@ class DirectUpiService {
       final txnRef = (txnRefStr != null && txnRefStr.isNotEmpty)
           ? txnRefStr
           : 'UPI${DateTime.now().millisecondsSinceEpoch}';
-      final double amount = overrideAmount ?? (initData['amount'] as num?)?.toDouble() ?? 8000.0;
+      final double amount =
+          overrideAmount ?? (initData['amount'] as num?)?.toDouble() ?? 8000.0;
       final rawUpiUri = initData['upi_uri']?.toString();
 
       final Uri cleanUri;
@@ -699,7 +762,9 @@ class DirectUpiService {
         );
       }
 
-      final redactedVpa = redactVpa(initData['payee_vpa']?.toString() ?? '9886699258-3@ybl');
+      final redactedVpa = redactVpa(
+        initData['payee_vpa']?.toString() ?? '9886699258-3@ybl',
+      );
       debugPrint(
         '[DirectUpi] Launch ref=$txnRef app=${selectedApp.name} (${selectedApp.packageName}) '
         'vpa=$redactedVpa am=$amount hasPlus=${cleanUri.toString().contains('+')}',
@@ -762,9 +827,17 @@ class DirectUpiService {
       }
 
       final backendStatus =
-          (syncRes['status']?.toString() ?? (outcome.status == DirectUpiOutcomeStatus.cancelled ? 'CANCELLED' : outcome.status == DirectUpiOutcomeStatus.failure ? 'FAILED' : 'PENDING_VERIFICATION'))
+          (syncRes['status']?.toString() ??
+                  (outcome.status == DirectUpiOutcomeStatus.cancelled
+                      ? 'CANCELLED'
+                      : outcome.status == DirectUpiOutcomeStatus.failure
+                      ? 'FAILED'
+                      : 'PENDING_VERIFICATION'))
               .toUpperCase();
-      final settled = syncRes['is_settled'] == true || backendStatus == 'PAID' || backendStatus == 'SUCCESS';
+      final settled =
+          syncRes['is_settled'] == true ||
+          backendStatus == 'PAID' ||
+          backendStatus == 'SUCCESS';
 
       debugPrint(
         '[DirectUpi] Synced ref=$txnRef backendStatus=$backendStatus settled=$settled',

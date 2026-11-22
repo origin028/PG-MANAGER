@@ -53,12 +53,6 @@ android {
             isShrinkResources = false
         }
     }
-
-    packaging {
-        jniLibs {
-            keepDebugSymbols += "**/*.so"
-        }
-    }
 }
 
 kotlin {

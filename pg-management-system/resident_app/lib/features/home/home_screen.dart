@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/network/token_storage.dart';
 import '../../core/services/resident_api_service.dart';
@@ -54,10 +55,32 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ? savedProfile
           : AppData.currentResident;
       if (source.isNotEmpty) {
-        final profileStay = (source['stay_details'] as Map?)?.cast<String, dynamic>() ?? {};
-        final profileInfo = (source['resident_info'] as Map?)?.cast<String, dynamic>() ?? {};
+        final profileStay =
+            (source['stay_details'] as Map?)?.cast<String, dynamic>() ?? {};
+        final profileInfo =
+            (source['resident_info'] as Map?)?.cast<String, dynamic>() ?? {};
+        final profileRent =
+            (source['rent_summary'] as Map?)?.cast<String, dynamic>() ?? {};
+        final profilePayNow =
+            (profileRent['pay_now'] as Map?)?.cast<String, dynamic>() ?? {};
+        final dynamic monthlyRent =
+            profileStay['monthly_rent'] ?? source['rent'];
         _residentInfo = profileInfo.isNotEmpty ? profileInfo : source;
         _stayDetails = profileStay.isNotEmpty ? profileStay : source;
+        _rentSummary = profileRent.isNotEmpty
+            ? profileRent
+            : {
+                if (monthlyRent != null) 'current_rent_amount': monthlyRent,
+                if (monthlyRent != null &&
+                    source['rent_status']?.toString().toLowerCase() != 'paid')
+                  'total_due': monthlyRent,
+                if (source['rent_status'] != null)
+                  'rent_payment_status':
+                      source['rent_status']?.toString().toLowerCase() == 'paid'
+                      ? 'PAID'
+                      : 'DUE',
+              };
+        _payNow = profilePayNow;
         _hasApiDashboard = true;
       }
     }
@@ -91,31 +114,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.dispose();
   }
 
+  bool _isLoadingDashboard = false;
+
   Future<void> _loadDashboard() async {
-    // Non-blocking parallel background refresh
-    await Future.wait([
-      _fetchDashboardApi(),
-      _fetchComplaintsApi(),
-    ]);
+    if (_isLoadingDashboard) return;
+    _isLoadingDashboard = true;
+    try {
+      // Non-blocking parallel background refresh
+      await Future.wait([_fetchDashboardApi(), _fetchComplaintsApi()]);
+    } finally {
+      if (mounted) {
+        _isLoadingDashboard = false;
+      }
+    }
   }
 
-  void _applyDashboardData(Map<String, dynamic> dash, {bool isFromCache = false}) {
-    final residentInfo = (dash['resident_info'] as Map?)?.cast<String, dynamic>() ?? {};
+  void _applyDashboardData(
+    Map<String, dynamic> dash, {
+    bool isFromCache = false,
+  }) {
+    final residentInfo =
+        (dash['resident_info'] as Map?)?.cast<String, dynamic>() ?? {};
     final stay = (dash['stay_details'] as Map?)?.cast<String, dynamic>() ?? {};
-    final rentSummary = (dash['rent_summary'] as Map?)?.cast<String, dynamic>() ?? {};
-    final payNow = (rentSummary['pay_now'] as Map?)?.cast<String, dynamic>() ?? {};
+    final rentSummary =
+        (dash['rent_summary'] as Map?)?.cast<String, dynamic>() ?? {};
+    final payNow =
+        (rentSummary['pay_now'] as Map?)?.cast<String, dynamic>() ?? {};
 
-    final rawNotices = (dash['recent_notices'] as List?) ?? (dash['notices'] as List?) ?? [];
+    final rawNotices =
+        (dash['recent_notices'] as List?) ?? (dash['notices'] as List?) ?? [];
     final rawPayments = (dash['recent_payments'] as List?) ?? [];
 
-    final dynamic rawDue = rentSummary['total_due'] ??
+    final dynamic rawDue =
+        rentSummary['total_due'] ??
         rentSummary['outstanding_dues'] ??
         dash['rent_due'];
     final int rentDueInt = rawDue is num
         ? rawDue.toInt()
         : (int.tryParse(rawDue?.toString() ?? '') ?? 0);
 
-    final dynamic rawMonthlyRent = stay['monthly_rent'] ??
+    final dynamic rawMonthlyRent =
+        stay['monthly_rent'] ??
         rentSummary['current_rent_amount'] ??
         AppData.currentResident['rent'];
     final String rentStatusStr =
@@ -123,7 +162,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             .toString()
             .toUpperCase();
 
-    final bool isPaidStatus = rentStatusStr == 'PAID' ||
+    final bool isPaidStatus =
+        rentStatusStr == 'PAID' ||
         (rentStatusStr.isEmpty && rentDueInt == 0 && rawPayments.isNotEmpty);
 
     _hasApiDashboard = true;
@@ -159,7 +199,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           'id': map['id']?.toString() ?? '',
           'title': map['title'] ?? 'Notice',
           'message': map['content'] ?? map['message'] ?? '',
-          'date': createdStr.length >= 10 ? createdStr.substring(0, 10) : createdStr,
+          'date': createdStr.length >= 10
+              ? createdStr.substring(0, 10)
+              : createdStr,
           'priority': map['is_pinned'] == true
               ? 'HIGH'
               : (map['priority'] ?? 'NORMAL'),
@@ -194,7 +236,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 : (st == 'IN_PROGRESS' ? 'In Progress' : 'Pending');
             return <String, dynamic>{
               'id': c['id']?.toString() ?? '',
-              'title': c['title'] ?? c['issue'] ?? c['description'] ?? 'Maintenance Request',
+              'title':
+                  c['title'] ??
+                  c['issue'] ??
+                  c['description'] ??
+                  'Maintenance Request',
               'category': c['category'] ?? 'General',
               'status': mappedStatus,
               'date': c['created_at']?.toString().substring(0, 10) ?? 'Recent',
@@ -278,13 +324,33 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   static const List<String> _monthShortNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   static const List<String> _monthFullNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   String _formatDateLabel(String? raw, {bool includeYear = true}) {
@@ -311,7 +377,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       }
       final firstWord = clean.split(' ').first;
-      if (_monthFullNames.any((m) => m.toLowerCase() == firstWord.toLowerCase())) {
+      if (_monthFullNames.any(
+        (m) => m.toLowerCase() == firstWord.toLowerCase(),
+      )) {
         return '$firstWord rent';
       }
       return clean.toLowerCase().contains('rent') ? clean : '$clean rent';
@@ -357,16 +425,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     final bool isDefaultPlaceholder =
         AppData.currentResident['phone'] == AppData.residents.first['phone'] &&
         AppData.currentResident['room_number'] == null &&
-        (AppData.currentResident['status']?.toString().toLowerCase() == 'pending');
+        (AppData.currentResident['status']?.toString().toLowerCase() ==
+            'pending');
 
-    Map<String, dynamic> loggedInResident = (savedProfile != null &&
+    Map<String, dynamic> loggedInResident =
+        (savedProfile != null &&
             savedProfile.isNotEmpty &&
             isDefaultPlaceholder)
         ? Map<String, dynamic>.from(savedProfile)
-        : <String, dynamic>{
-            ...?savedProfile,
-            ...AppData.currentResident,
-          };
+        : <String, dynamic>{...?savedProfile, ...AppData.currentResident};
     if (extra is Map<String, dynamic>) {
       loggedInResident = {...loggedInResident, ...extra};
     } else if (extra is String && extra.trim().isNotEmpty) {
@@ -374,44 +441,54 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     final profileResidentInfo =
-        (loggedInResident['resident_info'] as Map?)?.cast<String, dynamic>() ?? {};
+        (loggedInResident['resident_info'] as Map?)?.cast<String, dynamic>() ??
+        {};
     final profileStayDetails =
-        (loggedInResident['stay_details'] as Map?)?.cast<String, dynamic>() ?? {};
+        (loggedInResident['stay_details'] as Map?)?.cast<String, dynamic>() ??
+        {};
 
-    final name = (_residentInfo['full_name'] ??
-            profileResidentInfo['full_name'] ??
-            loggedInResident['full_name'] ??
-            loggedInResident['name'] ??
-            'Resident')
-        .toString()
-        .trim();
+    final name =
+        (_residentInfo['full_name'] ??
+                profileResidentInfo['full_name'] ??
+                loggedInResident['full_name'] ??
+                loggedInResident['name'] ??
+                'Resident')
+            .toString()
+            .trim();
     final displayName = name.isEmpty ? 'Resident' : name;
 
-    final rawRoom = _stayDetails['room_number'] ??
+    final rawRoom =
+        _stayDetails['room_number'] ??
         _stayDetails['room'] ??
         profileStayDetails['room_number'] ??
         profileStayDetails['room'] ??
         loggedInResident['room_number'] ??
         loggedInResident['room'];
-    final roomNumber = (rawRoom != null && rawRoom.toString().trim().isNotEmpty && rawRoom.toString().trim() != 'null')
+    final roomNumber =
+        (rawRoom != null &&
+            rawRoom.toString().trim().isNotEmpty &&
+            rawRoom.toString().trim() != 'null')
         ? rawRoom.toString().trim()
         : '101';
 
-    final propertyName = (_stayDetails['property_name'] ??
-            profileStayDetails['property_name'] ??
-            loggedInResident['property_name'] ??
-            loggedInResident['property'] ??
-            'BNR Luxury PG')
-        .toString()
-        .trim();
+    final propertyName =
+        (_stayDetails['property_name'] ??
+                profileStayDetails['property_name'] ??
+                loggedInResident['property_name'] ??
+                loggedInResident['property'] ??
+                'BNR Luxury PG')
+            .toString()
+            .trim();
 
-    final status = (_residentInfo['status'] ??
-            profileResidentInfo['status'] ??
-            loggedInResident['status'] ??
-            'Active')
-        .toString();
+    final status =
+        (_residentInfo['status'] ??
+                profileResidentInfo['status'] ??
+                loggedInResident['status'] ??
+                'Active')
+            .toString();
 
-    final bool isPending = (rawRoom == null ||
+    final bool isPending =
+        (rawRoom == null ||
             rawRoom.toString().trim().isEmpty ||
             rawRoom.toString().trim() == 'null') &&
         status.toLowerCase() == 'pending';
@@ -436,38 +513,43 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
 
     // Rent & Invoice calculation
-    final dynamic rawRent = _payNow['amount_due'] != null &&
-            (_payNow['amount_due'] as num) > 0
+    final dynamic rawRent =
+        _payNow['amount_due'] != null && (_payNow['amount_due'] as num) > 0
         ? _payNow['amount_due']
-        : (_rentSummary['total_due'] != null && (_rentSummary['total_due'] as num) > 0
-            ? _rentSummary['total_due']
-            : (_rentSummary['current_rent_amount'] ??
-                profileStayDetails['monthly_rent'] ??
-                loggedInResident['rent']));
+        : (_rentSummary['total_due'] != null &&
+                  (_rentSummary['total_due'] as num) > 0
+              ? _rentSummary['total_due']
+              : (_rentSummary['current_rent_amount'] ??
+                    profileStayDetails['monthly_rent'] ??
+                    loggedInResident['rent']));
     final double rentAmount = rawRent is num
         ? rawRent.toDouble()
         : (double.tryParse(rawRent?.toString() ?? '') ?? 8000.0);
     final int displayRentInt = rentAmount > 0 ? rentAmount.round() : 8000;
 
-    final rentPaymentStatus = (_rentSummary['rent_payment_status'] ??
-            _rentSummary['status'] ??
-            loggedInResident['rent_status'] ??
-            'DUE')
-        .toString()
-        .toUpperCase();
+    final rentPaymentStatus =
+        (_rentSummary['rent_payment_status'] ??
+                _rentSummary['status'] ??
+                loggedInResident['rent_status'] ??
+                'DUE')
+            .toString()
+            .toUpperCase();
 
     final bool isRentPaid = !_hasApiDashboard
         ? loggedInResident['rent_status']?.toString().toLowerCase() == 'paid'
         : (rentPaymentStatus == 'PAID' ||
-            (rentPaymentStatus == 'NO_INVOICE' && (_rentSummary['total_due'] ?? 1) == 0));
+              (rentPaymentStatus == 'NO_INVOICE' &&
+                  (_rentSummary['total_due'] ?? 1) == 0));
 
     final String? rawDueDateStr =
         (_rentSummary['next_due_date'] ??
-         _rentSummary['rent_due_date'] ??
-         loggedInResident['due_date'] ??
-         loggedInResident['rent_due_date'])?.toString();
-    final DateTime? parsedDueDate =
-        rawDueDateStr != null ? DateTime.tryParse(rawDueDateStr) : null;
+                _rentSummary['rent_due_date'] ??
+                loggedInResident['due_date'] ??
+                loggedInResident['rent_due_date'])
+            ?.toString();
+    final DateTime? parsedDueDate = rawDueDateStr != null
+        ? DateTime.tryParse(rawDueDateStr)
+        : null;
 
     final String billingMonthLabel = _formatBillingMonthTitle(
       _payNow['billing_month']?.toString(),
@@ -478,11 +560,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         : '05 Nov';
 
     final int? daysLeft = parsedDueDate != null
-        ? parsedDueDate.difference(DateTime(
-            DateTime.now().year,
-            DateTime.now().month,
-            DateTime.now().day,
-          )).inDays
+        ? parsedDueDate
+              .difference(
+                DateTime(
+                  DateTime.now().year,
+                  DateTime.now().month,
+                  DateTime.now().day,
+                ),
+              )
+              .inDays
         : (isPending ? null : (isRentPaid ? null : 1));
 
     String statusChipText;
@@ -504,8 +590,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       progressFraction = 1.0;
     } else if (daysLeft != null && daysLeft < 0) {
       final overdueDays = daysLeft.abs();
-      statusChipText = overdueDays == 1 ? 'Overdue 1 day' : 'Overdue ${overdueDays}d';
-      progLeftText = 'Overdue by $overdueDays ${overdueDays == 1 ? 'day' : 'days'}';
+      statusChipText = overdueDays == 1
+          ? 'Overdue 1 day'
+          : 'Overdue ${overdueDays}d';
+      progLeftText =
+          'Overdue by $overdueDays ${overdueDays == 1 ? 'day' : 'days'}';
       progRightText = 'Due $dueDateShort';
       progressFraction = 0.96;
     } else if (daysLeft == 0) {
@@ -532,14 +621,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // "Show the warning exactly 2 days before the rent payment due date.
     // The warning should be displayed below the green card on the Home Screen.
     // It should automatically disappear or update when the rent is paid or the due date changes."
-    final bool showRentWarning = !isRentPaid && !isPending && daysLeft != null && daysLeft <= 2;
+    final bool showRentWarning =
+        !isRentPaid && !isPending && daysLeft != null && daysLeft <= 2;
 
     // Notices state
     final noticesList = AppData.notices;
-    final int noticeCount = _hasApiDashboard ? noticesList.length : (noticesList.isNotEmpty ? noticesList.length : 2);
+    final int noticeCount = _hasApiDashboard
+        ? noticesList.length
+        : (noticesList.isNotEmpty ? noticesList.length : 2);
     final String noticePreview = noticesList.isNotEmpty
-        ? (noticesList.first['title']?.toString() ?? 'Water maintenance tomorrow')
-        : (_hasApiDashboard ? 'No new announcements' : 'Water maintenance tomorrow');
+        ? (noticesList.first['title']?.toString() ??
+              'Water maintenance tomorrow')
+        : (_hasApiDashboard
+              ? 'No new announcements'
+              : 'Water maintenance tomorrow');
 
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
@@ -841,21 +936,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         : HomeThemeTokens.warning(context);
     final dotColor = statusIsSuccess
         ? statusFg
-        : (isDark ? HomeThemeTokens.darkWarning : HomeThemeTokens.lightWarningDot);
+        : (isDark
+              ? HomeThemeTokens.darkWarning
+              : HomeThemeTokens.lightWarningDot);
 
     final formattedAmount = _formatIndianAmount(
       (isPending && rentAmount <= 0) ? 0 : displayRentInt,
     );
 
-    final Animation<double> amountPop = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.86, end: 1.04), weight: 60),
-      TweenSequenceItem(tween: Tween(begin: 1.04, end: 1.0), weight: 40),
-    ]).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.15, 0.72, curve: Curves.easeOutCubic),
-      ),
-    );
+    final Animation<double> amountPop =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0.86, end: 1.04), weight: 60),
+          TweenSequenceItem(tween: Tween(begin: 1.04, end: 1.0), weight: 40),
+        ]).animate(
+          CurvedAnimation(
+            parent: _entranceController,
+            curve: const Interval(0.15, 0.72, curve: Curves.easeOutCubic),
+          ),
+        );
 
     return Container(
       decoration: BoxDecoration(
@@ -867,9 +965,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? const Color(0x660B2231)
-                : const Color(0x470B2231),
+            color: isDark ? const Color(0x660B2231) : const Color(0x470B2231),
             blurRadius: 30,
             spreadRadius: -8,
             offset: const Offset(0, 16),
@@ -915,7 +1011,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         _sheenController.value == 1) {
                       return const SizedBox.shrink();
                     }
-                    final progress = Curves.easeOut.transform(_sheenController.value);
+                    final progress = Curves.easeOut.transform(
+                      _sheenController.value,
+                    );
                     return FractionalTranslation(
                       translation: Offset(-1.2 + progress * 2.4, 0),
                       child: Transform.rotate(
@@ -971,7 +1069,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                if (payNowInvoiceNo != null && payNowInvoiceNo.isNotEmpty) ...[
+                                if (payNowInvoiceNo != null &&
+                                    payNowInvoiceNo.isNotEmpty) ...[
                                   const SizedBox(width: 6),
                                   Flexible(
                                     child: Text(
@@ -999,13 +1098,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Padding(
-                                      padding: const EdgeInsets.only(top: 4, right: 3),
+                                      padding: const EdgeInsets.only(
+                                        top: 4,
+                                        right: 3,
+                                      ),
                                       child: Text(
                                         '₹',
                                         style: HomeThemeTokens.manrope(
                                           fontSize: 22,
                                           fontWeight: FontWeight.w700,
-                                          color: Colors.white.withValues(alpha: 0.72),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.72,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -1017,7 +1121,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                         color: Colors.white,
                                         letterSpacing: -1.3,
                                         height: 1.0,
-                                        fontFeatures: const [FontFeature.tabularFigures()],
+                                        fontFeatures: const [
+                                          FontFeature.tabularFigures(),
+                                        ],
                                       ),
                                     ),
                                   ],
@@ -1041,7 +1147,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (statusIsSuccess)
-                              Icon(Icons.check_circle_rounded, size: 13, color: statusFg)
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 13,
+                                color: statusFg,
+                              )
                             else
                               Container(
                                 width: 8,
@@ -1116,9 +1226,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             widthFactor: value.clamp(0.0, 1.0),
                             child: const DecoratedBox(
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.all(Radius.circular(6)),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(6),
+                                ),
                                 gradient: LinearGradient(
-                                  colors: [Color(0xFF2FB8A3), Color(0xFF8BE3D4)],
+                                  colors: [
+                                    Color(0xFF2FB8A3),
+                                    Color(0xFF8BE3D4),
+                                  ],
                                 ),
                               ),
                             ),
@@ -1152,7 +1267,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               flex: 12,
                               child: _buildStayMetric(
                                 label: propertyName,
-                                value: isPending ? 'Room Pending' : 'Room $roomNumber',
+                                value: isPending
+                                    ? 'Room Pending'
+                                    : 'Room $roomNumber',
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -1185,10 +1302,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStayMetric({
-    required String label,
-    required String value,
-  }) {
+  Widget _buildStayMetric({required String label, required String value}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -1236,27 +1350,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       warningTitle = overdue == 1
           ? 'Rent payment is 1 day overdue'
           : 'Rent payment is $overdue days overdue';
-      warningSubtitle = 'Due date was $dueDateShort. Please pay promptly to avoid late charges.';
+      warningSubtitle =
+          'Due date was $dueDateShort. Please pay promptly to avoid late charges.';
       warningBg = isDark ? const Color(0xFF381A1A) : const Color(0xFFFEF2F2);
-      warningBorder = isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5);
+      warningBorder = isDark
+          ? const Color(0xFF7F1D1D)
+          : const Color(0xFFFCA5A5);
       warningIconColor = const Color(0xFFEF4444);
     } else if (daysLeft == 0) {
       warningTitle = 'Rent payment is due today';
-      warningSubtitle = 'Due date is today ($dueDateShort). Clear your dues promptly.';
+      warningSubtitle =
+          'Due date is today ($dueDateShort). Clear your dues promptly.';
       warningBg = isDark ? const Color(0xFF382310) : const Color(0xFFFFFBEB);
-      warningBorder = isDark ? const Color(0xFF92400E) : const Color(0xFFFCD34D);
+      warningBorder = isDark
+          ? const Color(0xFF92400E)
+          : const Color(0xFFFCD34D);
       warningIconColor = const Color(0xFFF59E0B);
     } else if (daysLeft == 1) {
       warningTitle = 'Rent payment due tomorrow';
-      warningSubtitle = 'Due date is tomorrow ($dueDateShort). Pay online to avoid dues.';
+      warningSubtitle =
+          'Due date is tomorrow ($dueDateShort). Pay online to avoid dues.';
       warningBg = isDark ? const Color(0xFF382310) : const Color(0xFFFFFBEB);
-      warningBorder = isDark ? const Color(0xFF92400E) : const Color(0xFFFCD34D);
+      warningBorder = isDark
+          ? const Color(0xFF92400E)
+          : const Color(0xFFFCD34D);
       warningIconColor = const Color(0xFFF59E0B);
     } else {
       warningTitle = 'Rent payment due in 2 days';
       warningSubtitle = 'Upcoming rent payment is due on $dueDateShort.';
       warningBg = isDark ? const Color(0xFF1B2E2B) : const Color(0xFFF0FDF4);
-      warningBorder = isDark ? const Color(0xFF115E59) : const Color(0xFFBBF7D0);
+      warningBorder = isDark
+          ? const Color(0xFF115E59)
+          : const Color(0xFFBBF7D0);
       warningIconColor = HomeThemeTokens.teal(context);
     }
 
@@ -1284,7 +1409,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               color: warningIconColor.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.notifications_active_rounded, color: warningIconColor, size: 20),
+            child: Icon(
+              Icons.notifications_active_rounded,
+              color: warningIconColor,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1306,7 +1435,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   style: HomeThemeTokens.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? const Color(0xFFD1D5DB) : const Color(0xFF4B5563),
+                    color: isDark
+                        ? const Color(0xFFD1D5DB)
+                        : const Color(0xFF4B5563),
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -1397,7 +1528,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   child: InkWell(
                     onTap: () => context.push('/complaints'),
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                       child: Row(
                         children: [
                           Container(
@@ -1438,7 +1572,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               ],
                             ),
                           ),
-                          Icon(Icons.chevron_right_rounded, color: textSec, size: 20),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: textSec,
+                            size: 20,
+                          ),
                         ],
                       ),
                     ),
@@ -1447,9 +1585,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               : Column(
                   children: List.generate(_complaints.take(2).length, (idx) {
                     final item = _complaints[idx];
-                    final String rawStatus = (item['status'] ?? 'Pending').toString();
-                    final bool isResolved = rawStatus.toLowerCase() == 'resolved';
-                    final bool isInProgress = rawStatus.toLowerCase().contains('progress');
+                    final String rawStatus = (item['status'] ?? 'Pending')
+                        .toString();
+                    final bool isResolved =
+                        rawStatus.toLowerCase() == 'resolved';
+                    final bool isInProgress = rawStatus.toLowerCase().contains(
+                      'progress',
+                    );
 
                     Color statusColor;
                     Color statusBg;
@@ -1473,7 +1615,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: InkWell(
                             onTap: () => context.push('/complaints'),
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
                               child: Row(
                                 children: [
                                   Container(
@@ -1487,8 +1632,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       isResolved
                                           ? Icons.check_circle_outline_rounded
                                           : (isInProgress
-                                              ? Icons.engineering_outlined
-                                              : Icons.pending_actions_rounded),
+                                                ? Icons.engineering_outlined
+                                                : Icons
+                                                      .pending_actions_rounded),
                                       color: statusColor,
                                       size: 20,
                                     ),
@@ -1496,11 +1642,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         Text(
-                                          item['title'] ?? item['issue'] ?? 'Maintenance Request',
+                                          item['title'] ??
+                                              item['issue'] ??
+                                              'Maintenance Request',
                                           style: HomeThemeTokens.manrope(
                                             fontSize: 14.5,
                                             fontWeight: FontWeight.w700,
@@ -1525,7 +1674,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   ),
                                   const SizedBox(width: 8),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: statusBg,
                                       borderRadius: BorderRadius.circular(8),
@@ -1540,7 +1692,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  Icon(Icons.chevron_right_rounded, color: textSec, size: 18),
+                                  Icon(
+                                    Icons.chevron_right_rounded,
+                                    color: textSec,
+                                    size: 18,
+                                  ),
                                 ],
                               ),
                             ),
@@ -1568,19 +1724,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         border: Border.all(color: borderCol, width: 1),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? const Color(0x24000000)
-                : const Color(0x140E1A1F),
+            color: isDark ? const Color(0x24000000) : const Color(0x140E1A1F),
             blurRadius: 22,
             spreadRadius: -10,
             offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: child,
-      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: child),
     );
   }
 
@@ -1638,11 +1789,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: textSec,
-                size: 20,
-              ),
+              Icon(Icons.chevron_right_rounded, color: textSec, size: 20),
             ],
           ),
         ),

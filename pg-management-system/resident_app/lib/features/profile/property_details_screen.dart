@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -135,11 +136,12 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
       resident['property_name'] ?? resident['property'] ?? 'BNR Luxury PG',
     );
 
-    final propertyName = (_propertyData['name'] ??
-            fallbackProperty['name'] ??
-            resident['property_name'] ??
-            'BNR Luxury PG')
-        .toString();
+    final propertyName =
+        (_propertyData['name'] ??
+                fallbackProperty['name'] ??
+                resident['property_name'] ??
+                'BNR Luxury PG')
+            .toString();
 
     final String address1 = _propertyData['address_line1']?.toString() ?? '';
     final String address2 = _propertyData['address_line2']?.toString() ?? '';
@@ -155,55 +157,58 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
       pincode,
     ].where((e) => e.trim().isNotEmpty).join(', ');
 
-    final String fullAddress = (formattedAddressParts.isNotEmpty
-            ? formattedAddressParts
-            : (fallbackProperty['full_address'] ??
-                fallbackProperty['address'] ??
-                '#124, 5th Cross, 6th Block, Near Sony World Signal, Koramangala, Bengaluru, Karnataka - 560095'))
-        .toString();
+    final String fullAddress =
+        (formattedAddressParts.isNotEmpty
+                ? formattedAddressParts
+                : (fallbackProperty['full_address'] ??
+                      fallbackProperty['address'] ??
+                      '#124, 5th Cross, 6th Block, Near Sony World Signal, Koramangala, Bengaluru, Karnataka - 560095'))
+            .toString();
 
-    final String propertySubtitle = (city.isNotEmpty
-            ? '$city, $state'
-            : (fallbackProperty['address'] ?? 'Koramangala 6th Block, Bengaluru'))
-        .toString();
+    final String propertySubtitle =
+        (city.isNotEmpty
+                ? '$city, $state'
+                : (fallbackProperty['address'] ??
+                      'Koramangala 6th Block, Bengaluru'))
+            .toString();
 
-    final rawType = _propertyData['property_type'] ??
+    final rawType =
+        _propertyData['property_type'] ??
         fallbackProperty['occupancyType'] ??
         fallbackProperty['type'] ??
         'Co-Living PG';
-    final occupancyType =
-        rawType.toString().replaceAll('_', ' ').toUpperCase();
+    final occupancyType = rawType.toString().replaceAll('_', ' ').toUpperCase();
 
     final List<dynamic>? rawAmenities =
         _propertyData['amenities'] as List<dynamic>?;
     final amenities = (rawAmenities != null && rawAmenities.isNotEmpty)
         ? rawAmenities.map((e) => e.toString()).toList()
         : ((fallbackProperty['amenities'] as List?)
-                ?.map((e) => e.toString())
-                .toList() ??
-            [
-              'High Speed Wi-Fi',
-              '3 Times Daily Meals',
-              'Washing Machine',
-              'Daily Housekeeping',
-              'RO Drinking Water',
-              'CCTV & Biometric Security',
-              '24/7 Power Backup',
-              'Common Lounge & TV',
-              'AC / Cooler',
-              'Parking',
-            ]);
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [
+                'High Speed Wi-Fi',
+                '3 Times Daily Meals',
+                'Washing Machine',
+                'Daily Housekeeping',
+                'RO Drinking Water',
+                'CCTV & Biometric Security',
+                '24/7 Power Backup',
+                'Common Lounge & TV',
+                'AC / Cooler',
+                'Parking',
+              ]);
 
     final assignedRoom =
         _propertyData['assigned_room'] as Map<String, dynamic>?;
-    final assignedBed =
-        _propertyData['assigned_bed'] as Map<String, dynamic>?;
+    final assignedBed = _propertyData['assigned_bed'] as Map<String, dynamic>?;
 
-    final roomNumber = (assignedRoom?['room_number'] ??
-            resident['room_number'] ??
-            resident['room'] ??
-            '101')
-        .toString();
+    final roomNumber =
+        (assignedRoom?['room_number'] ??
+                resident['room_number'] ??
+                resident['room'] ??
+                '101')
+            .toString();
 
     final String? bedNumber = (assignedBed?['bed_number'] ?? resident['bed'])
         ?.toString()
@@ -224,8 +229,9 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
 
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
@@ -261,7 +267,9 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
           ),
           backgroundColor: HomeThemeTokens.lightTeal,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -347,9 +355,7 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
             // ----------------------------------------------------------------
             Expanded(
               child: _isLoading
-                  ? Center(
-                      child: CircularProgressIndicator(color: tealCol),
-                    )
+                  ? Center(child: CircularProgressIndicator(color: tealCol))
                   : RefreshIndicator(
                       color: tealCol,
                       onRefresh: _loadPropertyDetails,
@@ -381,8 +387,9 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                       children: [
                                         Icon(
                                           Icons.info_outline_rounded,
-                                          color:
-                                              HomeThemeTokens.warning(context),
+                                          color: HomeThemeTokens.warning(
+                                            context,
+                                          ),
                                           size: 18,
                                         ),
                                         const SizedBox(width: 9),
@@ -410,12 +417,14 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                   end: 0.45,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      gradient:
-                                          HomeThemeTokens.heroGradient(context),
+                                      gradient: HomeThemeTokens.heroGradient(
+                                        context,
+                                      ),
                                       borderRadius: BorderRadius.circular(22),
                                       border: Border.all(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.08),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.08,
+                                        ),
                                         width: 1,
                                       ),
                                       boxShadow: heroShadow,
@@ -441,86 +450,84 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                               children: [
                                                 Column(
                                                   crossAxisAlignment:
-                                                      CrossAxisAlignment
-                                                          .start,
+                                                      CrossAxisAlignment.start,
                                                   children: [
                                                     // Occupancy Type Pill
-                                                      Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 11,
-                                                          vertical: 5,
-                                                        ),
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          color: Colors.white
-                                                              .withValues(
-                                                            alpha: 0.14,
+                                                    Container(
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 11,
+                                                            vertical: 5,
                                                           ),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                            999,
-                                                          ),
-                                                        ),
-                                                        child: Text(
-                                                          occupancyType
-                                                                  .endsWith('PG')
-                                                              ? occupancyType
-                                                              : '$occupancyType PG',
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
-                                                          style: HomeThemeTokens
-                                                              .manrope(
-                                                            color: Colors.white,
-                                                            fontSize: 11,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withValues(
+                                                              alpha: 0.14,
+                                                            ),
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              999,
+                                                            ),
+                                                      ),
+                                                      child: Text(
+                                                        occupancyType.endsWith(
+                                                              'PG',
+                                                            )
+                                                            ? occupancyType
+                                                            : '$occupancyType PG',
+                                                        maxLines: 1,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        style:
+                                                            HomeThemeTokens.manrope(
+                                                              color:
+                                                                  Colors.white,
+                                                              fontSize: 11,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              letterSpacing:
+                                                                  0.5,
+                                                            ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 12),
+                                                    // Large Property Name
+                                                    Text(
+                                                      propertyName,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style:
+                                                          HomeThemeTokens.manrope(
+                                                            fontSize: 24,
                                                             fontWeight:
-                                                                FontWeight.w700,
-                                                            letterSpacing: 0.5,
+                                                                FontWeight.w800,
+                                                            color: Colors.white,
+                                                            letterSpacing: -0.6,
+                                                            height: 1.12,
                                                           ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(
-                                                        height: 12,
-                                                      ),
-                                                      // Large Property Name
-                                                      Text(
-                                                        propertyName,
-                                                        maxLines: 2,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: HomeThemeTokens
-                                                            .manrope(
-                                                          fontSize: 24,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          color: Colors.white,
-                                                          letterSpacing: -0.6,
-                                                          height: 1.12,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 5),
-                                                      // Location Subtitle
-                                                      Text(
-                                                        propertySubtitle,
-                                                        maxLines: 2,
-                                                        overflow: TextOverflow
-                                                            .ellipsis,
-                                                        style: HomeThemeTokens
-                                                            .manrope(
-                                                          color: const Color(
-                                                            0xFFB7C6D2,
+                                                    ),
+                                                    const SizedBox(height: 5),
+                                                    // Location Subtitle
+                                                    Text(
+                                                      propertySubtitle,
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style:
+                                                          HomeThemeTokens.manrope(
+                                                            color: const Color(
+                                                              0xFFB7C6D2,
+                                                            ),
+                                                            fontSize: 13,
+                                                            fontWeight:
+                                                                FontWeight.w500,
+                                                            height: 1.35,
                                                           ),
-                                                          fontSize: 13,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          height: 1.35,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
+                                                    ),
+                                                  ],
+                                                ),
                                                 const SizedBox(height: 16),
 
                                                 // Room & Floor Translucent Stat Tiles
@@ -530,7 +537,8 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                                       child: _buildHeroStatTile(
                                                         icon: Icons.bed_rounded,
                                                         label: 'Room Number',
-                                                        value: (bedNumber !=
+                                                        value:
+                                                            (bedNumber !=
                                                                     null &&
                                                                 bedNumber
                                                                     .isNotEmpty)
@@ -632,8 +640,9 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                             color: isDark
                                                 ? HomeThemeTokens.darkSurface
                                                 : const Color(0xFFF6F9F8),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                             child: InkWell(
                                               onTap: copyAddressToClipboard,
                                               borderRadius:
@@ -641,9 +650,9 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                               child: Container(
                                                 padding:
                                                     const EdgeInsets.symmetric(
-                                                  horizontal: 12,
-                                                  vertical: 10,
-                                                ),
+                                                      horizontal: 12,
+                                                      vertical: 10,
+                                                    ),
                                                 decoration: BoxDecoration(
                                                   borderRadius:
                                                       BorderRadius.circular(12),
@@ -668,13 +677,14 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                                         maxLines: 2,
                                                         overflow: TextOverflow
                                                             .ellipsis,
-                                                        style: HomeThemeTokens
-                                                            .manrope(
-                                                          fontSize: 12,
-                                                          color: tealCol,
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                        ),
+                                                        style:
+                                                            HomeThemeTokens.manrope(
+                                                              fontSize: 12,
+                                                              color: tealCol,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                            ),
                                                       ),
                                                     ),
                                                   ],
@@ -704,9 +714,9 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                               maxWidth:
                                                   (constraints.maxWidth - 18)
                                                       .clamp(
-                                                40.0,
-                                                double.infinity,
-                                              ),
+                                                        40.0,
+                                                        double.infinity,
+                                                      ),
                                             ),
                                             child: Text(
                                               'AMENITIES & INCLUSIONS',
@@ -754,8 +764,8 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                             child: Padding(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                vertical: 12,
-                                              ),
+                                                    vertical: 12,
+                                                  ),
                                               child: Text(
                                                 'No amenities listed for this property.',
                                                 style: HomeThemeTokens.manrope(
@@ -775,22 +785,22 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                                 final amenity =
                                                     amenities[index];
                                                 final chip = Container(
-                                                  padding: const EdgeInsets
-                                                      .symmetric(
-                                                    horizontal: 13,
-                                                    vertical: 10,
-                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 13,
+                                                        vertical: 10,
+                                                      ),
                                                   decoration: BoxDecoration(
                                                     color: isDark
                                                         ? HomeThemeTokens
-                                                            .darkSurface
+                                                              .darkSurface
                                                         : const Color(
                                                             0xFFF6F9F8,
                                                           ),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                      14,
-                                                    ),
+                                                          14,
+                                                        ),
                                                     border: Border.all(
                                                       color: borderCol,
                                                       width: 1,
@@ -814,13 +824,14 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                                           maxLines: 2,
                                                           overflow: TextOverflow
                                                               .ellipsis,
-                                                          style: HomeThemeTokens
-                                                              .manrope(
-                                                            fontSize: 13,
-                                                            fontWeight:
-                                                                FontWeight.w700,
-                                                            color: textPri,
-                                                          ),
+                                                          style:
+                                                              HomeThemeTokens.manrope(
+                                                                fontSize: 13,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w700,
+                                                                color: textPri,
+                                                              ),
                                                         ),
                                                       ),
                                                     ],
@@ -829,20 +840,22 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
 
                                                 if (disableAnim) return chip;
 
-                                                final start = (0.42 +
-                                                        (index * 0.045))
-                                                    .clamp(0.42, 0.85);
+                                                final start =
+                                                    (0.42 + (index * 0.045))
+                                                        .clamp(0.42, 0.85);
                                                 final end = (start + 0.16)
                                                     .clamp(0.58, 1.0);
                                                 final chipAnim =
                                                     CurvedAnimation(
-                                                  parent: _entranceController,
-                                                  curve: Interval(
-                                                    start,
-                                                    end,
-                                                    curve: Curves.easeOutCubic,
-                                                  ),
-                                                );
+                                                      parent:
+                                                          _entranceController,
+                                                      curve: Interval(
+                                                        start,
+                                                        end,
+                                                        curve:
+                                                            Curves.easeOutCubic,
+                                                      ),
+                                                    );
                                                 return AnimatedBuilder(
                                                   animation: chipAnim,
                                                   child: chip,
@@ -854,8 +867,8 @@ class _PropertyDetailsScreenState extends State<PropertyDetailsScreen>
                                                         1.0,
                                                       ),
                                                       child: Transform.scale(
-                                                        scale: 0.92 +
-                                                            (0.08 * t),
+                                                        scale:
+                                                            0.92 + (0.08 * t),
                                                         child: child,
                                                       ),
                                                     );
@@ -1000,10 +1013,7 @@ class _InteractivePress extends StatefulWidget {
   final VoidCallback? onTap;
   final Widget child;
 
-  const _InteractivePress({
-    this.onTap,
-    required this.child,
-  });
+  const _InteractivePress({this.onTap, required this.child});
 
   @override
   State<_InteractivePress> createState() => _InteractivePressState();

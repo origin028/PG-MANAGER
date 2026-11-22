@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/network/token_storage.dart';
 import '../../core/services/resident_api_service.dart';
@@ -122,8 +123,9 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   void _showLogoutDialog() {
     final isDark = HomeThemeTokens.isDark(context);
-    final dialogBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final dialogBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final borderCol = HomeThemeTokens.border(context);
@@ -260,15 +262,17 @@ class _SettingsScreenState extends State<SettingsScreen>
     _isDarkMode = isDark;
 
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
     final softTealCol = HomeThemeTokens.softTeal(context);
-    final dividerCol =
-        isDark ? HomeThemeTokens.darkBorder : const Color(0xFFF0F4F3);
+    final dividerCol = isDark
+        ? HomeThemeTokens.darkBorder
+        : const Color(0xFFF0F4F3);
 
     final resident = _resolveResidentData();
     final residentInfo =
@@ -296,22 +300,25 @@ class _SettingsScreenState extends State<SettingsScreen>
         resident['property'];
     final propertyName =
         (rawProperty != null && rawProperty.toString().trim().isNotEmpty)
-            ? rawProperty.toString().trim()
-            : 'BNR Luxury PG';
+        ? rawProperty.toString().trim()
+        : 'BNR Luxury PG';
 
     final rawRoom =
-        stayDetails['room_number'] ?? resident['room_number'] ?? resident['room'];
+        stayDetails['room_number'] ??
+        resident['room_number'] ??
+        resident['room'];
     final room = (rawRoom != null && rawRoom.toString().trim().isNotEmpty)
         ? rawRoom.toString().trim()
         : '101';
 
-    final kycStr = (kycDetails['kyc_status'] ??
-            resident['kyc'] ??
-            resident['kyc_status'] ??
-            '')
-        .toString()
-        .trim()
-        .toLowerCase();
+    final kycStr =
+        (kycDetails['kyc_status'] ??
+                resident['kyc'] ??
+                resident['kyc_status'] ??
+                '')
+            .toString()
+            .trim()
+            .toLowerCase();
     final isVerified = kycStr == 'verified' || kycStr == 'approved';
 
     final cardShadow = <BoxShadow>[
@@ -322,8 +329,9 @@ class _SettingsScreenState extends State<SettingsScreen>
       ),
     ];
 
-    final logoutBorderCol =
-        isDark ? const Color(0xFF6B3A37) : const Color(0xFFF8C9C4);
+    final logoutBorderCol = isDark
+        ? const Color(0xFF6B3A37)
+        : const Color(0xFFF8C9C4);
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -544,10 +552,12 @@ class _SettingsScreenState extends State<SettingsScreen>
                                         width: 40,
                                         height: 40,
                                         decoration: BoxDecoration(
-                                          color:
-                                              HomeThemeTokens.foodBg(context),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          color: HomeThemeTokens.foodBg(
+                                            context,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         child: Icon(
                                           isDark
@@ -600,17 +610,17 @@ class _SettingsScreenState extends State<SettingsScreen>
                                           _saveSettingsToApi();
                                           ScaffoldMessenger.of(context)
                                               .showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                val
-                                                    ? 'Dark mode enabled'
-                                                    : 'Light mode enabled',
-                                              ),
-                                              duration: const Duration(
-                                                milliseconds: 900,
-                                              ),
-                                            ),
-                                          );
+                                                SnackBar(
+                                                  content: Text(
+                                                    val
+                                                        ? 'Dark mode enabled'
+                                                        : 'Light mode enabled',
+                                                  ),
+                                                  duration: const Duration(
+                                                    milliseconds: 900,
+                                                  ),
+                                                ),
+                                              );
                                         },
                                       ),
                                     ],
@@ -631,8 +641,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                         height: 40,
                                         decoration: BoxDecoration(
                                           color: softTealCol,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
                                         ),
                                         child: Icon(
                                           Icons.language_rounded,
@@ -677,17 +688,20 @@ class _SettingsScreenState extends State<SettingsScreen>
                                           vertical: 5,
                                         ),
                                         decoration: BoxDecoration(
-                                          color:
-                                              HomeThemeTokens.foodBg(context),
-                                          borderRadius:
-                                              BorderRadius.circular(999),
+                                          color: HomeThemeTokens.foodBg(
+                                            context,
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            999,
+                                          ),
                                         ),
                                         child: DropdownButtonHideUnderline(
                                           child: DropdownButton<String>(
                                             value: _selectedLanguage,
                                             isDense: true,
-                                            borderRadius:
-                                                BorderRadius.circular(14),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                             dropdownColor: cardBg,
                                             icon: Icon(
                                               Icons.keyboard_arrow_down_rounded,
@@ -710,10 +724,11 @@ class _SettingsScreenState extends State<SettingsScreen>
                                                   lang,
                                                   style:
                                                       HomeThemeTokens.manrope(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 13,
-                                                    color: textPri,
-                                                  ),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 13,
+                                                        color: textPri,
+                                                      ),
                                                 ),
                                               );
                                             }).toList(),
@@ -722,13 +737,14 @@ class _SettingsScreenState extends State<SettingsScreen>
                                                 return Center(
                                                   child: Text(
                                                     lang,
-                                                    style:
-                                                        HomeThemeTokens.manrope(
+                                                    style: HomeThemeTokens.manrope(
                                                       fontWeight:
                                                           FontWeight.w700,
                                                       fontSize: 12.5,
-                                                      color: HomeThemeTokens
-                                                          .foodIcon(context),
+                                                      color:
+                                                          HomeThemeTokens.foodIcon(
+                                                            context,
+                                                          ),
                                                     ),
                                                   ),
                                                 );
@@ -740,8 +756,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                                   () => _selectedLanguage = val,
                                                 );
                                                 _saveSettingsToApi();
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
+                                                ScaffoldMessenger.of(
+                                                  context,
+                                                ).showSnackBar(
                                                   SnackBar(
                                                     content: Text(
                                                       'Language changed to $val',
@@ -796,7 +813,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                                   iconBg: HomeThemeTokens.foodBg(context),
                                   iconColor: HomeThemeTokens.foodIcon(context),
                                   title: 'Rent Reminders',
-                                  subtitle: 'Receive alerts before rent due date',
+                                  subtitle:
+                                      'Receive alerts before rent due date',
                                   value: _rentReminders,
                                   isDark: isDark,
                                   tealCol: tealCol,
@@ -864,8 +882,7 @@ class _SettingsScreenState extends State<SettingsScreen>
                                         Icon(
                                           Icons.logout_rounded,
                                           size: 18.5,
-                                          color:
-                                              HomeThemeTokens.error(context),
+                                          color: HomeThemeTokens.error(context),
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
@@ -873,8 +890,9 @@ class _SettingsScreenState extends State<SettingsScreen>
                                           style: HomeThemeTokens.manrope(
                                             fontWeight: FontWeight.w800,
                                             fontSize: 15,
-                                            color:
-                                                HomeThemeTokens.error(context),
+                                            color: HomeThemeTokens.error(
+                                              context,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -949,8 +967,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     return Switch.adaptive(
       value: value,
       activeTrackColor: tealCol,
-      inactiveTrackColor:
-          isDark ? const Color(0xFF404F59) : const Color(0xFFD5DCDA),
+      inactiveTrackColor: isDark
+          ? const Color(0xFF404F59)
+          : const Color(0xFFD5DCDA),
       thumbColor: WidgetStateProperty.all(Colors.white),
       trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
       onChanged: onChanged,
@@ -1036,10 +1055,7 @@ class _InteractivePress extends StatefulWidget {
   final VoidCallback? onTap;
   final Widget child;
 
-  const _InteractivePress({
-    this.onTap,
-    required this.child,
-  });
+  const _InteractivePress({this.onTap, required this.child});
 
   @override
   State<_InteractivePress> createState() => _InteractivePressState();

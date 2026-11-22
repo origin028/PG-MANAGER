@@ -1,7 +1,9 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/network/api_exception.dart';
 import '../../core/network/token_storage.dart';
@@ -323,8 +325,9 @@ class _LoginScreenState extends State<LoginScreen>
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
               decoration: BoxDecoration(
                 color: palette.card,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -536,8 +539,9 @@ class _LoginScreenState extends State<LoginScreen>
     int cooldownSeconds = 60,
   ]) {
     final destination = emailMasked.isNotEmpty ? emailMasked : '+91 $phone';
-    final channel =
-        emailMasked.isNotEmpty ? 'registered email' : 'mobile number';
+    final channel = emailMasked.isNotEmpty
+        ? 'registered email'
+        : 'mobile number';
 
     Navigator.of(context).push(
       buildOtpPageRoute<void>(
@@ -548,24 +552,34 @@ class _LoginScreenState extends State<LoginScreen>
           onVerifyOtp: (otp) async {
             await ResidentAuthService.verifyLoginOtp(phone: phone, otp: otp);
             final results = await Future.wait([
-              ResidentApiService.getProfile().catchError((_) => <String, dynamic>{}),
-              ResidentApiService.getDashboard().catchError((_) => <String, dynamic>{}),
+              ResidentApiService.getProfile().catchError(
+                (_) => <String, dynamic>{},
+              ),
+              ResidentApiService.getDashboard().catchError(
+                (_) => <String, dynamic>{},
+              ),
             ]);
             final profile = results[0];
             final dash = results[1];
-            final stay = (dash['stay_details'] as Map?)?.cast<String, dynamic>() ??
-                         (profile['stay_details'] as Map?)?.cast<String, dynamic>() ?? {};
+            final stay =
+                (dash['stay_details'] as Map?)?.cast<String, dynamic>() ??
+                (profile['stay_details'] as Map?)?.cast<String, dynamic>() ??
+                {};
 
             final merged = {
               ...AppData.currentResident,
               ...profile,
               ...dash,
               ...stay,
-              if (stay['room_number'] != null) 'room_number': stay['room_number'],
+              if (stay['room_number'] != null)
+                'room_number': stay['room_number'],
               if (stay['room'] != null) 'room': stay['room'],
-              if (stay['floor_number'] != null) 'floor_number': stay['floor_number'],
-              if (stay['living_since'] != null) 'living_since': stay['living_since'],
-              if (stay['check_in_date'] != null) 'check_in_date': stay['check_in_date'],
+              if (stay['floor_number'] != null)
+                'floor_number': stay['floor_number'],
+              if (stay['living_since'] != null)
+                'living_since': stay['living_since'],
+              if (stay['check_in_date'] != null)
+                'check_in_date': stay['check_in_date'],
             };
             AppData.currentResident = merged;
             if (profile.isNotEmpty) {
@@ -610,8 +624,7 @@ class _LoginScreenState extends State<LoginScreen>
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     return AnimatedSwitcher(
-      duration:
-          disableAnim ? Duration.zero : const Duration(milliseconds: 280),
+      duration: disableAnim ? Duration.zero : const Duration(milliseconds: 280),
       switchInCurve: Curves.easeOutCubic,
       switchOutCurve: Curves.easeIn,
       child: _isRegisterMode
@@ -665,8 +678,6 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ],
                 ),
-
-
 
                 const SizedBox(height: 22),
 
@@ -779,15 +790,9 @@ class _LoginScreenState extends State<LoginScreen>
                 height: 220,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color(0x295EEAD4),
-                    width: 1,
-                  ),
+                  border: Border.all(color: const Color(0x295EEAD4), width: 1),
                   boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x0A5EEAD4),
-                      spreadRadius: 30,
-                    ),
+                    BoxShadow(color: Color(0x0A5EEAD4), spreadRadius: 30),
                   ],
                 ),
               ),
@@ -905,12 +910,10 @@ class _LoginScreenState extends State<LoginScreen>
             animation: _shakeController,
             builder: (context, child) {
               final t = _shakeController.value;
-              final dx =
-                  t == 0 ? 0.0 : math.sin(t * math.pi * 4) * (1 - t) * 6.0;
-              return Transform.translate(
-                offset: Offset(dx, 0),
-                child: child,
-              );
+              final dx = t == 0
+                  ? 0.0
+                  : math.sin(t * math.pi * 4) * (1 - t) * 6.0;
+              return Transform.translate(offset: Offset(dx, 0), child: child);
             },
             child: _LoginFocusGlowField(
               palette: palette,
@@ -961,11 +964,7 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Container(
-                          width: 1,
-                          height: 18,
-                          color: palette.line,
-                        ),
+                        Container(width: 1, height: 18, color: palette.line),
                       ],
                     ),
                   ),
@@ -986,7 +985,9 @@ class _LoginScreenState extends State<LoginScreen>
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
-                      color: _phoneError != null ? palette.error : palette.field,
+                      color: _phoneError != null
+                          ? palette.error
+                          : palette.field,
                       width: 1.5,
                     ),
                   ),
@@ -1222,8 +1223,6 @@ class _LoginScreenState extends State<LoginScreen>
     );
   }
 
-
-
   BoxDecoration _cardDecoration(_LoginPalette palette) {
     return BoxDecoration(
       color: palette.card,
@@ -1284,8 +1283,9 @@ class _LoginFocusGlowFieldState extends State<_LoginFocusGlowField> {
         }
       },
       child: AnimatedContainer(
-        duration:
-            disableAnim ? Duration.zero : const Duration(milliseconds: 200),
+        duration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: bgColor,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../theme/app_theme.dart';
 
 class MainLayout extends StatelessWidget {
@@ -13,7 +14,8 @@ class MainLayout extends StatelessWidget {
       location = GoRouterState.of(context).uri.toString();
     } catch (_) {
       try {
-        location = GoRouter.of(context).routeInformationProvider.value.uri.toString();
+        location = GoRouter.of(context).routeInformationProvider.value.uri
+            .toString();
       } catch (_) {
         location = '/home';
       }
@@ -34,7 +36,9 @@ class MainLayout extends StatelessWidget {
     final activePillBg = HomeThemeTokens.softTeal(context);
     final inactiveColor = HomeThemeTokens.textSecondary(context);
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final animDuration = disableAnim ? Duration.zero : const Duration(milliseconds: 220);
+    final animDuration = disableAnim
+        ? Duration.zero
+        : const Duration(milliseconds: 220);
 
     final items = const [
       (
@@ -69,14 +73,10 @@ class MainLayout extends StatelessWidget {
       bottomNavigationBar: DecoratedBox(
         decoration: BoxDecoration(
           color: navBg,
-          border: Border(
-            top: BorderSide(color: borderCol, width: 1.0),
-          ),
+          border: Border(top: BorderSide(color: borderCol, width: 1.0)),
           boxShadow: [
             BoxShadow(
-              color: isDark
-                  ? const Color(0x33000000)
-                  : const Color(0x0A0E1A1F),
+              color: isDark ? const Color(0x33000000) : const Color(0x0A0E1A1F),
               blurRadius: 16,
               offset: const Offset(0, -4),
             ),
@@ -107,7 +107,9 @@ class MainLayout extends StatelessWidget {
                               width: 56,
                               height: 30,
                               decoration: BoxDecoration(
-                                color: isSelected ? activePillBg : Colors.transparent,
+                                color: isSelected
+                                    ? activePillBg
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(15),
                               ),
                               child: Center(
@@ -118,7 +120,9 @@ class MainLayout extends StatelessWidget {
                                   child: Icon(
                                     isSelected ? item.activeIcon : item.icon,
                                     size: 22,
-                                    color: isSelected ? activeColor : inactiveColor,
+                                    color: isSelected
+                                        ? activeColor
+                                        : inactiveColor,
                                   ),
                                 ),
                               ),
@@ -129,7 +133,9 @@ class MainLayout extends StatelessWidget {
                               curve: Curves.easeOutCubic,
                               style: HomeThemeTokens.manrope(
                                 fontSize: 12,
-                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                fontWeight: isSelected
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
                                 color: isSelected ? activeColor : inactiveColor,
                               ),
                               child: Text(

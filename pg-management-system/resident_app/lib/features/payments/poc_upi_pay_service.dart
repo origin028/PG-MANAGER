@@ -1,7 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:upi_pay/upi_pay.dart' as upi;
+
 import '../../core/services/payment_verification_service.dart';
 import '../../core/services/resident_api_service.dart';
 
@@ -91,8 +93,9 @@ abstract class PocUpiPayRunner {
 
 /// Default real implementation delegating to the upi_pay plugin and native MethodChannel.
 class DefaultPocUpiPayRunner implements PocUpiPayRunner {
-  static const MethodChannel _nativeChannel =
-      MethodChannel('com.originpg.resident/native_upi');
+  static const MethodChannel _nativeChannel = MethodChannel(
+    'com.originpg.resident/native_upi',
+  );
 
   const DefaultPocUpiPayRunner();
 
@@ -174,7 +177,8 @@ class PocUpiPayService {
   static const String defaultCurrency = 'INR';
 
   // Well-known packages
-  static const String googlePayPackage = 'com.google.android.apps.nbu.paisa.user';
+  static const String googlePayPackage =
+      'com.google.android.apps.nbu.paisa.user';
   static const String phonePePackage = 'com.phonepe.app';
   static const String naviPackage = 'com.navi.curiosity';
   static const String naviAppPackage = 'com.naviapp';
@@ -215,41 +219,51 @@ class PocUpiPayService {
 
     // Map discovered packages
     for (final meta in discoveredByPackage) {
-      result.add(PocDiscoveredApp(
-        appName: meta.upiApplication.appName,
-        packageName: meta.upiApplication.androidPackageName,
-        isNativelySupportedByPackage: true,
-        isInstalled: true,
-        rawMeta: meta,
-        upiApplication: meta.upiApplication,
-      ));
+      result.add(
+        PocDiscoveredApp(
+          appName: meta.upiApplication.appName,
+          packageName: meta.upiApplication.androidPackageName,
+          isNativelySupportedByPackage: true,
+          isInstalled: true,
+          rawMeta: meta,
+          upiApplication: meta.upiApplication,
+        ),
+      );
     }
 
     // 2. Check if Google Pay was omitted despite being installed
     if (!discoveredPackageNames.contains(googlePayPackage)) {
-      final isGPayInstalled = await runner.checkPackageInstalledNative(googlePayPackage);
+      final isGPayInstalled = await runner.checkPackageInstalledNative(
+        googlePayPackage,
+      );
       if (isGPayInstalled) {
-        result.add(PocDiscoveredApp(
-          appName: 'Google Pay',
-          packageName: googlePayPackage,
-          isNativelySupportedByPackage: true,
-          isInstalled: true,
-          upiApplication: upi.UpiApplication.googlePay,
-        ));
+        result.add(
+          PocDiscoveredApp(
+            appName: 'Google Pay',
+            packageName: googlePayPackage,
+            isNativelySupportedByPackage: true,
+            isInstalled: true,
+            upiApplication: upi.UpiApplication.googlePay,
+          ),
+        );
       }
     }
 
     // 3. Check if PhonePe was omitted despite being installed
     if (!discoveredPackageNames.contains(phonePePackage)) {
-      final isPhonePeInstalled = await runner.checkPackageInstalledNative(phonePePackage);
+      final isPhonePeInstalled = await runner.checkPackageInstalledNative(
+        phonePePackage,
+      );
       if (isPhonePeInstalled) {
-        result.add(PocDiscoveredApp(
-          appName: 'PhonePe',
-          packageName: phonePePackage,
-          isNativelySupportedByPackage: true,
-          isInstalled: true,
-          upiApplication: upi.UpiApplication.phonePe,
-        ));
+        result.add(
+          PocDiscoveredApp(
+            appName: 'PhonePe',
+            packageName: phonePePackage,
+            isNativelySupportedByPackage: true,
+            isInstalled: true,
+            upiApplication: upi.UpiApplication.phonePe,
+          ),
+        );
       }
     }
 
@@ -259,17 +273,19 @@ class PocUpiPayService {
       if (!discoveredPackageNames.contains(pkg)) {
         final isNaviInstalled = await runner.checkPackageInstalledNative(pkg);
         if (isNaviInstalled) {
-          result.add(PocDiscoveredApp(
-            appName: 'Navi UPI',
-            packageName: pkg,
-            isNativelySupportedByPackage: false,
-            isInstalled: true,
-            upiApplication: upi.UpiApplication(
-              androidPackageName: pkg,
-              iosBundleId: pkg,
-              appName: 'Navi',
+          result.add(
+            PocDiscoveredApp(
+              appName: 'Navi UPI',
+              packageName: pkg,
+              isNativelySupportedByPackage: false,
+              isInstalled: true,
+              upiApplication: upi.UpiApplication(
+                androidPackageName: pkg,
+                iosBundleId: pkg,
+                appName: 'Navi',
+              ),
             ),
-          ));
+          );
         }
       }
     }
@@ -289,7 +305,10 @@ class PocUpiPayService {
   }
 
   /// Safely extracts transaction attributes across Android and cross-platform/test environments
-  static String? extractResponseField(upi.UpiTransactionResponse response, String field) {
+  static String? extractResponseField(
+    upi.UpiTransactionResponse response,
+    String field,
+  ) {
     try {
       switch (field) {
         case 'responseCode':
@@ -331,7 +350,8 @@ class PocUpiPayService {
 
     final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
     final cleanId = invoiceId.trim();
-    final displayId = cleanId.length > 8 && !cleanId.toUpperCase().startsWith('INV-')
+    final displayId =
+        cleanId.length > 8 && !cleanId.toUpperCase().startsWith('INV-')
         ? cleanId.substring(0, 8)
         : cleanId;
     final note = 'Rent Payment - $displayId - $verifiedPayeeName';
@@ -376,7 +396,9 @@ class PocUpiPayService {
 
     // 3. Launch via upi_pay plugin
     try {
-      logs.add('Invoking upi_pay initiateTransaction (startActivityForResult)...');
+      logs.add(
+        'Invoking upi_pay initiateTransaction (startActivityForResult)...',
+      );
       response = await runner.initiateTransaction(
         app: upiApp,
         receiverUpiAddress: verifiedPayeeVpa,
@@ -399,7 +421,8 @@ class PocUpiPayService {
 
       if (raw == 'activity_unavailable') {
         launched = false;
-        message = 'Package $packageName has no activity resolving standard upi://pay intent';
+        message =
+            'Package $packageName has no activity resolving standard upi://pay intent';
         logs.add('Result: Activity Unavailable in target package');
       } else if (raw == 'failed_to_open_app') {
         launched = false;
@@ -407,7 +430,8 @@ class PocUpiPayService {
         logs.add('Result: Failed to open app');
       } else if (raw == 'user_cancelled') {
         launched = true;
-        message = 'Returned from $appName without completing payment (Cancelled)';
+        message =
+            'Returned from $appName without completing payment (Cancelled)';
         logs.add('Result: User cancelled in UPI app');
       } else {
         launched = true;
@@ -419,7 +443,9 @@ class PocUpiPayService {
     }
 
     // 4. Special PhonePe Fallback Evaluation if upi_pay returned activity_unavailable
-    if (!launched && packageName == phonePePackage && enableNativePhonePeFallback) {
+    if (!launched &&
+        packageName == phonePePackage &&
+        enableNativePhonePeFallback) {
       logs.add('--- Triggering Native Kotlin 4-tier Fallback for PhonePe ---');
       try {
         final nativeRes = await runner.launchPhonePeNativeDirect(
@@ -434,7 +460,8 @@ class PocUpiPayService {
         logs.add('Native Channel Response: $nativeRes');
         if (nativeRes?['status'] == 'SUCCESS') {
           launched = true;
-          message = 'Launched PhonePe via Native Kotlin fallback (${nativeRes?['method']})';
+          message =
+              'Launched PhonePe via Native Kotlin fallback (${nativeRes?['method']})';
         }
       } catch (ne) {
         logs.add('Native Channel Error: $ne');
@@ -451,7 +478,9 @@ class PocUpiPayService {
       }
     }
 
-    logs.add('Security Verification: Payment status remains PENDING_VERIFICATION.');
+    logs.add(
+      'Security Verification: Payment status remains PENDING_VERIFICATION.',
+    );
     logs.add('=== [END POC INITIATION] ===');
 
     return PocUpiPayExecutionResult(

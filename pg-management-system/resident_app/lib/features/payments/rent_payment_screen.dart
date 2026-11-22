@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/motion_wrappers.dart';
@@ -51,7 +52,8 @@ class RentPaymentScreen extends StatefulWidget {
     required String payeeName,
   }) {
     final cleanId = invoiceId.trim().replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
-    final displayId = cleanId.length > 8 && !cleanId.toUpperCase().startsWith('INV')
+    final displayId =
+        cleanId.length > 8 && !cleanId.toUpperCase().startsWith('INV')
         ? cleanId.substring(0, 8)
         : cleanId;
     final cleanName = payeeName
@@ -104,9 +106,13 @@ class RentPaymentScreen extends StatefulWidget {
 
     if (transactionRef != null && transactionRef.trim().isNotEmpty) {
       // NPCI Rule: tr must be strictly alphanumeric (no hyphens, no underscores, max 35 chars)
-      final cleanTr = transactionRef.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').trim();
+      final cleanTr = transactionRef
+          .replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
+          .trim();
       if (cleanTr.isNotEmpty) {
-        queryParams['tr'] = cleanTr.length > 35 ? cleanTr.substring(0, 35) : cleanTr;
+        queryParams['tr'] = cleanTr.length > 35
+            ? cleanTr.substring(0, 35)
+            : cleanTr;
       }
     }
 
@@ -121,11 +127,7 @@ class RentPaymentScreen extends StatefulWidget {
         .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
         .join('&');
 
-    return Uri(
-      scheme: 'upi',
-      host: 'pay',
-      query: queryString,
-    );
+    return Uri(scheme: 'upi', host: 'pay', query: queryString);
   }
 
   /// Official Android package name for PhonePe.
@@ -143,20 +145,29 @@ class RentPaymentScreen extends StatefulWidget {
     String? merchantCode,
   }) {
     final note = transactionNote?.trim();
-    final cleanTr = transactionRef?.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').trim();
+    final cleanTr = transactionRef
+        ?.replaceAll(RegExp(r'[^A-Za-z0-9]'), '')
+        .trim();
     final cleanPn = payeeName.replaceAll("'", '').trim();
-    final mc = (merchantCode != null && merchantCode.trim().isNotEmpty) ? merchantCode.trim() : '5411';
+    final mc = (merchantCode != null && merchantCode.trim().isNotEmpty)
+        ? merchantCode.trim()
+        : '5411';
     final query = <String, String>{
       'pa': payeeVpa.trim(),
       'pn': cleanPn,
       'am': amount.toStringAsFixed(2),
       'cu': currency.trim(),
       if (note != null && note.isNotEmpty) 'tn': note,
-      if (cleanTr != null && cleanTr.isNotEmpty) 'tr': cleanTr.length > 35 ? cleanTr.substring(0, 35) : cleanTr,
+      if (cleanTr != null && cleanTr.isNotEmpty)
+        'tr': cleanTr.length > 35 ? cleanTr.substring(0, 35) : cleanTr,
       'mc': mc,
     };
-    final queryString = query.entries.map((e) => '${e.key}=${Uri.encodeComponent(e.value)}').join('&');
-    return Uri.parse('intent://pay?$queryString#Intent;scheme=upi;package=$phonePePackage;end');
+    final queryString = query.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value)}')
+        .join('&');
+    return Uri.parse(
+      'intent://pay?$queryString#Intent;scheme=upi;package=$phonePePackage;end',
+    );
   }
 
   @override
@@ -182,7 +193,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   @override
   void initState() {
     super.initState();
-    final rent = AppData.currentResident['rent'] != null && AppData.currentResident['rent'] != 0
+    final rent =
+        AppData.currentResident['rent'] != null &&
+            AppData.currentResident['rent'] != 0
         ? AppData.currentResident['rent']
         : 8000;
 
@@ -237,7 +250,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       await prefs.remove('admin_merchant_code');
 
       // Force-purge any legacy Saukatali / personal / invalid VPAs from device local cache
-      if (upi != null && (upi.contains('masisokatali') || upi.contains('okaxis') || !upi.contains('@'))) {
+      if (upi != null &&
+          (upi.contains('masisokatali') ||
+              upi.contains('okaxis') ||
+              !upi.contains('@'))) {
         await prefs.remove('admin_upi_id');
         await prefs.remove('admin_payee_name');
         upi = null;
@@ -246,8 +262,12 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
       if (mounted) {
         setState(() {
-          _ownerUpiId = (upi != null && upi.trim().isNotEmpty) ? upi.trim() : defaultPayeeUpiId;
-          _payeeName = (name != null && name.trim().isNotEmpty) ? name.trim() : defaultPayeeName;
+          _ownerUpiId = (upi != null && upi.trim().isNotEmpty)
+              ? upi.trim()
+              : defaultPayeeUpiId;
+          _payeeName = (name != null && name.trim().isNotEmpty)
+              ? name.trim()
+              : defaultPayeeName;
           _merchantCode = null;
           _isMerchantConfigured = true;
         });
@@ -260,10 +280,13 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
       if (backendUpi != null && backendUpi.trim().isNotEmpty) {
         final cleanUpi = backendUpi.trim();
-        final cleanName = (backendName != null && backendName.trim().isNotEmpty) ? backendName.trim() : defaultPayeeName;
+        final cleanName = (backendName != null && backendName.trim().isNotEmpty)
+            ? backendName.trim()
+            : defaultPayeeName;
 
         // Ensure backend response is not an old legacy VPA
-        if (!cleanUpi.contains('masisokatali') && !cleanUpi.contains('okaxis')) {
+        if (!cleanUpi.contains('masisokatali') &&
+            !cleanUpi.contains('okaxis')) {
           await prefs.setString('admin_upi_id', cleanUpi);
           await prefs.setString('admin_payee_name', cleanName);
           await prefs.remove('admin_merchant_code');
@@ -290,7 +313,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     return val.toStringAsFixed(2);
   }
 
-  Future<void> _handlePaymentMethodSelection(String paymentApp, String appScheme) async {
+  Future<void> _handlePaymentMethodSelection(
+    String paymentApp,
+    String appScheme,
+  ) async {
     if (_isLaunching) return; // Prevent duplicate taps
 
     setState(() => _isLaunching = true);
@@ -345,7 +371,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       // =========================================================================
       // SEPARATE FLOW 3: DEDICATED GOOGLE PAY PACKAGE FLOW (com.google.android.apps.nbu.paisa.user)
       // =========================================================================
-      if (paymentApp == 'Google Pay' || paymentApp == 'GPay' || paymentApp == 'Google Pay (G Pay)') {
+      if (paymentApp == 'Google Pay' ||
+          paymentApp == 'GPay' ||
+          paymentApp == 'Google Pay (G Pay)') {
         setState(() => _isLaunching = false);
         _showGooglePayModal();
         return;
@@ -378,20 +406,38 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       final rawAmountType = rawAmount?.runtimeType.toString() ?? 'null';
       final rawBalanceType = rawBalance?.runtimeType.toString() ?? 'null';
 
-      debugPrint('==================== [UPI INTENT DIAGNOSTICS] ====================');
+      debugPrint(
+        '==================== [UPI INTENT DIAGNOSTICS] ====================',
+      );
       debugPrint('[UPI Diagnostics] Actual Invoice ID: $invoiceId');
-      debugPrint('[UPI Diagnostics] Raw Invoice Amount: $rawAmount (runtime type: $rawAmountType)');
-      debugPrint('[UPI Diagnostics] Raw Balance Amount: $rawBalance (runtime type: $rawBalanceType)');
-      debugPrint('[UPI Diagnostics] Remaining Amount: ₹${amount.toStringAsFixed(2)}');
-      debugPrint('[UPI Diagnostics] Final Payment Amount: ₹${amount.toStringAsFixed(2)}');
+      debugPrint(
+        '[UPI Diagnostics] Raw Invoice Amount: $rawAmount (runtime type: $rawAmountType)',
+      );
+      debugPrint(
+        '[UPI Diagnostics] Raw Balance Amount: $rawBalance (runtime type: $rawBalanceType)',
+      );
+      debugPrint(
+        '[UPI Diagnostics] Remaining Amount: ₹${amount.toStringAsFixed(2)}',
+      );
+      debugPrint(
+        '[UPI Diagnostics] Final Payment Amount: ₹${amount.toStringAsFixed(2)}',
+      );
       debugPrint('[UPI Diagnostics] Target Payee VPA: $_ownerUpiId');
       debugPrint('[UPI Diagnostics] Target Payee Name: $_payeeName');
-      debugPrint('[UPI Diagnostics] Is Merchant Configured: $_isMerchantConfigured');
-      debugPrint('[UPI Diagnostics] Merchant Category Code (mc): ${_merchantCode ?? "None (Personal VPA - Bank limits apply for Mode 04)"}');
-      debugPrint('[UPI Diagnostics] Selected UPI App: $paymentApp (scheme: $appScheme)');
+      debugPrint(
+        '[UPI Diagnostics] Is Merchant Configured: $_isMerchantConfigured',
+      );
+      debugPrint(
+        '[UPI Diagnostics] Merchant Category Code (mc): ${_merchantCode ?? "None (Personal VPA - Bank limits apply for Mode 04)"}',
+      );
+      debugPrint(
+        '[UPI Diagnostics] Selected UPI App: $paymentApp (scheme: $appScheme)',
+      );
       debugPrint('[UPI Diagnostics] Transaction Ref (tr): $txnRef');
       debugPrint('[UPI Diagnostics] Final Encoded UPI URI: $upiUri');
-      debugPrint('==================================================================');
+      debugPrint(
+        '==================================================================',
+      );
 
       // Web Desktop Guard: Desktop web browsers have no registered handler for upi:// intents.
       // Launching upi:// on Chrome opens a blank 'Untitled' tab.
@@ -424,15 +470,17 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       }
 
       try {
-        const nativeUpiChannel = MethodChannel('com.originpg.resident/native_upi');
-        final nativeRes = await nativeUpiChannel.invokeMapMethod<String, dynamic>(
-          'launchUpiIntent',
-          {
-            'uri': upiUri.toString(),
-            'packageName': ?targetPackage,
-          },
+        const nativeUpiChannel = MethodChannel(
+          'com.originpg.resident/native_upi',
         );
-        if (nativeRes != null && nativeRes['status'] != 'APP_NOT_INSTALLED' && nativeRes['status'] != 'FAILURE') {
+        final nativeRes = await nativeUpiChannel
+            .invokeMapMethod<String, dynamic>('launchUpiIntent', {
+              'uri': upiUri.toString(),
+              'packageName': ?targetPackage,
+            });
+        if (nativeRes != null &&
+            nativeRes['status'] != 'APP_NOT_INSTALLED' &&
+            nativeRes['status'] != 'FAILURE') {
           launched = true;
         }
       } catch (e) {
@@ -442,10 +490,16 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       if (!launched) {
         try {
           if (await canLaunchUrl(upiUri)) {
-            launched = await launchUrl(upiUri, mode: LaunchMode.externalNonBrowserApplication);
+            launched = await launchUrl(
+              upiUri,
+              mode: LaunchMode.externalNonBrowserApplication,
+            );
           } else {
             try {
-              launched = await launchUrl(upiUri, mode: LaunchMode.externalApplication);
+              launched = await launchUrl(
+                upiUri,
+                mode: LaunchMode.externalApplication,
+              );
             } catch (_) {}
           }
         } catch (e) {
@@ -453,8 +507,12 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         }
       }
 
-      debugPrint('[UPI Diagnostics] Launch Method: url_launcher.launchUrl(mode: LaunchMode.externalNonBrowserApplication)');
-      debugPrint('[UPI Diagnostics] Launch Result: ${launched ? 'SUCCESS (intent dispatched to Android OS)' : 'FAILED (app not found / rejected)'}');
+      debugPrint(
+        '[UPI Diagnostics] Launch Method: url_launcher.launchUrl(mode: LaunchMode.externalNonBrowserApplication)',
+      );
+      debugPrint(
+        '[UPI Diagnostics] Launch Result: ${launched ? 'SUCCESS (intent dispatched to Android OS)' : 'FAILED (app not found / rejected)'}',
+      );
 
       if (!mounted) return;
       setState(() => _isLaunching = false);
@@ -471,7 +529,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
       // 6. Record app return on backend: strict rule -> sets state to PENDING_VERIFICATION (NOT paid)
       if (backendPaymentId != null) {
-        ResidentApiService.recordUpiReturn(backendPaymentId).catchError((_) => <String, dynamic>{});
+        ResidentApiService.recordUpiReturn(backendPaymentId)
+            .catchError((_) => <String, dynamic>{});
       }
 
       // 7. Directly display Payment Status screen (strictly Pending Bank Verification)
@@ -491,8 +550,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   // ===========================================================================
   // AUTHORITATIVE BACKEND INITIATION HELPER
   // ===========================================================================
-  Future<({String? backendPaymentId, String txnRef, double amount, String invoiceId})>
-      _initiateAuthoritativePayment(String paymentApp) async {
+  Future<
+    ({String? backendPaymentId, String txnRef, double amount, String invoiceId})
+  >
+  _initiateAuthoritativePayment(String paymentApp) async {
     final invoiceId = _invoice['id']?.toString() ?? 'INV-2026-010';
     double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
     String txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
@@ -513,13 +574,16 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         if (initiateRes['amount'] is num) {
           amount = (initiateRes['amount'] as num).toDouble();
         }
-        if (initiateRes['payee_vpa'] != null && initiateRes['payee_vpa'].toString().trim().isNotEmpty) {
+        if (initiateRes['payee_vpa'] != null &&
+            initiateRes['payee_vpa'].toString().trim().isNotEmpty) {
           _ownerUpiId = initiateRes['payee_vpa'].toString().trim();
         }
-        if (initiateRes['payee_name'] != null && initiateRes['payee_name'].toString().trim().isNotEmpty) {
+        if (initiateRes['payee_name'] != null &&
+            initiateRes['payee_name'].toString().trim().isNotEmpty) {
           _payeeName = initiateRes['payee_name'].toString().trim();
         }
-        if (initiateRes['merchant_code'] != null && initiateRes['merchant_code'].toString().trim().isNotEmpty) {
+        if (initiateRes['merchant_code'] != null &&
+            initiateRes['merchant_code'].toString().trim().isNotEmpty) {
           _merchantCode = initiateRes['merchant_code'].toString().trim();
         }
         if (initiateRes['is_merchant_configured'] != null) {
@@ -547,7 +611,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   /// Launches Direct UPI Intent for the selected installed UPI app and syncs outcome.
   /// Never trusts client callback as proof of settlement; always ends in
   /// pendingVerification (or failed/cancelled) until verified by backend.
-  Future<void> _launchDirectUpiFlow(InstalledUpiApp app, {double? customAmount}) async {
+  Future<void> _launchDirectUpiFlow(
+    InstalledUpiApp app, {
+    double? customAmount,
+  }) async {
     if (_isLaunching || DirectUpiService.isProcessing) return;
     setState(() => _isLaunching = true);
 
@@ -573,7 +640,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         overrideAmount: customAmount,
       );
 
-      final resolvedTxnRef = flowResult.txnRef ?? PaymentVerificationService.generateTxnReference(invoiceId);
+      final resolvedTxnRef =
+          flowResult.txnRef ??
+          PaymentVerificationService.generateTxnReference(invoiceId);
       await PaymentVerificationService.initiatePayment(
         invoiceId: invoiceId,
         amount: flowResult.amount,
@@ -600,7 +669,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       if (flowResult.isSettled) {
         initialState = 'successful';
         autoPoll = false;
-      } else if (flowResult.outcome.status == DirectUpiOutcomeStatus.cancelled) {
+      } else if (flowResult.outcome.status ==
+          DirectUpiOutcomeStatus.cancelled) {
         initialState = 'cancelled';
         autoPoll = false;
       } else if (flowResult.outcome.status == DirectUpiOutcomeStatus.failure ||
@@ -695,10 +765,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   // ===========================================================================
   void _showPhonePeModal({double? amount}) {
     _launchDirectUpiFlow(
-      const InstalledUpiApp(
-        name: 'PhonePe',
-        packageName: 'com.phonepe.app',
-      ),
+      const InstalledUpiApp(name: 'PhonePe', packageName: 'com.phonepe.app'),
       customAmount: amount,
     );
   }
@@ -712,7 +779,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
     final formattedAmt = _formatAmount(amount);
     final usdAmount = (amount / 83.0).toStringAsFixed(2);
-    final userEmail = AppData.currentResident['email']?.toString() ?? 'priya.sharma@example.com';
+    final userEmail =
+        AppData.currentResident['email']?.toString() ??
+        'priya.sharma@example.com';
     final emailController = TextEditingController(text: userEmail);
     bool isProcessing = false;
 
@@ -729,10 +798,17 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
             final textSec = AppTheme.textSecondary(sheetCtx);
 
             return Container(
-              padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                14,
+                20,
+                MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+              ),
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: isDark ? const Color(0x33000000) : Colors.black12,
@@ -751,7 +827,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         width: 44,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                          color: isDark
+                              ? AppTheme.darkBorder
+                              : const Color(0xFFE2E8F0),
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
@@ -763,21 +841,33 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF003087).withValues(alpha: 0.12),
+                              color: const Color(0xFF003087)
+                                  .withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: const Icon(Icons.payment_rounded, color: Color(0xFF003087), size: 26),
+                            child: const Icon(
+                              Icons.payment_rounded,
+                              color: Color(0xFF003087),
+                              size: 26,
+                            ),
                           ),
                           const SizedBox(width: 10),
                           const Text(
                             'PayPal Checkout',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF003087)),
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF003087),
+                            ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFEFF6FF),
                           borderRadius: BorderRadius.circular(20),
@@ -786,11 +876,19 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.lock_outline_rounded, color: Color(0xFF1D4ED8), size: 14),
+                            Icon(
+                              Icons.lock_outline_rounded,
+                              color: Color(0xFF1D4ED8),
+                              size: 14,
+                            ),
                             SizedBox(width: 6),
                             Text(
                               'Redirecting to PayPal secure session...',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1D4ED8)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1D4ED8),
+                              ),
                             ),
                           ],
                         ),
@@ -800,37 +898,88 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                          color: isDark
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFFF8FAFC),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0)),
+                          border: Border.all(
+                            color: isDark
+                                ? AppTheme.darkBorder
+                                : const Color(0xFFE2E8F0),
+                          ),
                         ),
                         child: Column(
                           children: [
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Payee', style: TextStyle(fontSize: 12, color: textSec)),
-                                Text('Origin PG Management', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: textPri)),
+                                Text(
+                                  'Payee',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSec,
+                                  ),
+                                ),
+                                Text(
+                                  'Origin PG Management',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: textPri,
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('PayPal Account', style: TextStyle(fontSize: 12, color: textSec)),
-                                const Text('payments@originpg.com', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF003087))),
+                                Text(
+                                  'PayPal Account',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSec,
+                                  ),
+                                ),
+                                const Text(
+                                  'payments@originpg.com',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF003087),
+                                  ),
+                                ),
                               ],
                             ),
                             const SizedBox(height: 6),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text('Payable Amount', style: TextStyle(fontSize: 12, color: textSec)),
+                                Text(
+                                  'Payable Amount',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSec,
+                                  ),
+                                ),
                                 Row(
                                   children: [
-                                    Text('₹ $formattedAmt', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                                    Text(
+                                      '₹ $formattedAmt',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF15803D),
+                                      ),
+                                    ),
                                     const SizedBox(width: 6),
-                                    Text('(\$$usdAmount USD)', style: TextStyle(fontSize: 12, color: textSec)),
+                                    Text(
+                                      '(\$$usdAmount USD)',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: textSec,
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ],
@@ -842,7 +991,14 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: Text('Your PayPal Account Email', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPri)),
+                        child: Text(
+                          'Your PayPal Account Email',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: textPri,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 6),
                       TextField(
@@ -851,11 +1007,23 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         style: TextStyle(color: textPri, fontSize: 14),
                         decoration: InputDecoration(
                           hintText: 'Enter PayPal email address',
-                          prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF003087), size: 20),
+                          prefixIcon: const Icon(
+                            Icons.email_outlined,
+                            color: Color(0xFF003087),
+                            size: 20,
+                          ),
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          fillColor: isDark
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 14),
@@ -869,12 +1037,20 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.verified_user_rounded, color: Color(0xFF16A34A), size: 16),
+                            Icon(
+                              Icons.verified_user_rounded,
+                              color: Color(0xFF16A34A),
+                              size: 16,
+                            ),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Eligible for PayPal Buyer & Fraud Protection. Instant rent confirmation.',
-                                style: TextStyle(fontSize: 11, color: Color(0xFF15803D), fontWeight: FontWeight.w500),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFF15803D),
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ],
@@ -890,7 +1066,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                               : () async {
                                   final navigator = Navigator.of(sheetCtx);
                                   setModalState(() => isProcessing = true);
-                                  await Future.delayed(const Duration(milliseconds: 250));
+                                  await Future.delayed(
+                                    const Duration(milliseconds: 250),
+                                  );
                                   navigator.pop();
                                   await _completePaymentSuccess(
                                     paymentApp: 'PayPal',
@@ -899,17 +1077,33 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                   );
                                 },
                           icon: isProcessing
-                              ? const Icon(Icons.sync_rounded, color: Color(0xFF003087), size: 18)
-                              : const Icon(Icons.payment_rounded, color: Color(0xFF003087), size: 20),
+                              ? const Icon(
+                                  Icons.sync_rounded,
+                                  color: Color(0xFF003087),
+                                  size: 18,
+                                )
+                              : const Icon(
+                                  Icons.payment_rounded,
+                                  color: Color(0xFF003087),
+                                  size: 20,
+                                ),
                           label: Text(
-                            isProcessing ? 'Connecting to PayPal...' : 'Pay ₹$formattedAmt with PayPal',
-                            style: const TextStyle(color: Color(0xFF003087), fontWeight: FontWeight.bold, fontSize: 15),
+                            isProcessing
+                                ? 'Connecting to PayPal...'
+                                : 'Pay ₹$formattedAmt with PayPal',
+                            style: const TextStyle(
+                              color: Color(0xFF003087),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFFC439),
                             elevation: 0,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                       ),
@@ -938,9 +1132,12 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     final double amount = RentPaymentScreen.calculatePayableAmount(_invoice);
     final txnRef = PaymentVerificationService.generateTxnReference(invoiceId);
     final formattedAmt = _formatAmount(amount);
-    final residentName = AppData.currentResident['name']?.toString() ?? 'Priya Sharma';
+    final residentName =
+        AppData.currentResident['name']?.toString() ?? 'Priya Sharma';
 
-    final cardNumController = TextEditingController(text: '4532 8901 2345 8890');
+    final cardNumController = TextEditingController(
+      text: '4532 8901 2345 8890',
+    );
     final cardHolderController = TextEditingController(text: residentName);
     final expiryController = TextEditingController(text: '12/28');
     final cvvController = TextEditingController(text: '889');
@@ -960,10 +1157,17 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
             final textSec = AppTheme.textSecondary(sheetCtx);
 
             return Container(
-              padding: EdgeInsets.fromLTRB(20, 14, 20, MediaQuery.of(sheetCtx).viewInsets.bottom + 24),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                14,
+                20,
+                MediaQuery.of(sheetCtx).viewInsets.bottom + 24,
+              ),
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: isDark ? const Color(0x33000000) : Colors.black12,
@@ -983,7 +1187,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           width: 44,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppTheme.darkBorder
+                                : const Color(0xFFE2E8F0),
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
@@ -999,16 +1205,25 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(6),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                                    color: const Color(0xFF0D9488)
+                                        .withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: const Icon(Icons.credit_card_rounded, color: Color(0xFF0D9488), size: 24),
+                                  child: const Icon(
+                                    Icons.credit_card_rounded,
+                                    color: Color(0xFF0D9488),
+                                    size: 24,
+                                  ),
                                 ),
                                 const SizedBox(width: 10),
                                 Flexible(
                                   child: Text(
                                     'Credit Card / Debit Card',
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: textPri,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -1017,9 +1232,14 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
+                              color: isDark
+                                  ? const Color(0xFF1E3A8A)
+                                  : const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -1027,7 +1247,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: isDark ? const Color(0xFF93C5FD) : AppTheme.primaryBlue,
+                                color: isDark
+                                    ? const Color(0xFF93C5FD)
+                                    : AppTheme.primaryBlue,
                               ),
                             ),
                           ),
@@ -1064,7 +1286,11 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                const Icon(Icons.nfc_rounded, color: Color(0xFF94A3B8), size: 24),
+                                const Icon(
+                                  Icons.nfc_rounded,
+                                  color: Color(0xFF94A3B8),
+                                  size: 24,
+                                ),
                                 Row(
                                   children: [
                                     Container(
@@ -1081,7 +1307,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                         width: 18,
                                         height: 18,
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFFF79E1B).withValues(alpha: 0.85),
+                                          color: const Color(0xFFF79E1B)
+                                              .withValues(alpha: 0.85),
                                           shape: BoxShape.circle,
                                         ),
                                       ),
@@ -1092,7 +1319,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              cardNumController.text.isEmpty ? '•••• •••• •••• ••••' : cardNumController.text,
+                              cardNumController.text.isEmpty
+                                  ? '•••• •••• •••• ••••'
+                                  : cardNumController.text,
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -1108,22 +1337,44 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('CARDHOLDER', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8), letterSpacing: 1)),
+                                    const Text(
+                                      'CARDHOLDER',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: Color(0xFF94A3B8),
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
                                     const SizedBox(height: 2),
                                     Text(
                                       cardHolderController.text.toUpperCase(),
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ],
                                 ),
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Text('EXPIRES', style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8), letterSpacing: 1)),
+                                    const Text(
+                                      'EXPIRES',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        color: Color(0xFF94A3B8),
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
                                     const SizedBox(height: 2),
                                     Text(
                                       expiryController.text,
-                                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -1141,20 +1392,39 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           decoration: BoxDecoration(
                             color: Colors.red.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                            border: Border.all(
+                              color: Colors.red.withValues(alpha: 0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                                size: 16,
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(cardError!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+                                child: Text(
+                                  cardError!,
+                                  style: const TextStyle(
+                                    color: Colors.red,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
                         ),
 
-                      Text('Card Number', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                      Text(
+                        'Card Number',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: textPri,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: cardNumController,
@@ -1163,16 +1433,34 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         onChanged: (_) => setModalState(() {}),
                         decoration: InputDecoration(
                           hintText: '4532 8901 2345 8890',
-                          prefixIcon: const Icon(Icons.credit_card_outlined, size: 20),
+                          prefixIcon: const Icon(
+                            Icons.credit_card_outlined,
+                            size: 20,
+                          ),
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          fillColor: isDark
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
 
-                      Text('Cardholder Name', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                      Text(
+                        'Cardholder Name',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: textPri,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       TextField(
                         controller: cardHolderController,
@@ -1180,11 +1468,22 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         onChanged: (_) => setModalState(() {}),
                         decoration: InputDecoration(
                           hintText: 'e.g. Priya Sharma',
-                          prefixIcon: const Icon(Icons.person_outline, size: 20),
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            size: 20,
+                          ),
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          fillColor: isDark
+                              ? const Color(0xFF1E293B)
+                              : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -1195,20 +1494,41 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Expiry Date', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                                Text(
+                                  'Expiry Date',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPri,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: expiryController,
                                   keyboardType: TextInputType.datetime,
-                                  style: TextStyle(color: textPri, fontSize: 14),
+                                  style: TextStyle(
+                                    color: textPri,
+                                    fontSize: 14,
+                                  ),
                                   onChanged: (_) => setModalState(() {}),
                                   decoration: InputDecoration(
                                     hintText: 'MM/YY',
-                                    prefixIcon: const Icon(Icons.calendar_month_outlined, size: 20),
+                                    prefixIcon: const Icon(
+                                      Icons.calendar_month_outlined,
+                                      size: 20,
+                                    ),
                                     filled: true,
-                                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    fillColor: isDark
+                                        ? const Color(0xFF1E293B)
+                                        : const Color(0xFFF1F5F9),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 12,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1219,22 +1539,43 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('CVV / CVC', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: textPri)),
+                                Text(
+                                  'CVV / CVC',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPri,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextField(
                                   controller: cvvController,
                                   keyboardType: TextInputType.number,
                                   obscureText: true,
                                   maxLength: 4,
-                                  style: TextStyle(color: textPri, fontSize: 14),
+                                  style: TextStyle(
+                                    color: textPri,
+                                    fontSize: 14,
+                                  ),
                                   decoration: InputDecoration(
                                     counterText: '',
                                     hintText: '•••',
-                                    prefixIcon: const Icon(Icons.lock_outline, size: 20),
+                                    prefixIcon: const Icon(
+                                      Icons.lock_outline,
+                                      size: 20,
+                                    ),
                                     filled: true,
-                                    fillColor: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    fillColor: isDark
+                                        ? const Color(0xFF1E293B)
+                                        : const Color(0xFFF1F5F9),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 12,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1246,12 +1587,20 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
                       const Row(
                         children: [
-                          Icon(Icons.shield_rounded, color: Color(0xFF10B981), size: 16),
+                          Icon(
+                            Icons.shield_rounded,
+                            color: Color(0xFF10B981),
+                            size: 16,
+                          ),
                           SizedBox(width: 6),
                           Expanded(
                             child: Text(
                               '256-bit SSL Bank Encryption • PCI-DSS Level 1 Compliant',
-                              style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                         ],
@@ -1264,16 +1613,26 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           onPressed: isProcessing
                               ? null
                               : () async {
-                                  if (cardNumController.text.trim().length < 12) {
-                                    setModalState(() => cardError = 'Please enter a valid card number.');
+                                  if (cardNumController.text.trim().length <
+                                      12) {
+                                    setModalState(
+                                      () => cardError =
+                                          'Please enter a valid card number.',
+                                    );
                                     return;
                                   }
                                   if (expiryController.text.trim().isEmpty) {
-                                    setModalState(() => cardError = 'Please enter card expiry date.');
+                                    setModalState(
+                                      () => cardError =
+                                          'Please enter card expiry date.',
+                                    );
                                     return;
                                   }
                                   if (cvvController.text.trim().length < 3) {
-                                    setModalState(() => cardError = 'Please enter a valid CVV.');
+                                    setModalState(
+                                      () => cardError =
+                                          'Please enter a valid CVV.',
+                                    );
                                     return;
                                   }
 
@@ -1283,7 +1642,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                     cardError = null;
                                   });
 
-                                  await Future.delayed(const Duration(milliseconds: 250));
+                                  await Future.delayed(
+                                    const Duration(milliseconds: 250),
+                                  );
                                   navigator.pop();
                                   await _completePaymentSuccess(
                                     paymentApp: 'Credit Card',
@@ -1292,17 +1653,28 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                   );
                                 },
                           icon: isProcessing
-                              ? const Icon(Icons.sync_rounded, size: 18, color: Colors.white)
+                              ? const Icon(
+                                  Icons.sync_rounded,
+                                  size: 18,
+                                  color: Colors.white,
+                                )
                               : const Icon(Icons.lock_rounded, size: 18),
                           label: Text(
-                            isProcessing ? 'Processing with Bank Gateway...' : 'Pay ₹$formattedAmt Securely',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            isProcessing
+                                ? 'Processing with Bank Gateway...'
+                                : 'Pay ₹$formattedAmt Securely',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0D9488),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                       ),
@@ -1311,7 +1683,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       Center(
                         child: TextButton(
                           onPressed: () => Navigator.pop(sheetCtx),
-                          child: Text('Cancel', style: TextStyle(color: textSec)),
+                          child: Text(
+                            'Cancel',
+                            style: TextStyle(color: textSec),
+                          ),
                         ),
                       ),
                     ],
@@ -1324,8 +1699,6 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       },
     );
   }
-
-
 
   // ===========================================================================
   // DEDICATED PHONEPE PAYMENT ACTION (Targeted com.phonepe.app)
@@ -1351,7 +1724,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       amount: amount,
       currency: defaultCurrency,
       transactionNote: note,
-      transactionRef: (_merchantCode != null && _merchantCode!.trim().isNotEmpty) ? txnRef : null,
+      transactionRef:
+          (_merchantCode != null && _merchantCode!.trim().isNotEmpty)
+          ? txnRef
+          : null,
       merchantCode: _merchantCode,
     );
     final upiUriString = upiUri.toString();
@@ -1391,7 +1767,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                      color: isDark
+                          ? AppTheme.darkBorder
+                          : const Color(0xFFE2E8F0),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
@@ -1406,24 +1784,41 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           padding: const EdgeInsets.all(4),
                           margin: const EdgeInsets.only(right: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF4285F4).withValues(alpha: 0.1),
+                            color: const Color(0xFF4285F4)
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.g_mobiledata_rounded, color: Color(0xFF4285F4), size: 24),
+                          child: const Icon(
+                            Icons.g_mobiledata_rounded,
+                            color: Color(0xFF4285F4),
+                            size: 24,
+                          ),
                         )
-                      else if (appLabel?.toLowerCase().contains('phonepe') == true)
+                      else if (appLabel?.toLowerCase().contains('phonepe') ==
+                          true)
                         Container(
                           padding: const EdgeInsets.all(4),
                           margin: const EdgeInsets.only(right: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF5F259F).withValues(alpha: 0.1),
+                            color: const Color(0xFF5F259F)
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.payments_rounded, color: Color(0xFF5F259F), size: 20),
+                          child: const Icon(
+                            Icons.payments_rounded,
+                            color: Color(0xFF5F259F),
+                            size: 20,
+                          ),
                         ),
                       Text(
-                        appLabel != null && appLabel.isNotEmpty ? '$appLabel — Scan & Pay' : 'Dynamic UPI QR Code',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPri),
+                        appLabel != null && appLabel.isNotEmpty
+                            ? '$appLabel — Scan & Pay'
+                            : 'Dynamic UPI QR Code',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textPri,
+                        ),
                       ),
                     ],
                   ),
@@ -1459,43 +1854,88 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
 
                   // Payee & Invoice Summary
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF8FAFC),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0)),
+                      border: Border.all(
+                        color: isDark
+                            ? AppTheme.darkBorder
+                            : const Color(0xFFE2E8F0),
+                      ),
                     ),
                     child: Column(
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Payee', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(_payeeName, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: textPri)),
+                            Text(
+                              'Payee',
+                              style: TextStyle(fontSize: 12, color: textSec),
+                            ),
+                            Text(
+                              _payeeName,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: textPri,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('UPI ID', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(_ownerUpiId, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                            Text(
+                              'UPI ID',
+                              style: TextStyle(fontSize: 12, color: textSec),
+                            ),
+                            Text(
+                              _ownerUpiId,
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Invoice ID', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text(invoiceId, style: TextStyle(fontSize: 12, color: textPri)),
+                            Text(
+                              'Invoice ID',
+                              style: TextStyle(fontSize: 12, color: textSec),
+                            ),
+                            Text(
+                              invoiceId,
+                              style: TextStyle(fontSize: 12, color: textPri),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Amount', style: TextStyle(fontSize: 12, color: textSec)),
-                            Text('₹ $formattedAmt', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.successGreen)),
+                            Text(
+                              'Amount',
+                              style: TextStyle(fontSize: 12, color: textSec),
+                            ),
+                            Text(
+                              '₹ $formattedAmt',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.successGreen,
+                              ),
+                            ),
                           ],
                         ),
                       ],
@@ -1516,11 +1956,19 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       children: [
                         const Row(
                           children: [
-                            Icon(Icons.qr_code_scanner_rounded, size: 16, color: Color(0xFF1D4ED8)),
+                            Icon(
+                              Icons.qr_code_scanner_rounded,
+                              size: 16,
+                              color: Color(0xFF1D4ED8),
+                            ),
                             SizedBox(width: 6),
                             Text(
                               'How to scan this QR Code:',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1E40AF),
+                              ),
                             ),
                           ],
                         ),
@@ -1528,7 +1976,11 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         const Text(
                           '• Scan using camera scanner in Google Pay, PhonePe, Paytm, or BHIM.\n'
                           '• NPCI Rule: UPI apps restrict gallery-uploaded QR screenshots to ₹2,000. For rent amounts above ₹2,000, scan directly via camera or copy the Merchant UPI ID below to pay directly in your app.',
-                          style: TextStyle(fontSize: 11.5, color: Color(0xFF1E3A8A), height: 1.4),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Color(0xFF1E3A8A),
+                            height: 1.4,
+                          ),
                         ),
                       ],
                     ),
@@ -1543,7 +1995,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         Clipboard.setData(ClipboardData(text: _ownerUpiId));
                         ScaffoldMessenger.of(sheetCtx).showSnackBar(
                           SnackBar(
-                            content: Text('Merchant UPI ID ($_ownerUpiId) copied! Open your UPI app and paste to pay.'),
+                            content: Text(
+                              'Merchant UPI ID ($_ownerUpiId) copied! Open your UPI app and paste to pay.',
+                            ),
                             duration: const Duration(seconds: 3),
                             backgroundColor: const Color(0xFF0B6B63),
                           ),
@@ -1555,7 +2009,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         backgroundColor: const Color(0xFF0B6B63),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -1567,10 +2023,14 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            Clipboard.setData(ClipboardData(text: upiUriString));
+                            Clipboard.setData(
+                              ClipboardData(text: upiUriString),
+                            );
                             ScaffoldMessenger.of(sheetCtx).showSnackBar(
                               const SnackBar(
-                                content: Text('UPI QR Code link saved to clipboard!'),
+                                content: Text(
+                                  'UPI QR Code link saved to clipboard!',
+                                ),
                                 duration: Duration(seconds: 2),
                               ),
                             );
@@ -1579,7 +2039,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           label: const Text('Save QR Link'),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ),
@@ -1587,7 +2049,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            final shareText = 'Rent Payment for $invoiceId\n'
+                            final shareText =
+                                'Rent Payment for $invoiceId\n'
                                 'Payee: $_payeeName\n'
                                 'UPI ID: $_ownerUpiId\n'
                                 'Amount: ₹$formattedAmt\n'
@@ -1595,7 +2058,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             Clipboard.setData(ClipboardData(text: shareText));
                             ScaffoldMessenger.of(sheetCtx).showSnackBar(
                               const SnackBar(
-                                content: Text('Payment details copied to share!'),
+                                content: Text(
+                                  'Payment details copied to share!',
+                                ),
                                 duration: Duration(seconds: 2),
                               ),
                             );
@@ -1604,7 +2069,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           label: const Text('Share Details'),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ),
@@ -1619,7 +2086,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       onPressed: () {
                         Navigator.pop(sheetCtx);
                         if (backendPaymentId != null) {
-                          ResidentApiService.recordUpiReturn(backendPaymentId).catchError((_) => <String, dynamic>{});
+                          ResidentApiService.recordUpiReturn(backendPaymentId)
+                              .catchError((_) => <String, dynamic>{});
                         }
                         _navigateToStatusScreen(
                           paymentApp: appLabel ?? 'Dynamic UPI QR',
@@ -1629,12 +2097,20 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         );
                       },
                       icon: const Icon(Icons.check_circle_rounded, size: 18),
-                      label: const Text('I Have Transferred / Confirm Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      label: const Text(
+                        'I Have Transferred / Confirm Payment',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -1648,12 +2124,25 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         Navigator.pop(sheetCtx);
                         _handlePaymentMethodSelection('Demo Pay', 'demo');
                       },
-                      icon: const Icon(Icons.science_rounded, size: 18, color: Color(0xFF10B981)),
-                      label: const Text('Simulate Instant Success (Test Mode)', style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600, fontSize: 13.5)),
+                      icon: const Icon(
+                        Icons.science_rounded,
+                        size: 18,
+                        color: Color(0xFF10B981),
+                      ),
+                      label: const Text(
+                        'Simulate Instant Success (Test Mode)',
+                        style: TextStyle(
+                          color: Color(0xFF10B981),
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                        ),
+                      ),
                       style: OutlinedButton.styleFrom(
                         side: const BorderSide(color: Color(0xFF10B981)),
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
@@ -1662,7 +2151,13 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   // Close Button
                   TextButton(
                     onPressed: () => Navigator.pop(sheetCtx),
-                    child: Text('Close', style: TextStyle(color: textSec, fontWeight: FontWeight.w500)),
+                    child: Text(
+                      'Close',
+                      style: TextStyle(
+                        color: textSec,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -1672,8 +2167,6 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
       },
     );
   }
-
-
 
   void _showUpiAppUnavailableDialog({
     required String paymentApp,
@@ -1692,13 +2185,20 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                 color: const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 22),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: Color(0xFFD97706),
+                size: 22,
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 '$paymentApp Not Available',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -1711,7 +2211,11 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
               '$paymentApp or a compatible UPI payment application was not found on your device.\n\n'
               'You can copy the PG Owner UPI ID below to pay directly from your mobile banking app, '
               'or test the payment using Demo Online Payment.',
-              style: const TextStyle(fontSize: 13, height: 1.4, color: AppTheme.textGrey),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.4,
+                color: AppTheme.textGrey,
+              ),
             ),
             const SizedBox(height: 16),
             Container(
@@ -1727,22 +2231,39 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Payee UPI ID', style: TextStyle(fontSize: 10, color: AppTheme.textGrey)),
+                        const Text(
+                          'Payee UPI ID',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppTheme.textGrey,
+                          ),
+                        ),
                         const SizedBox(height: 2),
                         Text(
                           _ownerUpiId,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textDark,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.primaryBlue),
+                    icon: const Icon(
+                      Icons.copy_rounded,
+                      size: 18,
+                      color: AppTheme.primaryBlue,
+                    ),
                     tooltip: 'Copy UPI ID',
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: _ownerUpiId));
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('UPI ID copied to clipboard!'), duration: Duration(seconds: 2)),
+                        const SnackBar(
+                          content: Text('UPI ID copied to clipboard!'),
+                          duration: Duration(seconds: 2),
+                        ),
                       );
                     },
                   ),
@@ -1754,7 +2275,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textGrey)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: AppTheme.textGrey),
+            ),
           ),
           ElevatedButton(
             onPressed: () {
@@ -1764,7 +2288,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.successGreen,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             child: const Text('Use Demo Pay'),
           ),
@@ -1783,7 +2309,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     bool autoPoll = true,
   }) {
     final amount = RentPaymentScreen.calculatePayableAmount(_invoice);
-    final effectiveInitialState = initialState ?? (isDemo ? 'successful' : null);
+    final effectiveInitialState =
+        initialState ?? (isDemo ? 'successful' : null);
     final effectiveAutoPoll = isDemo ? false : autoPoll;
     final payload = <String, dynamic>{
       'invoiceId': _invoice['id'] ?? 'INV-2026-010',
@@ -1837,7 +2364,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
               decoration: BoxDecoration(
                 color: cardBg,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: isDark ? const Color(0x33000000) : Colors.black12,
@@ -1858,7 +2387,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           width: 44,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: isDark ? AppTheme.darkBorder : const Color(0xFFE2E8F0),
+                            color: isDark
+                                ? AppTheme.darkBorder
+                                : const Color(0xFFE2E8F0),
                             borderRadius: BorderRadius.circular(10),
                           ),
                         ),
@@ -1894,18 +2425,29 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 6,
+                            ),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEFF6FF),
+                              color: isDark
+                                  ? const Color(0xFF1E3A8A)
+                                  : const Color(0xFFEFF6FF),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: isDark ? const Color(0xFF3B82F6) : const Color(0xFFDBEAFE)),
+                              border: Border.all(
+                                color: isDark
+                                    ? const Color(0xFF3B82F6)
+                                    : const Color(0xFFDBEAFE),
+                              ),
                             ),
                             child: Text(
                               '₹ ${_formatAmount(activeAmount)}',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
-                                color: isDark ? const Color(0xFF93C5FD) : AppTheme.primaryBlue,
+                                color: isDark
+                                    ? const Color(0xFF93C5FD)
+                                    : AppTheme.primaryBlue,
                               ),
                             ),
                           ),
@@ -1925,22 +2467,35 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                               });
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: !isTestOneRupee
-                                    ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                                    ? AppTheme.primaryBlue.withValues(
+                                        alpha: 0.15,
+                                      )
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: !isTestOneRupee ? AppTheme.primaryBlue : (isDark ? Colors.white24 : Colors.black12),
+                                  color: !isTestOneRupee
+                                      ? AppTheme.primaryBlue
+                                      : (isDark
+                                            ? Colors.white24
+                                            : Colors.black12),
                                 ),
                               ),
                               child: Text(
                                 'Full Rent (₹ ${_formatAmount(originalAmount)})',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: !isTestOneRupee ? FontWeight.bold : FontWeight.normal,
-                                  color: !isTestOneRupee ? AppTheme.primaryBlue : textSec,
+                                  fontWeight: !isTestOneRupee
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: !isTestOneRupee
+                                      ? AppTheme.primaryBlue
+                                      : textSec,
                                 ),
                               ),
                             ),
@@ -1955,22 +2510,34 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                               });
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
                               decoration: BoxDecoration(
                                 color: isTestOneRupee
-                                    ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                                    ? const Color(0xFF10B981)
+                                          .withValues(alpha: 0.15)
                                     : Colors.transparent,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: isTestOneRupee ? const Color(0xFF10B981) : (isDark ? Colors.white24 : Colors.black12),
+                                  color: isTestOneRupee
+                                      ? const Color(0xFF10B981)
+                                      : (isDark
+                                            ? Colors.white24
+                                            : Colors.black12),
                                 ),
                               ),
                               child: Text(
                                 'Test Intent (₹ 1.00)',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  fontWeight: isTestOneRupee ? FontWeight.bold : FontWeight.normal,
-                                  color: isTestOneRupee ? const Color(0xFF10B981) : textSec,
+                                  fontWeight: isTestOneRupee
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  color: isTestOneRupee
+                                      ? const Color(0xFF10B981)
+                                      : textSec,
                                 ),
                               ),
                             ),
@@ -1980,14 +2547,19 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       const SizedBox(height: 12),
                       Text(
                         'Direct UPI Intent transfers funds to $_ownerUpiId ($defaultPayeeName).',
-                        style: TextStyle(fontSize: 12.5, color: textSec, height: 1.3),
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          color: textSec,
+                          height: 1.3,
+                        ),
                       ),
                       const SizedBox(height: 16),
 
                       // Option 1: Google Pay (G Pay)
                       _buildModalPaymentOption(
                         title: 'Google Pay (G Pay)',
-                        subtitle: 'Direct transfer of ₹ ${_formatAmount(activeAmount)} via Google Pay',
+                        subtitle:
+                            'Direct transfer of ₹ ${_formatAmount(activeAmount)} via Google Pay',
                         brandColor: const Color(0xFF4285F4),
                         iconData: Icons.g_mobiledata_rounded,
                         isIconLetter: true,
@@ -2002,7 +2574,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       // Option 2: PhonePe
                       _buildModalPaymentOption(
                         title: 'PhonePe',
-                        subtitle: 'Fast UPI payment of ₹ ${_formatAmount(activeAmount)} via PhonePe',
+                        subtitle:
+                            'Fast UPI payment of ₹ ${_formatAmount(activeAmount)} via PhonePe',
                         brandColor: const Color(0xFF5F259F),
                         iconData: Icons.payments_rounded,
                         isIconLetter: false,
@@ -2017,7 +2590,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       // Option 3: Dynamic UPI QR Code
                       _buildModalPaymentOption(
                         title: 'Dynamic UPI QR Code',
-                        subtitle: 'Scan with camera on PhonePe, Google Pay, or Paytm',
+                        subtitle:
+                            'Scan with camera on PhonePe, Google Pay, or Paytm',
                         brandColor: const Color(0xFF0B6B63),
                         iconData: Icons.qr_code_rounded,
                         isIconLetter: false,
@@ -2025,99 +2599,120 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         onTap: () {
                           Navigator.pop(bottomSheetContext);
                           _showDynamicQrDialog(
-                            invoiceId: _invoice['id']?.toString() ?? 'INV-2026-010',
+                            invoiceId:
+                                _invoice['id']?.toString() ?? 'INV-2026-010',
                             amount: activeAmount,
-                            txnRef: PaymentVerificationService.generateTxnReference(_invoice['id']?.toString() ?? 'INV-2026-010'),
+                            txnRef:
+                                PaymentVerificationService.generateTxnReference(
+                                  _invoice['id']?.toString() ?? 'INV-2026-010',
+                                ),
                           );
                         },
                       ),
-                  const SizedBox(height: 10),
+                      const SizedBox(height: 10),
 
-                  // Option 3: PayPal
-                  _buildModalPaymentOption(
-                    title: 'PayPal',
-                    subtitle: 'International & balance checkout via PayPal',
-                    brandColor: const Color(0xFF003087),
-                    iconData: Icons.payment_rounded,
-                    isIconLetter: false,
-                    context: bottomSheetContext,
-                    onTap: () {
-                      Navigator.pop(bottomSheetContext);
-                      _showPayPalModal();
-                    },
-                  ),
-                  const SizedBox(height: 10),
+                      // Option 3: PayPal
+                      _buildModalPaymentOption(
+                        title: 'PayPal',
+                        subtitle: 'International & balance checkout via PayPal',
+                        brandColor: const Color(0xFF003087),
+                        iconData: Icons.payment_rounded,
+                        isIconLetter: false,
+                        context: bottomSheetContext,
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          _showPayPalModal();
+                        },
+                      ),
+                      const SizedBox(height: 10),
 
-                  // Option 4: Credit Card
-                  _buildModalPaymentOption(
-                    title: 'Credit Card / Debit Card',
-                    subtitle: 'Visa, MasterCard, RuPay, American Express',
-                    brandColor: const Color(0xFF0D9488),
-                    iconData: Icons.credit_card_rounded,
-                    isIconLetter: false,
-                    context: bottomSheetContext,
-                    onTap: () {
-                      Navigator.pop(bottomSheetContext);
-                      _showCreditCardModal();
-                    },
-                  ),
-                  const SizedBox(height: 18),
+                      // Option 4: Credit Card
+                      _buildModalPaymentOption(
+                        title: 'Credit Card / Debit Card',
+                        subtitle: 'Visa, MasterCard, RuPay, American Express',
+                        brandColor: const Color(0xFF0D9488),
+                        iconData: Icons.credit_card_rounded,
+                        isIconLetter: false,
+                        context: bottomSheetContext,
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          _showCreditCardModal();
+                        },
+                      ),
+                      const SizedBox(height: 18),
 
-                  // Security Note
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFFBBF7D0)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.shield_rounded, color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF16A34A), size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
+                      // Security Note
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF064E3B)
+                              : const Color(0xFFF0FDF4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF059669)
+                                : const Color(0xFFBBF7D0),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.shield_rounded,
+                              color: isDark
+                                  ? const Color(0xFFA7F3D0)
+                                  : const Color(0xFF16A34A),
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '100% Secure bank-to-bank UPI payment to $_ownerUpiId. No gateway surcharge.',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: isDark
+                                      ? const Color(0xFFA7F3D0)
+                                      : const Color(0xFF15803D),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Cancel Button
+                      SizedBox(
+                        width: double.infinity,
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(bottomSheetContext),
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
                           child: Text(
-                            '100% Secure bank-to-bank UPI payment to $_ownerUpiId. No gateway surcharge.',
+                            'Cancel',
                             style: TextStyle(
-                              fontSize: 11.5,
-                              color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF15803D),
-                              fontWeight: FontWeight.w500,
+                              color: textSec,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Cancel Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(bottomSheetContext),
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: textSec,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
-  },
-);
-}
+  }
 
   Widget _buildModalPaymentOption({
     required String title,
@@ -2130,9 +2725,15 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   }) {
     final isDark = context != null ? AppTheme.isDark(context) : false;
     final cardBg = context != null ? AppTheme.cardBg(context) : Colors.white;
-    final borderCol = context != null ? AppTheme.borderCol(context) : const Color(0xFFE2E8F0);
-    final textPri = context != null ? AppTheme.textPrimary(context) : AppTheme.textDark;
-    final textSec = context != null ? AppTheme.textSecondary(context) : AppTheme.textGrey;
+    final borderCol = context != null
+        ? AppTheme.borderCol(context)
+        : const Color(0xFFE2E8F0);
+    final textPri = context != null
+        ? AppTheme.textPrimary(context)
+        : AppTheme.textDark;
+    final textSec = context != null
+        ? AppTheme.textSecondary(context)
+        : AppTheme.textGrey;
 
     return Container(
       decoration: BoxDecoration(
@@ -2162,7 +2763,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   decoration: BoxDecoration(
                     color: brandColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: brandColor.withValues(alpha: 0.25)),
+                    border: Border.all(
+                      color: brandColor.withValues(alpha: 0.25),
+                    ),
                   ),
                   child: Center(
                     child: Icon(
@@ -2188,10 +2791,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: textSec,
-                        ),
+                        style: TextStyle(fontSize: 11.5, color: textSec),
                       ),
                     ],
                   ),
@@ -2199,7 +2799,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                 Icon(
                   Icons.arrow_forward_ios_rounded,
                   size: 13,
-                  color: isDark ? AppTheme.darkTextSecondary : const Color(0xFF94A3B8),
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : const Color(0xFF94A3B8),
                 ),
               ],
             ),
@@ -2226,7 +2828,14 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
     return Scaffold(
       backgroundColor: pageBg,
       appBar: AppBar(
-        title: Text('Rent Payment', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: textPri)),
+        title: Text(
+          'Rent Payment',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: textPri,
+          ),
+        ),
         backgroundColor: cardBg,
         iconTheme: IconThemeData(color: textPri),
         elevation: 0,
@@ -2287,7 +2896,10 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                                 ),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0x26FFFFFF),
                                   borderRadius: BorderRadius.circular(12),
@@ -2315,7 +2927,11 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             ),
                           ),
                           const SizedBox(height: 16),
-                          const Divider(height: 1, thickness: 1, color: Colors.white24),
+                          const Divider(
+                            height: 1,
+                            thickness: 1,
+                            color: Colors.white24,
+                          ),
                           const SizedBox(height: 14),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2323,17 +2939,43 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Invoice ID', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
+                                  const Text(
+                                    'Invoice ID',
+                                    style: TextStyle(
+                                      color: Color(0xFFCBD5E1),
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                   const SizedBox(height: 2),
-                                  Text(invoiceId, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(
+                                    invoiceId,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ],
                               ),
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  const Text('Due Date', style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 11)),
+                                  const Text(
+                                    'Due Date',
+                                    style: TextStyle(
+                                      color: Color(0xFFCBD5E1),
+                                      fontSize: 11,
+                                    ),
+                                  ),
                                   const SizedBox(height: 2),
-                                  Text(dueDate, style: const TextStyle(color: Color(0xFFFBBF24), fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(
+                                    dueDate,
+                                    style: const TextStyle(
+                                      color: Color(0xFFFBBF24),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -2356,7 +2998,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         border: Border.all(color: borderCol),
                         boxShadow: [
                           BoxShadow(
-                            color: isDark ? const Color(0x1A000000) : const Color(0x05000000),
+                            color: isDark
+                                ? const Color(0x1A000000)
+                                : const Color(0x05000000),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
                           ),
@@ -2367,10 +3011,16 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFEEF2FF),
+                              color: isDark
+                                  ? const Color(0xFF1E3A8A)
+                                  : const Color(0xFFEEF2FF),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.verified_user_rounded, color: AppTheme.primaryBlue, size: 22),
+                            child: const Icon(
+                              Icons.verified_user_rounded,
+                              color: AppTheme.primaryBlue,
+                              size: 22,
+                            ),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
@@ -2397,12 +3047,21 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             ),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.copy_rounded, size: 18, color: AppTheme.primaryBlue),
+                            icon: const Icon(
+                              Icons.copy_rounded,
+                              size: 18,
+                              color: AppTheme.primaryBlue,
+                            ),
                             tooltip: 'Copy UPI ID',
                             onPressed: () {
-                              Clipboard.setData(ClipboardData(text: _ownerUpiId));
+                              Clipboard.setData(
+                                ClipboardData(text: _ownerUpiId),
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Owner UPI ID copied!'), duration: Duration(seconds: 2)),
+                                const SnackBar(
+                                  content: Text('Owner UPI ID copied!'),
+                                  duration: Duration(seconds: 2),
+                                ),
                               );
                             },
                           ),
@@ -2435,10 +3094,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   const SizedBox(height: 6),
                   Text(
                     'Pay securely with Google Pay, PhonePe, PayPal, or Credit Card.',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: textSec,
-                    ),
+                    style: TextStyle(fontSize: 12.5, color: textSec),
                   ),
                   const SizedBox(height: 16),
 
@@ -2462,7 +3118,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     delay: const Duration(milliseconds: 145),
                     child: _buildPaymentMethodTile(
                       title: 'PhonePe',
-                      subtitle: 'Fast UPI payment via PhonePe app to $_payeeName',
+                      subtitle:
+                          'Fast UPI payment via PhonePe app to $_payeeName',
                       brandColor: const Color(0xFF5F259F),
                       iconData: Icons.payments_rounded,
                       isIconLetter: false,
@@ -2477,7 +3134,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     delay: const Duration(milliseconds: 190),
                     child: _buildPaymentMethodTile(
                       title: 'PayPal',
-                      subtitle: 'Fast and secure worldwide checkout with PayPal',
+                      subtitle:
+                          'Fast and secure worldwide checkout with PayPal',
                       brandColor: const Color(0xFF003087),
                       iconData: Icons.payment_rounded,
                       isIconLetter: false,
@@ -2513,13 +3171,18 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                           icon: const Icon(Icons.flash_on_rounded, size: 18),
                           label: Text(
                             'Pay ₹ ${_formatAmount(amount)} Now',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             elevation: 2,
                             shadowColor: const Color(0x594F46E5),
                           ),
@@ -2533,22 +3196,39 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   MotionEntrance(
                     delay: const Duration(milliseconds: 300),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF064E3B) : const Color(0xFFF0FDF4),
+                        color: isDark
+                            ? const Color(0xFF064E3B)
+                            : const Color(0xFFF0FDF4),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFFBBF7D0)),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF059669)
+                              : const Color(0xFFBBF7D0),
+                        ),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.shield_rounded, color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF16A34A), size: 20),
+                          Icon(
+                            Icons.shield_rounded,
+                            color: isDark
+                                ? const Color(0xFFA7F3D0)
+                                : const Color(0xFF16A34A),
+                            size: 20,
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               '100% Encrypted & Bank-Verified. Recipient: $_payeeName ($defaultCurrency).',
                               style: TextStyle(
                                 fontSize: 11.5,
-                                color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF15803D),
+                                color: isDark
+                                    ? const Color(0xFFA7F3D0)
+                                    : const Color(0xFF15803D),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -2587,11 +3267,19 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.account_balance_wallet_rounded, size: 18, color: Color(0xFF0B6B63)),
+              const Icon(
+                Icons.account_balance_wallet_rounded,
+                size: 18,
+                color: Color(0xFF0B6B63),
+              ),
               const SizedBox(width: 8),
               Text(
                 'Installed UPI Apps',
-                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.bold, color: textPri),
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.bold,
+                  color: textPri,
+                ),
               ),
               const Spacer(),
               if (_isLaunching)
@@ -2616,14 +3304,18 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF2C3841) : const Color(0xFFFEF3C7),
+                color: isDark
+                    ? const Color(0xFF2C3841)
+                    : const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 'No UPI apps installed on this device. Install Google Pay, PhonePe, Paytm, or BHIM to pay via Direct UPI.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? const Color(0xFFFDE68A) : const Color(0xFF92400E),
+                  color: isDark
+                      ? const Color(0xFFFDE68A)
+                      : const Color(0xFF92400E),
                 ),
               ),
             )
@@ -2632,7 +3324,8 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
               spacing: 8,
               runSpacing: 8,
               children: _installedUpiApps.map((app) {
-                final selected = _selectedUpiApp?.packageName == app.packageName;
+                final selected =
+                    _selectedUpiApp?.packageName == app.packageName;
                 return ChoiceChip(
                   label: Text(
                     app.name,
@@ -2644,7 +3337,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   ),
                   selected: selected,
                   selectedColor: const Color(0xFF0B6B63),
-                  backgroundColor: isDark ? const Color(0xFF1B232A) : const Color(0xFFF2F5F4),
+                  backgroundColor: isDark
+                      ? const Color(0xFF1B232A)
+                      : const Color(0xFFF2F5F4),
                   onSelected: _isLaunching
                       ? null
                       : (_) => setState(() => _selectedUpiApp = app),
@@ -2662,20 +3357,28 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     ? const SizedBox(
                         width: 16,
                         height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Icon(Icons.qr_code_scanner_rounded, size: 18),
                 label: Text(
                   _isLaunching
                       ? 'Opening ${_selectedUpiApp?.name ?? 'UPI App'}...'
                       : 'Pay using UPI',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0B6B63),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -2696,9 +3399,15 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   }) {
     final isDark = context != null ? AppTheme.isDark(context) : false;
     final cardBg = context != null ? AppTheme.cardBg(context) : Colors.white;
-    final borderCol = context != null ? AppTheme.borderCol(context) : const Color(0xFFE2E8F0);
-    final textPri = context != null ? AppTheme.textPrimary(context) : AppTheme.textDark;
-    final textSec = context != null ? AppTheme.textSecondary(context) : AppTheme.textGrey;
+    final borderCol = context != null
+        ? AppTheme.borderCol(context)
+        : const Color(0xFFE2E8F0);
+    final textPri = context != null
+        ? AppTheme.textPrimary(context)
+        : AppTheme.textDark;
+    final textSec = context != null
+        ? AppTheme.textSecondary(context)
+        : AppTheme.textGrey;
 
     return TactilePress(
       child: Container(
@@ -2729,7 +3438,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     decoration: BoxDecoration(
                       color: brandColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: brandColor.withValues(alpha: 0.25)),
+                      border: Border.all(
+                        color: brandColor.withValues(alpha: 0.25),
+                      ),
                     ),
                     child: Center(
                       child: Icon(
@@ -2755,10 +3466,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         const SizedBox(height: 3),
                         Text(
                           subtitle,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: textSec,
-                          ),
+                          style: TextStyle(fontSize: 12, color: textSec),
                         ),
                       ],
                     ),
@@ -2766,7 +3474,9 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                   Icon(
                     Icons.arrow_forward_ios_rounded,
                     size: 14,
-                    color: isDark ? AppTheme.darkTextSecondary : const Color(0xFF94A3B8),
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : const Color(0xFF94A3B8),
                   ),
                 ],
               ),

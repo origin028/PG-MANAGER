@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:upi_pay/upi_pay.dart' as upi;
+
 import '../../core/theme/app_theme.dart';
 import 'poc_upi_pay_service.dart';
 
@@ -119,11 +120,17 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFF0D9488).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF0D9488).withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.verified_user, color: Color(0xFF0D9488), size: 32),
+                  const Icon(
+                    Icons.verified_user,
+                    color: Color(0xFF0D9488),
+                    size: 32,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -145,7 +152,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                         const SizedBox(height: 2),
                         const Text(
                           'Strict Safety: State remains PENDING_VERIFICATION (Never auto-marked PAID).',
-                          style: TextStyle(fontSize: 11, color: Color(0xFF0D9488), fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFF0D9488),
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -158,7 +169,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
             // Package Compatibility & Architecture Notes
             Text(
               'Package Evaluation Diagnostics',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textPri),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textPri,
+              ),
             ),
             const SizedBox(height: 8),
             Container(
@@ -209,7 +224,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
               children: [
                 Text(
                   'Discovered UPI Apps (${_discoveredApps.length})',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textPri),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textPri,
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: _isDiscovering ? null : _runDiscovery,
@@ -256,7 +275,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                           children: [
                             Text(
                               app.appName,
-                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: textPri),
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: textPri,
+                              ),
                             ),
                             Text(
                               app.packageName,
@@ -266,7 +289,10 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: app.isNativelySupportedByPackage
                               ? Colors.green.withValues(alpha: 0.1)
@@ -274,11 +300,15 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          app.isNativelySupportedByPackage ? 'In Enum' : 'Custom App',
+                          app.isNativelySupportedByPackage
+                              ? 'In Enum'
+                              : 'Custom App',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: app.isNativelySupportedByPackage ? Colors.green : Colors.amber.shade800,
+                            color: app.isNativelySupportedByPackage
+                                ? Colors.green
+                                : Colors.amber.shade800,
                           ),
                         ),
                       ),
@@ -291,7 +321,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
             // Independent Testing Action Tiles
             Text(
               'Execute Isolated upi_pay Test Launches',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textPri),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textPri,
+              ),
             ),
             const SizedBox(height: 8),
 
@@ -331,7 +365,8 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                   style: TextStyle(fontSize: 12, color: textPri),
                 ),
                 value: _enablePhonePeFallback,
-                onChanged: (val) => setState(() => _enablePhonePeFallback = val),
+                onChanged: (val) =>
+                    setState(() => _enablePhonePeFallback = val),
               ),
               onTap: () => _executePayment(
                 appName: 'PhonePe',
@@ -352,17 +387,20 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
               textPri: textPri,
               textSec: textSec,
               onTap: () {
-                final discoveredNavi = _discoveredApps.cast<PocDiscoveredApp?>().firstWhere(
-                  (a) =>
-                      a != null &&
-                      (a.packageName == PocUpiPayService.naviPackage ||
-                          a.packageName == PocUpiPayService.naviAppPackage),
-                  orElse: () => null,
-                );
+                final discoveredNavi = _discoveredApps
+                    .cast<PocDiscoveredApp?>()
+                    .firstWhere(
+                      (a) =>
+                          a != null &&
+                          (a.packageName == PocUpiPayService.naviPackage ||
+                              a.packageName == PocUpiPayService.naviAppPackage),
+                      orElse: () => null,
+                    );
                 final targetPkg =
                     discoveredNavi?.packageName ?? PocUpiPayService.naviPackage;
                 final targetApp =
-                    discoveredNavi?.upiApplication ?? PocUpiPayService.naviCustomApplication;
+                    discoveredNavi?.upiApplication ??
+                    PocUpiPayService.naviCustomApplication;
 
                 _executePayment(
                   appName: 'Navi UPI',
@@ -391,7 +429,13 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                 ),
               )
             else if (_lastResult != null)
-              _buildResultCard(_lastResult!, cardBg, borderCol, textPri, textSec),
+              _buildResultCard(
+                _lastResult!,
+                cardBg,
+                borderCol,
+                textPri,
+                textSec,
+              ),
             const SizedBox(height: 40),
           ],
         ),
@@ -413,23 +457,33 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
     return CircleAvatar(
       radius: 18,
       backgroundColor: const Color(0xFF6366F1).withValues(alpha: 0.1),
-      child: const Icon(Icons.account_balance_wallet, size: 20, color: Color(0xFF6366F1)),
+      child: const Icon(
+        Icons.account_balance_wallet,
+        size: 20,
+        color: Color(0xFF6366F1),
+      ),
     );
   }
 
-  Widget _buildBulletPoint(String label, String value, Color textPri, Color textSec) {
+  Widget _buildBulletPoint(
+    String label,
+    String value,
+    Color textPri,
+    Color textSec,
+  ) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '$label ',
-          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textPri),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: textPri,
+          ),
         ),
         Expanded(
-          child: Text(
-            value,
-            style: TextStyle(fontSize: 12, color: textSec),
-          ),
+          child: Text(value, style: TextStyle(fontSize: 12, color: textSec)),
         ),
       ],
     );
@@ -473,7 +527,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                     children: [
                       Text(
                         title,
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textPri),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: textPri,
+                        ),
                       ),
                       const SizedBox(height: 2),
                       Text(
@@ -488,9 +546,17 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: iconColor,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
+                    textStyle: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   child: const Text('Test ₹1'),
                 ),
@@ -521,7 +587,10 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,7 +600,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
             children: [
               Text(
                 'Execution Result: ${res.appName}',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: textPri),
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: textPri,
+                ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -541,7 +614,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                 ),
                 child: Text(
                   res.launched ? 'LAUNCHED' : 'NOT RESOLVED',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
                 ),
               ),
             ],
@@ -565,7 +642,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
                 Expanded(
                   child: Text(
                     'State: PENDING_VERIFICATION (Invoice not marked paid on callback)',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.orange.shade800),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange.shade800,
+                    ),
                   ),
                 ),
               ],
@@ -576,17 +657,46 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
           // Diagnostic Attributes Table
           _buildDetailRow('Target Package', res.packageName, textPri, textSec),
           _buildDetailRow('Txn Ref (tr)', res.txnRef, textPri, textSec),
-          _buildDetailRow('Amount', '₹${res.amount.toStringAsFixed(2)}', textPri, textSec),
-          _buildDetailRow('Status Enum', res.status?.toString() ?? 'None', textPri, textSec),
-          _buildDetailRow('Raw Response', res.rawResponse ?? 'None', textPri, textSec),
-          _buildDetailRow('Response Code', res.responseCode ?? 'None', textPri, textSec),
-          _buildDetailRow('Approval Ref', res.approvalRefNo ?? 'None', textPri, textSec),
+          _buildDetailRow(
+            'Amount',
+            '₹${res.amount.toStringAsFixed(2)}',
+            textPri,
+            textSec,
+          ),
+          _buildDetailRow(
+            'Status Enum',
+            res.status?.toString() ?? 'None',
+            textPri,
+            textSec,
+          ),
+          _buildDetailRow(
+            'Raw Response',
+            res.rawResponse ?? 'None',
+            textPri,
+            textSec,
+          ),
+          _buildDetailRow(
+            'Response Code',
+            res.responseCode ?? 'None',
+            textPri,
+            textSec,
+          ),
+          _buildDetailRow(
+            'Approval Ref',
+            res.approvalRefNo ?? 'None',
+            textPri,
+            textSec,
+          ),
           _buildDetailRow('Txn ID', res.txnId ?? 'None', textPri, textSec),
 
           const Divider(height: 20),
           Text(
             'Raw Execution Logs:',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textPri),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: textPri,
+            ),
           ),
           const SizedBox(height: 6),
           Container(
@@ -606,7 +716,12 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, Color textPri, Color textSec) {
+  Widget _buildDetailRow(
+    String label,
+    String value,
+    Color textPri,
+    Color textSec,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
@@ -619,7 +734,11 @@ class _PocUpiPayScreenState extends State<PocUpiPayScreen> {
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: textPri),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: textPri,
+              ),
             ),
           ),
         ],

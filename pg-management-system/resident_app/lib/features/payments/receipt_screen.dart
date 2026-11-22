@@ -1,10 +1,12 @@
 import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/motion_wrappers.dart';
@@ -31,7 +33,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   }) async {
     setState(() => _isDownloading = true);
     try {
-      String? receiptId = widget.receiptData['id']?.toString() ??
+      String? receiptId =
+          widget.receiptData['id']?.toString() ??
           widget.receiptData['receiptId']?.toString() ??
           widget.receiptData['receipt_id']?.toString();
 
@@ -44,7 +47,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                 r['receipt_number']?.toString() == receiptNumber ||
                 r['invoice_number']?.toString() == invoiceId ||
                 r['invoice_id']?.toString() == invoiceId,
-            orElse: () => receipts.isNotEmpty ? receipts.first : <String, dynamic>{},
+            orElse: () =>
+                receipts.isNotEmpty ? receipts.first : <String, dynamic>{},
           );
           if (match.isNotEmpty && match['id'] != null) {
             receiptId = match['id'].toString();
@@ -54,7 +58,8 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
 
       if (receiptId != null && receiptId.isNotEmpty) {
         final pdfBytes = await ResidentApiService.downloadReceiptPdf(receiptId);
-        final safeFileName = 'receipt_${receiptNumber.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_')}.pdf';
+        final safeFileName =
+            'receipt_${receiptNumber.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_')}.pdf';
 
         final savedPath = await FilePicker.platform.saveFile(
           dialogTitle: 'Save Rent Receipt PDF',
@@ -93,14 +98,18 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
         }
       } else {
         // Fallback: Copy official summary to clipboard
-        Clipboard.setData(ClipboardData(
-          text:
-              'RENT RECEIPT: $receiptNumber\nInvoice: $invoiceId\nAmount: ₹$amount\nTenant: $residentName (Room $roomNumber)\nTxn Ref: $transactionRef\nStatus: Paid & Verified',
-        ));
+        Clipboard.setData(
+          ClipboardData(
+            text:
+                'RENT RECEIPT: $receiptNumber\nInvoice: $invoiceId\nAmount: ₹$amount\nTenant: $residentName (Room $roomNumber)\nTxn Ref: $transactionRef\nStatus: Paid & Verified',
+          ),
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Receipt details copied to clipboard! (PDF available on server)'),
+              content: Text(
+                'Receipt details copied to clipboard! (PDF available on server)',
+              ),
               duration: Duration(seconds: 3),
             ),
           );
@@ -108,14 +117,18 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       }
     } catch (e) {
       // Ensure user always gets feedback and access to text summary
-      Clipboard.setData(ClipboardData(
-        text:
-            'RENT RECEIPT: $receiptNumber\nInvoice: $invoiceId\nAmount: ₹$amount\nTenant: $residentName (Room $roomNumber)\nTxn Ref: $transactionRef\nStatus: Paid & Verified',
-      ));
+      Clipboard.setData(
+        ClipboardData(
+          text:
+              'RENT RECEIPT: $receiptNumber\nInvoice: $invoiceId\nAmount: ₹$amount\nTenant: $residentName (Room $roomNumber)\nTxn Ref: $transactionRef\nStatus: Paid & Verified',
+        ),
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not download PDF ($e). Summary copied to clipboard!'),
+            content: Text(
+              'Could not download PDF ($e). Summary copied to clipboard!',
+            ),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -134,20 +147,47 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     final textSec = AppTheme.textSecondary(context);
     final pageBg = AppTheme.pageBg(context);
 
-    final receiptNumber = widget.receiptData['receiptNumber'] ?? widget.receiptData['receipt_number'] ?? 'REC-2026-11-0084';
-    final invoiceId = widget.receiptData['invoiceId'] ?? widget.receiptData['invoice_number'] ?? widget.receiptData['id'] ?? 'INV-2026-010';
+    final receiptNumber =
+        widget.receiptData['receiptNumber'] ??
+        widget.receiptData['receipt_number'] ??
+        'REC-2026-11-0084';
+    final invoiceId =
+        widget.receiptData['invoiceId'] ??
+        widget.receiptData['invoice_number'] ??
+        widget.receiptData['id'] ??
+        'INV-2026-010';
     final amount = widget.receiptData['amount'] ?? 8000;
-    final paymentApp = widget.receiptData['paymentApp'] ?? widget.receiptData['payment_mode'] ?? 'Google Pay';
-    final transactionRef = widget.receiptData['transactionRef'] ?? widget.receiptData['transaction_ref'] ?? 'UPI-20261029-998877';
-    final approvalCode = widget.receiptData['bankApprovalCode'] ?? widget.receiptData['approval_code'] ?? 'BANK-AUTH-10492';
+    final paymentApp =
+        widget.receiptData['paymentApp'] ??
+        widget.receiptData['payment_mode'] ??
+        'Google Pay';
+    final transactionRef =
+        widget.receiptData['transactionRef'] ??
+        widget.receiptData['transaction_ref'] ??
+        'UPI-20261029-998877';
+    final approvalCode =
+        widget.receiptData['bankApprovalCode'] ??
+        widget.receiptData['approval_code'] ??
+        'BANK-AUTH-10492';
     final paidAt = widget.receiptData['paidAt'] != null
-        ? DateTime.tryParse(widget.receiptData['paidAt'].toString()) ?? DateTime.now()
+        ? DateTime.tryParse(widget.receiptData['paidAt'].toString()) ??
+              DateTime.now()
         : (widget.receiptData['issued_at'] != null
-            ? DateTime.tryParse(widget.receiptData['issued_at'].toString()) ?? DateTime.now()
-            : DateTime.now());
-    final residentName = widget.receiptData['residentName'] ?? widget.receiptData['resident_name'] ?? 'Akshay B';
-    final roomNumber = widget.receiptData['roomNumber'] ?? widget.receiptData['room_number'] ?? '101';
-    final propertyName = widget.receiptData['propertyName'] ?? widget.receiptData['property_name'] ?? 'BNR Luxury PG';
+              ? DateTime.tryParse(widget.receiptData['issued_at'].toString()) ??
+                    DateTime.now()
+              : DateTime.now());
+    final residentName =
+        widget.receiptData['residentName'] ??
+        widget.receiptData['resident_name'] ??
+        'Akshay B';
+    final roomNumber =
+        widget.receiptData['roomNumber'] ??
+        widget.receiptData['room_number'] ??
+        '101';
+    final propertyName =
+        widget.receiptData['propertyName'] ??
+        widget.receiptData['property_name'] ??
+        'BNR Luxury PG';
 
     final formattedDate =
         '${paidAt.day.toString().padLeft(2, '0')} ${_monthName(paidAt.month)} ${paidAt.year}, ${paidAt.hour.toString().padLeft(2, '0')}:${paidAt.minute.toString().padLeft(2, '0')}';
@@ -166,7 +206,11 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       appBar: AppBar(
         title: Text(
           'Rent Receipt',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: textPri),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: textPri,
+          ),
         ),
         backgroundColor: cardBg,
         iconTheme: IconThemeData(color: textPri),
@@ -187,10 +231,12 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
             icon: Icon(Icons.share_outlined, color: textPri),
             tooltip: 'Share Receipt',
             onPressed: () {
-              Clipboard.setData(ClipboardData(
-                text:
-                    'RENT RECEIPT: $receiptNumber\nInvoice: $invoiceId\nAmount: ₹${formatAmount(amount)}\nTenant: $residentName (Room $roomNumber)\nTxn Ref: $transactionRef\nStatus: Paid & Verified',
-              ));
+              Clipboard.setData(
+                ClipboardData(
+                  text:
+                      'RENT RECEIPT: $receiptNumber\nInvoice: $invoiceId\nAmount: ₹${formatAmount(amount)}\nTenant: $residentName (Room $roomNumber)\nTxn Ref: $transactionRef\nStatus: Paid & Verified',
+                ),
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Receipt summary copied to clipboard!'),
@@ -218,7 +264,9 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                         border: Border.all(color: borderCol),
                         boxShadow: [
                           BoxShadow(
-                            color: isDark ? const Color(0x2A000000) : const Color(0x0F000000),
+                            color: isDark
+                                ? const Color(0x2A000000)
+                                : const Color(0x0F000000),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -231,8 +279,12 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                           Container(
                             padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
                             decoration: BoxDecoration(
-                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: const BorderRadius.vertical(
+                                top: Radius.circular(24),
+                              ),
                             ),
                             child: Column(
                               children: [
@@ -242,7 +294,10 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFDCFCE7),
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFF86EFAC), width: 2),
+                                    border: Border.all(
+                                      color: const Color(0xFF86EFAC),
+                                      width: 2,
+                                    ),
                                   ),
                                   child: Center(
                                     child: Lottie.asset(
@@ -250,144 +305,233 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                                       width: 42,
                                       height: 42,
                                       repeat: false,
-                                      animate: !(MediaQuery.maybeDisableAnimationsOf(context) ?? false),
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Icon(Icons.check_rounded, color: Color(0xFF16A34A), size: 32),
+                                      animate:
+                                          !(MediaQuery.maybeDisableAnimationsOf(
+                                                context,
+                                              ) ??
+                                              false),
+                                      errorBuilder:
+                                          (context, error, stackTrace) =>
+                                              const Icon(
+                                                Icons.check_rounded,
+                                                color: Color(0xFF16A34A),
+                                                size: 32,
+                                              ),
                                     ),
                                   ),
                                 ),
-                              const SizedBox(height: 14),
-                              Text(
-                                propertyName,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: textPri,
-                                  letterSpacing: -0.2,
+                                const SizedBox(height: 14),
+                                Text(
+                                  propertyName,
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: textPri,
+                                    letterSpacing: -0.2,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Official E-Rent Payment Receipt',
-                                style: TextStyle(fontSize: 12.5, color: textSec),
-                              ),
-                              const SizedBox(height: 12),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(color: isDark ? const Color(0xFF059669) : const Color(0xFFBBF7D0)),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Official E-Rent Payment Receipt',
+                                  style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: textSec,
+                                  ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.verified_rounded, size: 14, color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF16A34A)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      'VERIFIED & PAID',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF15803D),
-                                        letterSpacing: 0.8,
-                                      ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF064E3B)
+                                        : const Color(0xFFDCFCE7),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? const Color(0xFF059669)
+                                          : const Color(0xFFBBF7D0),
                                     ),
-                                  ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.verified_rounded,
+                                        size: 14,
+                                        color: isDark
+                                            ? const Color(0xFFA7F3D0)
+                                            : const Color(0xFF16A34A),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'VERIFIED & PAID',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: isDark
+                                              ? const Color(0xFFA7F3D0)
+                                              : const Color(0xFF15803D),
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
 
-                        // Serrated/Dotted separator line
-                        _buildCutlineDivider(pageBg: pageBg, dotColor: borderCol),
+                          // Serrated/Dotted separator line
+                          _buildCutlineDivider(
+                            pageBg: pageBg,
+                            dotColor: borderCol,
+                          ),
 
-                        // Amount Block
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                          child: Column(
-                            children: [
-                              Text(
-                                'AMOUNT PAID',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
+                          // Amount Block
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: 20,
+                              horizontal: 24,
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'AMOUNT PAID',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: textSec,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '₹ ${formatAmount(amount)}',
+                                  style: TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w900,
+                                    color: textPri,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Paid on $formattedDate',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSec,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Divider(
+                              height: 1,
+                              thickness: 1,
+                              color: borderCol,
+                            ),
+                          ),
+
+                          // Receipt Details Grid
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              children: [
+                                _buildReceiptRow(
+                                  'Receipt Number',
+                                  receiptNumber,
+                                  isHighlight: true,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                ),
+                                const SizedBox(height: 14),
+                                _buildReceiptRow(
+                                  'Invoice Number',
+                                  invoiceId,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                ),
+                                const SizedBox(height: 14),
+                                _buildReceiptRow(
+                                  'Tenant Name',
+                                  residentName,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                ),
+                                const SizedBox(height: 14),
+                                _buildReceiptRow(
+                                  'Room / Bed',
+                                  'Room $roomNumber',
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                ),
+                                const SizedBox(height: 14),
+                                _buildReceiptRow(
+                                  'Payment Method',
+                                  paymentApp,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                ),
+                                const SizedBox(height: 14),
+                                _buildCopyableRow(
+                                  context,
+                                  'Transaction Ref',
+                                  transactionRef,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                ),
+                                const SizedBox(height: 14),
+                                _buildReceiptRow(
+                                  'Bank Auth Code',
+                                  approvalCode,
+                                  textPri: textPri,
+                                  textSec: textSec,
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Security & Note Footer inside receipt
+                          Container(
+                            padding: const EdgeInsets.all(18),
+                            margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF1E293B)
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: borderCol),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.lock_rounded,
+                                  size: 18,
                                   color: textSec,
-                                  letterSpacing: 1.2,
                                 ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '₹ ${formatAmount(amount)}',
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w900,
-                                  color: textPri,
-                                  letterSpacing: -0.5,
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    'This is an authorized computer-generated rent receipt settled directly to PG Owner bank account.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: textSec,
+                                      height: 1.35,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Paid on $formattedDate',
-                                style: TextStyle(fontSize: 12, color: textSec),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Divider(height: 1, thickness: 1, color: borderCol),
-                        ),
-
-                        // Receipt Details Grid
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            children: [
-                              _buildReceiptRow('Receipt Number', receiptNumber, isHighlight: true, textPri: textPri, textSec: textSec),
-                              const SizedBox(height: 14),
-                              _buildReceiptRow('Invoice Number', invoiceId, textPri: textPri, textSec: textSec),
-                              const SizedBox(height: 14),
-                              _buildReceiptRow('Tenant Name', residentName, textPri: textPri, textSec: textSec),
-                              const SizedBox(height: 14),
-                              _buildReceiptRow('Room / Bed', 'Room $roomNumber', textPri: textPri, textSec: textSec),
-                              const SizedBox(height: 14),
-                              _buildReceiptRow('Payment Method', paymentApp, textPri: textPri, textSec: textSec),
-                              const SizedBox(height: 14),
-                              _buildCopyableRow(context, 'Transaction Ref', transactionRef, textPri: textPri, textSec: textSec),
-                              const SizedBox(height: 14),
-                              _buildReceiptRow('Bank Auth Code', approvalCode, textPri: textPri, textSec: textSec),
-                            ],
-                          ),
-                        ),
-
-                        // Security & Note Footer inside receipt
-                        Container(
-                          padding: const EdgeInsets.all(18),
-                          margin: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF8FAFC),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: borderCol),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.lock_rounded, size: 18, color: textSec),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'This is an authorized computer-generated rent receipt settled directly to PG Owner bank account.',
-                                  style: TextStyle(fontSize: 11, color: textSec, height: 1.35),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
                   ),
 
                   const SizedBox(height: 24),
@@ -402,13 +546,13 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                           onPressed: _isDownloading
                               ? null
                               : () => _handleDownloadReceiptPdf(
-                                    receiptNumber: receiptNumber,
-                                    invoiceId: invoiceId,
-                                    amount: amount,
-                                    residentName: residentName,
-                                    roomNumber: roomNumber,
-                                    transactionRef: transactionRef,
-                                  ),
+                                  receiptNumber: receiptNumber,
+                                  invoiceId: invoiceId,
+                                  amount: amount,
+                                  residentName: residentName,
+                                  roomNumber: roomNumber,
+                                  transactionRef: transactionRef,
+                                ),
                           icon: _isDownloading
                               ? const SizedBox(
                                   width: 18,
@@ -419,12 +563,18 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                                   ),
                                 )
                               : const Icon(Icons.download_rounded, size: 18),
-                          label: Text(_isDownloading ? 'Downloading PDF...' : 'Download Receipt PDF / Summary'),
+                          label: Text(
+                            _isDownloading
+                                ? 'Downloading PDF...'
+                                : 'Download Receipt PDF / Summary',
+                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.primaryBlue,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                         ),
                       ),
@@ -438,13 +588,18 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                         onPressed: () => context.go('/home'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           side: BorderSide(color: borderCol),
                           backgroundColor: cardBg,
                         ),
                         child: Text(
                           'Done (Return to Home)',
-                          style: TextStyle(color: textPri, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: textPri,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
@@ -458,7 +613,10 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     );
   }
 
-  Widget _buildCutlineDivider({required Color pageBg, required Color dotColor}) {
+  Widget _buildCutlineDivider({
+    required Color pageBg,
+    required Color dotColor,
+  }) {
     return SizedBox(
       height: 20,
       child: Stack(
@@ -480,10 +638,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
             child: Container(
               width: 20,
               height: 20,
-              decoration: BoxDecoration(
-                color: pageBg,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: pageBg, shape: BoxShape.circle),
             ),
           ),
           Positioned(
@@ -491,10 +646,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
             child: Container(
               width: 20,
               height: 20,
-              decoration: BoxDecoration(
-                color: pageBg,
-                shape: BoxShape.circle,
-              ),
+              decoration: BoxDecoration(color: pageBg, shape: BoxShape.circle),
             ),
           ),
         ],
@@ -502,14 +654,17 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     );
   }
 
-  Widget _buildReceiptRow(String label, String value, {bool isHighlight = false, required Color textPri, required Color textSec}) {
+  Widget _buildReceiptRow(
+    String label,
+    String value, {
+    bool isHighlight = false,
+    required Color textPri,
+    required Color textSec,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 13, color: textSec),
-        ),
+        Text(label, style: TextStyle(fontSize: 13, color: textSec)),
         const SizedBox(width: 12),
         Flexible(
           child: Text(
@@ -527,21 +682,27 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     );
   }
 
-  Widget _buildCopyableRow(BuildContext context, String label, String value, {required Color textPri, required Color textSec}) {
+  Widget _buildCopyableRow(
+    BuildContext context,
+    String label,
+    String value, {
+    required Color textPri,
+    required Color textSec,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: TextStyle(fontSize: 13, color: textSec),
-        ),
+        Text(label, style: TextStyle(fontSize: 13, color: textSec)),
         const SizedBox(width: 12),
         Flexible(
           child: InkWell(
             onTap: () {
               Clipboard.setData(ClipboardData(text: value));
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$label copied!'), duration: const Duration(seconds: 1)),
+                SnackBar(
+                  content: Text('$label copied!'),
+                  duration: const Duration(seconds: 1),
+                ),
               );
             },
             child: Row(
@@ -559,7 +720,11 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.copy_rounded, size: 14, color: AppTheme.primaryBlue),
+                const Icon(
+                  Icons.copy_rounded,
+                  size: 14,
+                  color: AppTheme.primaryBlue,
+                ),
               ],
             ),
           ),
@@ -570,8 +735,18 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
 
   static String _monthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     if (month >= 1 && month <= 12) return months[month - 1];
     return '';

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
 import '../../core/network/api_exception.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/motion_wrappers.dart';
@@ -109,7 +111,7 @@ class OtpVerificationScreen extends StatefulWidget {
   final Future<Map<String, dynamic>> Function(String otp) onVerifyOtp;
   final Future<Map<String, dynamic>> Function()? onResendOtp;
   final void Function(BuildContext otpContext, Map<String, dynamic> result)
-      onVerified;
+  onVerified;
 
   const OtpVerificationScreen({
     super.key,
@@ -149,16 +151,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       widget.otpLength,
       (_) => TextEditingController(),
     );
-    _cellFocusNodes = List.generate(
-      widget.otpLength,
-      (index) {
-        final node = FocusNode();
-        node.addListener(() {
-          if (mounted) setState(() {});
-        });
-        return node;
-      },
-    );
+    _cellFocusNodes = List.generate(widget.otpLength, (index) {
+      final node = FocusNode();
+      node.addListener(() {
+        if (mounted) setState(() {});
+      });
+      return node;
+    });
 
     _pulseController = AnimationController(
       vsync: this,
@@ -393,7 +392,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       _cellFocusNodes.first.requestFocus();
 
       final cooldownFromApi =
-          (res['cooldown_seconds'] as num?)?.toInt() ?? widget.initialCooldownSeconds;
+          (res['cooldown_seconds'] as num?)?.toInt() ??
+          widget.initialCooldownSeconds;
       setState(() {
         _isResending = false;
         _secondsRemaining = math.max(1, cooldownFromApi);
@@ -407,7 +407,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           content: const Text('A new verification code is on its way.'),
           backgroundColor: palette.teal,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -585,8 +587,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                                       color: palette.softError,
                                       borderRadius: BorderRadius.circular(12),
                                       border: Border.all(
-                                        color:
-                                            palette.error.withValues(alpha: 0.3),
+                                        color: palette.error.withValues(
+                                          alpha: 0.3,
+                                        ),
                                       ),
                                     ),
                                     child: Row(
@@ -634,8 +637,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                                     ? null
                                     : [
                                         BoxShadow(
-                                          color: palette.teal
-                                              .withValues(alpha: 0.35),
+                                          color: palette.teal.withValues(
+                                            alpha: 0.35,
+                                          ),
                                           blurRadius: 20,
                                           offset: const Offset(0, 10),
                                         ),
@@ -643,9 +647,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                               ),
                               child: ElevatedButton(
                                 onPressed:
-                                    (!isCodeComplete || _isVerifying || _isVerified)
-                                        ? null
-                                        : _handleVerify,
+                                    (!isCodeComplete ||
+                                        _isVerifying ||
+                                        _isVerified)
+                                    ? null
+                                    : _handleVerify,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: _isVerified
                                       ? palette.success
@@ -654,8 +660,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                                       ? palette.success
                                       : palette.teal.withValues(alpha: 0.55),
                                   foregroundColor: Colors.white,
-                                  disabledForegroundColor:
-                                      Colors.white.withValues(alpha: 0.9),
+                                  disabledForegroundColor: Colors.white
+                                      .withValues(alpha: 0.9),
                                   minimumSize: const Size(double.infinity, 54),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
@@ -677,36 +683,36 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                                           ),
                                         )
                                       : _isVerified
-                                          ? Row(
-                                              key: const ValueKey('otp_done'),
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                const Icon(
-                                                  Icons.check_circle_outline_rounded,
-                                                  size: 20,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Text(
-                                                  'Verified',
-                                                  style:
-                                                      HomeThemeTokens.manrope(
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Colors.white,
-                                                  ),
-                                                ),
-                                              ],
-                                            )
-                                          : Text(
-                                              'Verify OTP',
-                                              key: const ValueKey('otp_idle'),
+                                      ? Row(
+                                          key: const ValueKey('otp_done'),
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            const Icon(
+                                              Icons
+                                                  .check_circle_outline_rounded,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              'Verified',
                                               style: HomeThemeTokens.manrope(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w800,
                                                 color: Colors.white,
                                               ),
                                             ),
+                                          ],
+                                        )
+                                      : Text(
+                                          'Verify OTP',
+                                          key: const ValueKey('otp_idle'),
+                                          style: HomeThemeTokens.manrope(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
                                 ),
                               ),
                             ),
@@ -773,8 +779,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
         if (v < startFraction || v >= 1.0) {
           return const SizedBox.shrink();
         }
-        final localT = ((v - startFraction) / (1.0 - startFraction))
-            .clamp(0.0, 1.0);
+        final localT = ((v - startFraction) / (1.0 - startFraction)).clamp(
+          0.0,
+          1.0,
+        );
         final waveT = (localT * 2.0) % 1.0;
         final fadeOut = localT > 0.7 ? (1.0 - localT) / 0.3 : 1.0;
         final scale = 1.0 + waveT * 0.45;
@@ -790,10 +798,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                 height: 88,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(28),
-                  border: Border.all(
-                    color: palette.teal,
-                    width: 1.5,
-                  ),
+                  border: Border.all(color: palette.teal, width: 1.5),
                 ),
               ),
             ),
@@ -849,24 +854,22 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
       builder: (context, scale, child) =>
           Transform.scale(scale: scale, child: child),
       child: AnimatedContainer(
-        duration:
-            disableAnim ? Duration.zero : const Duration(milliseconds: 180),
+        duration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
         height: 60,
         decoration: BoxDecoration(
           color: cellBg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: borderCol,
-            width: isFocused ? 2.0 : 1.5,
-          ),
+          border: Border.all(color: borderCol, width: isFocused ? 2.0 : 1.5),
           boxShadow: [
             BoxShadow(
               color: isFocused
                   ? palette.teal.withValues(alpha: 0.18)
                   : (palette.isDark
-                      ? const Color(0x33000000)
-                      : const Color(0x0D000000)),
+                        ? const Color(0x33000000)
+                        : const Color(0x0D000000)),
               blurRadius: isFocused ? 8 : 4,
               spreadRadius: isFocused ? 1 : 0,
               offset: const Offset(0, 2),
@@ -882,8 +885,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               enabled: !_isVerifying && !_isVerified,
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              autofillHints:
-                  index == 0 ? const [AutofillHints.oneTimeCode] : null,
+              autofillHints: index == 0
+                  ? const [AutofillHints.oneTimeCode]
+                  : null,
               inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               style: HomeThemeTokens.manrope(
                 fontSize: 22,
@@ -915,8 +919,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
     }
 
     return AnimatedSwitcher(
-      duration:
-          disableAnim ? Duration.zero : const Duration(milliseconds: 200),
+      duration: disableAnim ? Duration.zero : const Duration(milliseconds: 200),
       child: _isResending
           ? Row(
               key: const ValueKey('resending'),
@@ -941,66 +944,65 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
               ],
             )
           : _secondsRemaining > 0
-              ? Align(
-                  key: const ValueKey('countdown'),
-                  alignment: Alignment.centerLeft,
-                  child: Text.rich(
+          ? Align(
+              key: const ValueKey('countdown'),
+              alignment: Alignment.centerLeft,
+              child: Text.rich(
+                TextSpan(
+                  text: 'Resend code in ',
+                  style: HomeThemeTokens.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: palette.mute,
+                  ),
+                  children: [
                     TextSpan(
-                      text: 'Resend code in ',
+                      text: _formatCountdown(_secondsRemaining),
                       style: HomeThemeTokens.manrope(
                         fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: palette.mute,
+                        fontWeight: FontWeight.w800,
+                        color: palette.ink,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
-                      children: [
-                        TextSpan(
-                          text: _formatCountdown(_secondsRemaining),
-                          style: HomeThemeTokens.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: palette.ink,
-                            fontFeatures: const [FontFeature.tabularFigures()],
-                          ),
-                        ),
-                      ],
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : Align(
+              key: const ValueKey('resend_ready'),
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    'Didn’t get it? ',
+                    style: HomeThemeTokens.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: palette.mute,
                     ),
                   ),
-                )
-              : Align(
-                  key: const ValueKey('resend_ready'),
-                  alignment: Alignment.centerLeft,
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      Text(
-                        'Didn’t get it? ',
+                  GestureDetector(
+                    onTap: _handleResend,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 2,
+                        vertical: 2,
+                      ),
+                      child: Text(
+                        'Resend code',
                         style: HomeThemeTokens.manrope(
                           fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: palette.mute,
+                          fontWeight: FontWeight.w800,
+                          color: palette.teal,
                         ),
                       ),
-                      GestureDetector(
-                        onTap: _handleResend,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 2,
-                            vertical: 2,
-                          ),
-                          child: Text(
-                            'Resend code',
-                            style: HomeThemeTokens.manrope(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: palette.teal,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+            ),
     );
   }
 }
-

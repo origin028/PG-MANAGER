@@ -1,4 +1,5 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:resident_app/core/theme/app_theme.dart';
@@ -12,48 +13,57 @@ import 'package:resident_app/features/profile/settings_screen.dart';
 import 'package:resident_app/features/complaints/raise_complaint_screen.dart';
 
 void main() {
-  testWidgets('HomeScreen in MainLayout with AppTheme renders and hit tests across wide web screen', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1920, 1080);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'HomeScreen in MainLayout with AppTheme renders and hit tests across wide web screen',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1920, 1080);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.lightTheme,
-      home: const MainLayout(child: HomeScreen()),
-    ));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: const MainLayout(child: HomeScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    // Verify key widgets
-    expect(find.text('Welcome back'), findsOneWidget);
-    expect(find.text('Notices'), findsWidgets);
-    expect(find.text('Recent payments'), findsNothing);
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Payments'), findsOneWidget);
-    expect(find.text('Food'), findsOneWidget);
-    expect(find.text('Menu'), findsOneWidget);
+      // Verify key widgets
+      expect(find.text('Welcome back'), findsOneWidget);
+      expect(find.text('Notices'), findsWidgets);
+      expect(find.text('Recent payments'), findsNothing);
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Payments'), findsOneWidget);
+      expect(find.text('Food'), findsOneWidget);
+      expect(find.text('Menu'), findsOneWidget);
 
-    // Simulate mouse movements across the screen to test MouseTracker hit tests
-    final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await gesture.addPointer(location: Offset.zero);
-    addTearDown(gesture.removePointer);
+      // Simulate mouse movements across the screen to test MouseTracker hit tests
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
+      await gesture.addPointer(location: Offset.zero);
+      addTearDown(gesture.removePointer);
 
-    for (double x = 0; x < 1200; x += 100) {
-      for (double y = 0; y < 800; y += 100) {
-        await gesture.moveTo(Offset(x, y));
-        await tester.pump();
+      for (double x = 0; x < 1200; x += 100) {
+        for (double y = 0; y < 800; y += 100) {
+          await gesture.moveTo(Offset(x, y));
+          await tester.pump();
+        }
       }
-    }
-  });
+    },
+  );
 
-  testWidgets('HomeScreen on mobile viewport with mouse hover in Dark Theme', (WidgetTester tester) async {
+  testWidgets('HomeScreen on mobile viewport with mouse hover in Dark Theme', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.darkTheme,
-      home: const MainLayout(child: HomeScreen()),
-    ));
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.darkTheme,
+        home: const MainLayout(child: HomeScreen()),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Welcome back'), findsOneWidget);
@@ -61,84 +71,105 @@ void main() {
     expect(find.text('Recent payments'), findsNothing);
   });
 
-  testWidgets('FoodMenuScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(320, 600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'FoodMenuScreen renders in Dark Theme and narrow viewport (320px) without overflow',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.darkTheme,
-      home: const FoodMenuScreen(),
-    ));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(theme: AppTheme.darkTheme, home: const FoodMenuScreen()),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Weekly Food Menu'), findsOneWidget);
-    expect(find.text('Monday'), findsOneWidget);
-  });
+      expect(find.text('Weekly Food Menu'), findsOneWidget);
+      expect(find.text('Monday'), findsOneWidget);
+    },
+  );
 
-  testWidgets('PaymentsScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(320, 600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'PaymentsScreen renders in Dark Theme and narrow viewport (320px) without overflow',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.darkTheme,
-      home: const PaymentsScreen(),
-    ));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(theme: AppTheme.darkTheme, home: const PaymentsScreen()),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Rent & Payments'), findsOneWidget);
-    expect(find.text('CURRENT CYCLE'), findsOneWidget);
-    expect(find.text('Payment history & invoices'), findsOneWidget);
-  });
+      expect(find.text('Rent & Payments'), findsOneWidget);
+      expect(find.text('CURRENT CYCLE'), findsOneWidget);
+      expect(find.text('Payment history & invoices'), findsOneWidget);
+    },
+  );
 
-  testWidgets('PropertyDetailsScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(320, 600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'PropertyDetailsScreen renders in Dark Theme and narrow viewport (320px) without overflow',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.darkTheme,
-      home: const PropertyDetailsScreen(),
-    ));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: const PropertyDetailsScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Property Details'), findsOneWidget);
-    expect(find.text('Room Number'), findsOneWidget);
-    expect(find.text('Floor'), findsOneWidget);
-  });
+      expect(find.text('Property Details'), findsOneWidget);
+      expect(find.text('Room Number'), findsOneWidget);
+      expect(find.text('Floor'), findsOneWidget);
+    },
+  );
 
-  testWidgets('CallManagementScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(320, 600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'CallManagementScreen renders in Dark Theme and narrow viewport (320px) without overflow',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.darkTheme,
-      home: const CallManagementScreen(),
-    ));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: const CallManagementScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Call Management'), findsOneWidget);
-    expect(find.text('Property Owner'), findsOneWidget);
-  });
+      expect(find.text('Call Management'), findsOneWidget);
+      expect(find.text('Property Owner'), findsOneWidget);
+    },
+  );
 
-  testWidgets('RaiseComplaintScreen renders in Dark Theme and narrow viewport (320px) without overflow', (WidgetTester tester) async {
-    tester.view.physicalSize = const Size(320, 600);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(() => tester.view.resetPhysicalSize());
+  testWidgets(
+    'RaiseComplaintScreen renders in Dark Theme and narrow viewport (320px) without overflow',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
 
-    await tester.pumpWidget(MaterialApp(
-      theme: AppTheme.darkTheme,
-      home: const RaiseComplaintScreen(),
-    ));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: const RaiseComplaintScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Raise Complaint'), findsOneWidget);
-    expect(find.text('Complaint Category *'), findsOneWidget);
-  });
+      expect(find.text('Raise Complaint'), findsOneWidget);
+      expect(find.text('Complaint Category *'), findsOneWidget);
+    },
+  );
 
-  testWidgets('SettingsScreen toggles Dark Theme mode via ValueNotifier', (WidgetTester tester) async {
+  testWidgets('SettingsScreen toggles Dark Theme mode via ValueNotifier', (
+    WidgetTester tester,
+  ) async {
     tester.view.physicalSize = const Size(400, 800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(() => tester.view.resetPhysicalSize());

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -98,9 +99,11 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
 
               for (final raw in rawItems) {
                 if (raw is! Map) continue;
-                final mealType =
-                    (raw['meal_type'] ?? '').toString().toUpperCase();
-                final dishesList = (raw['dishes'] as List?)
+                final mealType = (raw['meal_type'] ?? '')
+                    .toString()
+                    .toUpperCase();
+                final dishesList =
+                    (raw['dishes'] as List?)
                         ?.map((e) => e.toString().trim())
                         .where((e) => e.isNotEmpty)
                         .toList() ??
@@ -124,10 +127,14 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
                 }
               }
 
-              if (breakfast.isNotEmpty || lunch.isNotEmpty || dinner.isNotEmpty) {
+              if (breakfast.isNotEmpty ||
+                  lunch.isNotEmpty ||
+                  dinner.isNotEmpty) {
                 parsed.add({
                   'day': day,
-                  'breakfast': breakfast.isNotEmpty ? breakfast : 'Not specified',
+                  'breakfast': breakfast.isNotEmpty
+                      ? breakfast
+                      : 'Not specified',
                   'lunch': lunch.isNotEmpty ? lunch : 'Not specified',
                   'dinner': dinner.isNotEmpty ? dinner : 'Not specified',
                   'breakfast_time': breakfastTime,
@@ -146,12 +153,14 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
         } else if (days.isNotEmpty) {
           setState(() {
             AppData.foodMenu = days
-                .map((d) => <String, dynamic>{
-                      'day': d['day_of_week'] ?? 'Monday',
-                      'breakfast': d['breakfast'] ?? '',
-                      'lunch': d['lunch'] ?? '',
-                      'dinner': d['dinner'] ?? '',
-                    })
+                .map(
+                  (d) => <String, dynamic>{
+                    'day': d['day_of_week'] ?? 'Monday',
+                    'breakfast': d['breakfast'] ?? '',
+                    'lunch': d['lunch'] ?? '',
+                    'dinner': d['dinner'] ?? '',
+                  },
+                )
                 .toList();
             _apiErrorMessage = null;
           });
@@ -235,8 +244,9 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
   Widget build(BuildContext context) {
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
@@ -301,7 +311,11 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
                               ),
                             ),
                             AnimatedSwitcher(
-                              duration: (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
+                              duration:
+                                  (MediaQuery.maybeDisableAnimationsOf(
+                                        context,
+                                      ) ??
+                                      false)
                                   ? Duration.zero
                                   : const Duration(milliseconds: 200),
                               child: _isRefreshing
@@ -350,8 +364,9 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
                                         style: HomeThemeTokens.manrope(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
-                                          color:
-                                              HomeThemeTokens.warning(context),
+                                          color: HomeThemeTokens.warning(
+                                            context,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -382,46 +397,44 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
                   SliverPadding(
                     padding: const EdgeInsets.fromLTRB(20, 2, 20, 28),
                     sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final day = _daysOfWeek[index];
-                          final isToday =
-                              day.toLowerCase() == _currentDayName.toLowerCase();
-                          final dayData = AppData.foodMenu.firstWhere(
-                            (m) =>
-                                m['day']?.toString().toLowerCase() ==
-                                day.toLowerCase(),
-                            orElse: () => {
-                              'day': day,
-                              'breakfast': 'Poha & Tea',
-                              'lunch': 'Dal, Rice, Roti, Sabzi',
-                              'dinner': 'Paneer, Roti, Rice',
-                            },
-                          );
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final day = _daysOfWeek[index];
+                        final isToday =
+                            day.toLowerCase() == _currentDayName.toLowerCase();
+                        final dayData = AppData.foodMenu.firstWhere(
+                          (m) =>
+                              m['day']?.toString().toLowerCase() ==
+                              day.toLowerCase(),
+                          orElse: () => {
+                            'day': day,
+                            'breakfast': 'Poha & Tea',
+                            'lunch': 'Dal, Rice, Roti, Sabzi',
+                            'dinner': 'Paneer, Roti, Rice',
+                          },
+                        );
 
-                          final double start =
-                              (0.08 + index * 0.07).clamp(0.08, 0.65);
-                          final double finish =
-                              (start + 0.32).clamp(0.35, 1.0);
+                        final double start = (0.08 + index * 0.07).clamp(
+                          0.08,
+                          0.65,
+                        );
+                        final double finish = (start + 0.32).clamp(0.35, 1.0);
 
-                          return _staggeredEntrance(
-                            begin: start,
-                            end: finish,
-                            child: _buildDayCard(
-                              data: dayData,
-                              isToday: isToday,
-                              nextMeal: nextMeal,
-                              isDark: isDark,
-                              cardBg: cardBg,
-                              borderCol: borderCol,
-                              textPri: textPri,
-                              textSec: textSec,
-                              context: context,
-                            ),
-                          );
-                        },
-                        childCount: _daysOfWeek.length,
-                      ),
+                        return _staggeredEntrance(
+                          begin: start,
+                          end: finish,
+                          child: _buildDayCard(
+                            data: dayData,
+                            isToday: isToday,
+                            nextMeal: nextMeal,
+                            isDark: isDark,
+                            cardBg: cardBg,
+                            borderCol: borderCol,
+                            textPri: textPri,
+                            textSec: textSec,
+                            context: context,
+                          ),
+                        );
+                      }, childCount: _daysOfWeek.length),
                     ),
                   ),
                 ],
@@ -449,8 +462,7 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
     final lunch = data['lunch']?.toString() ?? 'Not specified';
     final dinner = data['dinner']?.toString() ?? 'Not specified';
 
-    final breakfastTime =
-        (data['breakfast_time'] ?? '7:30–9:30 AM').toString();
+    final breakfastTime = (data['breakfast_time'] ?? '7:30–9:30 AM').toString();
     final lunchTime = (data['lunch_time'] ?? '12:30–2:30 PM').toString();
     final dinnerTime = (data['dinner_time'] ?? '8:00–10:00 PM').toString();
 
@@ -458,18 +470,16 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
         ? (isDark ? const Color(0xFF2F6F68) : const Color(0xFF9CCBC4))
         : (isDark ? borderCol : const Color(0xFFE8EDEC));
 
-    final Color normalHeaderBg =
-        isDark ? HomeThemeTokens.darkSurface : const Color(0xFFF6F9F8);
+    final Color normalHeaderBg = isDark
+        ? HomeThemeTokens.darkSurface
+        : const Color(0xFFF6F9F8);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: cardBorder,
-          width: isToday ? 1.2 : 1.0,
-        ),
+        border: Border.all(color: cardBorder, width: isToday ? 1.2 : 1.0),
         boxShadow: [
           if (isToday)
             BoxShadow(
@@ -496,7 +506,10 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
           children: [
             // Day Card Header Strip
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10.5),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 15,
+                vertical: 10.5,
+              ),
               decoration: BoxDecoration(
                 color: isToday ? null : normalHeaderBg,
                 gradient: isToday
@@ -508,9 +521,7 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
                             : const [Color(0xFF0B2231), Color(0xFF12394A)],
                       )
                     : null,
-                border: Border(
-                  bottom: BorderSide(color: borderCol, width: 1),
-                ),
+                border: Border(bottom: BorderSide(color: borderCol, width: 1)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -630,10 +641,7 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
         child: Container(
           width: 5,
           height: 5,
-          decoration: BoxDecoration(
-            color: vegColor,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: vegColor, shape: BoxShape.circle),
         ),
       ),
     );
@@ -654,7 +662,8 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
   }) {
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     final lowerMenu = menuText.toLowerCase();
-    final isNonVeg = lowerMenu.contains('egg') ||
+    final isNonVeg =
+        lowerMenu.contains('egg') ||
         lowerMenu.contains('chicken') ||
         lowerMenu.contains('mutton') ||
         lowerMenu.contains('fish');
@@ -762,8 +771,7 @@ class _FoodMenuScreenState extends State<FoodMenuScreen>
                             builder: (context, _) {
                               final t = _dotController.value;
                               final scale = 1.0 + t * 1.4;
-                              final alpha =
-                                  ((1.0 - t) * 0.45).clamp(0.0, 1.0);
+                              final alpha = ((1.0 - t) * 0.45).clamp(0.0, 1.0);
                               return Transform.scale(
                                 scale: scale,
                                 child: Container(

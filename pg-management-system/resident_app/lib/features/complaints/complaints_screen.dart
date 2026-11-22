@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -36,7 +37,8 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
       'priority': 'High',
       'status': 'In Progress',
       'date': 'Yesterday, 4:30 PM',
-      'resolutionNote': 'Technician assigned. Inspection scheduled for today at 3:00 PM.',
+      'resolutionNote':
+          'Technician assigned. Inspection scheduled for today at 3:00 PM.',
     },
     {
       'id': 'TKT-102',
@@ -73,17 +75,24 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
           _complaints.clear();
           for (var c in list) {
             final rawStatus = (c['status'] ?? 'Pending').toString();
-            final String normalizedStatus = rawStatus.toUpperCase() == 'RESOLVED'
+            final String normalizedStatus =
+                rawStatus.toUpperCase() == 'RESOLVED'
                 ? 'Resolved'
-                : (rawStatus.toUpperCase().contains('PROGRESS') ? 'In Progress' : 'Pending');
+                : (rawStatus.toUpperCase().contains('PROGRESS')
+                      ? 'In Progress'
+                      : 'Pending');
 
             _complaints.add({
-              'id': c['id'] != null ? 'TKT-${c['id'].toString().substring(0, 4).toUpperCase()}' : 'TKT-${100 + _complaints.length}',
+              'id': c['id'] != null
+                  ? 'TKT-${c['id'].toString().substring(0, 4).toUpperCase()}'
+                  : 'TKT-${100 + _complaints.length}',
               'title': c['title'] ?? c['description'] ?? 'Service Request',
               'category': c['category'] ?? 'General',
               'priority': c['priority'] ?? 'Medium',
               'status': normalizedStatus,
-              'date': c['created_at'] != null && c['created_at'].toString().length >= 10
+              'date':
+                  c['created_at'] != null &&
+                      c['created_at'].toString().length >= 10
                   ? c['created_at'].toString().substring(0, 10)
                   : 'Recent',
               'resolutionNote': c['resolution_note'] ?? c['admin_notes'],
@@ -131,7 +140,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                 padding: const EdgeInsets.fromLTRB(22, 14, 22, 24),
                 decoration: BoxDecoration(
                   color: cardBg,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
+                  ),
                   border: Border.all(color: borderCol),
                   boxShadow: const [
                     BoxShadow(
@@ -166,7 +177,11 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                               color: softTealCol,
                               borderRadius: BorderRadius.circular(11),
                             ),
-                            child: Icon(Icons.handyman_rounded, color: tealCol, size: 20),
+                            child: Icon(
+                              Icons.handyman_rounded,
+                              color: tealCol,
+                              size: 20,
+                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -195,7 +210,11 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                           ),
                           IconButton(
                             onPressed: () => Navigator.pop(modalCtx),
-                            icon: Icon(Icons.close_rounded, color: textSec, size: 22),
+                            icon: Icon(
+                              Icons.close_rounded,
+                              color: textSec,
+                              size: 22,
+                            ),
                           ),
                         ],
                       ),
@@ -214,39 +233,52 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: [
-                          'Plumbing',
-                          'Electrical',
-                          'Wi-Fi',
-                          'Appliance',
-                          'Housekeeping',
-                          'General'
-                        ].map((cat) {
-                          final isSelected = selectedCategory == cat;
-                          return InkWell(
-                            onTap: () => setModalState(() => selectedCategory = cat),
-                            borderRadius: BorderRadius.circular(10),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isSelected ? tealCol : (isDark ? const Color(0xFF1E272E) : const Color(0xFFF1F5F4)),
+                        children:
+                            [
+                              'Plumbing',
+                              'Electrical',
+                              'Wi-Fi',
+                              'Appliance',
+                              'Housekeeping',
+                              'General',
+                            ].map((cat) {
+                              final isSelected = selectedCategory == cat;
+                              return InkWell(
+                                onTap: () =>
+                                    setModalState(() => selectedCategory = cat),
                                 borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                  color: isSelected ? tealCol : borderCol,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? tealCol
+                                        : (isDark
+                                              ? const Color(0xFF1E272E)
+                                              : const Color(0xFFF1F5F4)),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(
+                                      color: isSelected ? tealCol : borderCol,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    cat,
+                                    style: HomeThemeTokens.manrope(
+                                      fontSize: 12.5,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w700
+                                          : FontWeight.w600,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : textPri,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                              child: Text(
-                                cat,
-                                style: HomeThemeTokens.manrope(
-                                  fontSize: 12.5,
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                  color: isSelected ? Colors.white : textPri,
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                              );
+                            }).toList(),
                       ),
                       const SizedBox(height: 18),
 
@@ -269,13 +301,30 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                         ),
                         decoration: InputDecoration(
                           hintText: 'e.g. Geyser not heating properly',
-                          hintStyle: HomeThemeTokens.manrope(fontSize: 13, color: textSec),
+                          hintStyle: HomeThemeTokens.manrope(
+                            fontSize: 13,
+                            color: textSec,
+                          ),
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF131F24) : const Color(0xFFF7FAF9),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderCol)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderCol)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: tealCol, width: 1.5)),
+                          fillColor: isDark
+                              ? const Color(0xFF131F24)
+                              : const Color(0xFFF7FAF9),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderCol),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderCol),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: tealCol, width: 1.5),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -300,13 +349,27 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                         ),
                         decoration: InputDecoration(
                           hintText: 'Describe details (e.g. Started yesterday, makes humming sound when switched on)...',
-                          hintStyle: HomeThemeTokens.manrope(fontSize: 13, color: textSec),
+                          hintStyle: HomeThemeTokens.manrope(
+                            fontSize: 13,
+                            color: textSec,
+                          ),
                           filled: true,
-                          fillColor: isDark ? const Color(0xFF131F24) : const Color(0xFFF7FAF9),
+                          fillColor: isDark
+                              ? const Color(0xFF131F24)
+                              : const Color(0xFFF7FAF9),
                           contentPadding: const EdgeInsets.all(14),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderCol)),
-                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: borderCol)),
-                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: tealCol, width: 1.5)),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderCol),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderCol),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: tealCol, width: 1.5),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -325,22 +388,37 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                         children: ['Low', 'Medium', 'High'].map((p) {
                           final isSelected = selectedPriority == p;
                           Color activeColor = tealCol;
-                          if (p == 'High') activeColor = const Color(0xFFE11D48);
-                          if (p == 'Medium') activeColor = const Color(0xFFD97706);
+                          if (p == 'High') {
+                            activeColor = const Color(0xFFE11D48);
+                          }
+                          if (p == 'Medium') {
+                            activeColor = const Color(0xFFD97706);
+                          }
 
                           return Expanded(
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
                               child: InkWell(
-                                onTap: () => setModalState(() => selectedPriority = p),
+                                onTap: () =>
+                                    setModalState(() => selectedPriority = p),
                                 borderRadius: BorderRadius.circular(10),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
                                   decoration: BoxDecoration(
-                                    color: isSelected ? activeColor.withValues(alpha: 0.15) : (isDark ? const Color(0xFF1E272E) : const Color(0xFFF1F5F4)),
+                                    color: isSelected
+                                        ? activeColor.withValues(alpha: 0.15)
+                                        : (isDark
+                                              ? const Color(0xFF1E272E)
+                                              : const Color(0xFFF1F5F4)),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
-                                      color: isSelected ? activeColor : borderCol,
+                                      color: isSelected
+                                          ? activeColor
+                                          : borderCol,
                                       width: isSelected ? 1.5 : 1.0,
                                     ),
                                   ),
@@ -350,7 +428,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                       style: HomeThemeTokens.manrope(
                                         fontSize: 13,
                                         fontWeight: FontWeight.w700,
-                                        color: isSelected ? activeColor : textSec,
+                                        color: isSelected
+                                            ? activeColor
+                                            : textSec,
                                       ),
                                     ),
                                   ),
@@ -371,10 +451,15 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                               ? null
                               : () async {
                                   final title = titleController.text.trim();
-                                  final desc = descriptionController.text.trim();
+                                  final desc = descriptionController.text
+                                      .trim();
                                   if (title.isEmpty) {
                                     ScaffoldMessenger.of(modalCtx).showSnackBar(
-                                      const SnackBar(content: Text('Please enter an issue title')),
+                                      const SnackBar(
+                                        content: Text(
+                                          'Please enter an issue title',
+                                        ),
+                                      ),
                                     );
                                     return;
                                   }
@@ -382,17 +467,32 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                   setModalState(() => isSubmitting = true);
 
                                   String apiCategory = 'OTHER';
-                                  final upperCat = selectedCategory.toUpperCase();
-                                  if (upperCat.contains('PLUMB')) apiCategory = 'PLUMBING';
-                                  if (upperCat.contains('ELECT')) apiCategory = 'ELECTRICAL';
-                                  if (upperCat.contains('CLEAN') || upperCat.contains('HOUSE')) apiCategory = 'CLEANING';
-                                  if (upperCat.contains('WI') || upperCat.contains('NET')) apiCategory = 'WIFI';
-                                  if (upperCat.contains('FOOD')) apiCategory = 'FOOD';
+                                  final upperCat = selectedCategory
+                                      .toUpperCase();
+                                  if (upperCat.contains('PLUMB')) {
+                                    apiCategory = 'PLUMBING';
+                                  }
+                                  if (upperCat.contains('ELECT')) {
+                                    apiCategory = 'ELECTRICAL';
+                                  }
+                                  if (upperCat.contains('CLEAN') ||
+                                      upperCat.contains('HOUSE')) {
+                                    apiCategory = 'CLEANING';
+                                  }
+                                  if (upperCat.contains('WI') ||
+                                      upperCat.contains('NET')) {
+                                    apiCategory = 'WIFI';
+                                  }
+                                  if (upperCat.contains('FOOD')) {
+                                    apiCategory = 'FOOD';
+                                  }
 
                                   // Submit to backend
                                   ResidentApiService.createComplaint({
                                     'title': title,
-                                    'description': desc.isNotEmpty ? desc : title,
+                                    'description': desc.isNotEmpty
+                                        ? desc
+                                        : title,
                                     'category': apiCategory,
                                     'priority': selectedPriority.toUpperCase(),
                                   }).catchError((e) {
@@ -418,10 +518,14 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                   Navigator.pop(modalCtx);
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: const Text('Service request submitted successfully! Staff notified.'),
+                                      content: const Text(
+                                        'Service request submitted successfully! Staff notified.',
+                                      ),
                                       backgroundColor: tealCol,
                                       behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
                                     ),
                                   );
                                 },
@@ -429,13 +533,18 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                             backgroundColor: tealCol,
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                           child: isSubmitting
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2.2, color: Colors.white),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.2,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : Text(
                                   'Submit Request',
@@ -463,16 +572,22 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
     if (cat.contains('plumb') || cat.contains('water') || cat.contains('tap')) {
       return Icons.water_drop_outlined;
     }
-    if (cat.contains('elect') || cat.contains('power') || cat.contains('light')) {
+    if (cat.contains('elect') ||
+        cat.contains('power') ||
+        cat.contains('light')) {
       return Icons.bolt_outlined;
     }
     if (cat.contains('wi') || cat.contains('net') || cat.contains('router')) {
       return Icons.wifi_rounded;
     }
-    if (cat.contains('appliance') || cat.contains('ac') || cat.contains('geyser')) {
+    if (cat.contains('appliance') ||
+        cat.contains('ac') ||
+        cat.contains('geyser')) {
       return Icons.hvac_rounded;
     }
-    if (cat.contains('clean') || cat.contains('housekeeping') || cat.contains('room')) {
+    if (cat.contains('clean') ||
+        cat.contains('housekeeping') ||
+        cat.contains('room')) {
       return Icons.cleaning_services_rounded;
     }
     return Icons.handyman_outlined;
@@ -497,8 +612,12 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
           }).toList();
 
     final int totalCount = _complaints.length;
-    final int inProgressCount = _complaints.where((c) => c['status'] == 'In Progress').length;
-    final int resolvedCount = _complaints.where((c) => c['status'] == 'Resolved').length;
+    final int inProgressCount = _complaints
+        .where((c) => c['status'] == 'In Progress')
+        .length;
+    final int resolvedCount = _complaints
+        .where((c) => c['status'] == 'Resolved')
+        .length;
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -543,7 +662,10 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
               onRefresh: _loadComplaintsFromApi,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18.0,
+                  vertical: 16.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -561,14 +683,22 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: isDark
-                              ? [const Color(0xFF0D322E), const Color(0xFF133F3A)]
-                              : [const Color(0xFFE6F4F1), const Color(0xFFD3EDE8)],
+                              ? [
+                                  const Color(0xFF0D322E),
+                                  const Color(0xFF133F3A),
+                                ]
+                              : [
+                                  const Color(0xFFE6F4F1),
+                                  const Color(0xFFD3EDE8),
+                                ],
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                         ),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: isDark ? const Color(0xFF1D5A52) : const Color(0xFFB5E0D7),
+                          color: isDark
+                              ? const Color(0xFF1D5A52)
+                              : const Color(0xFFB5E0D7),
                         ),
                       ),
                       child: Column(
@@ -600,7 +730,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                       style: HomeThemeTokens.manrope(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
-                                        color: isDark ? Colors.white : const Color(0xFF063A34),
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF063A34),
                                         letterSpacing: -0.2,
                                       ),
                                     ),
@@ -611,7 +743,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                         fontSize: 12.5,
                                         height: 1.35,
                                         fontWeight: FontWeight.w500,
-                                        color: isDark ? const Color(0xFFB0D5CF) : const Color(0xFF275953),
+                                        color: isDark
+                                            ? const Color(0xFFB0D5CF)
+                                            : const Color(0xFF275953),
                                       ),
                                     ),
                                   ],
@@ -631,20 +765,44 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                     backgroundColor: tealCol,
                                     foregroundColor: Colors.white,
                                     elevation: 0,
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 10),
                               OutlinedButton.icon(
-                                onPressed: () => context.push('/call-management'),
-                                icon: Icon(Icons.phone_outlined, size: 17, color: tealCol),
-                                label: Text('Call Desk', style: TextStyle(color: tealCol, fontWeight: FontWeight.w700)),
+                                onPressed: () =>
+                                    context.push('/call-management'),
+                                icon: Icon(
+                                  Icons.phone_outlined,
+                                  size: 17,
+                                  color: tealCol,
+                                ),
+                                label: Text(
+                                  'Call Desk',
+                                  style: TextStyle(
+                                    color: tealCol,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
                                 style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: isDark ? const Color(0xFF246D63) : const Color(0xFF86CDC2)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  side: BorderSide(
+                                    color: isDark
+                                        ? const Color(0xFF246D63)
+                                        : const Color(0xFF86CDC2),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 12,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                 ),
                               ),
                             ],
@@ -709,11 +867,15 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                           return Padding(
                             padding: const EdgeInsets.only(right: 8),
                             child: InkWell(
-                              onTap: () => setState(() => _selectedFilter = cat),
+                              onTap: () =>
+                                  setState(() => _selectedFilter = cat),
                               borderRadius: BorderRadius.circular(99),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 7,
+                                ),
                                 decoration: BoxDecoration(
                                   color: isSelected ? tealCol : cardBg,
                                   borderRadius: BorderRadius.circular(99),
@@ -723,7 +885,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                   boxShadow: isSelected
                                       ? [
                                           BoxShadow(
-                                            color: tealCol.withValues(alpha: 0.25),
+                                            color: tealCol.withValues(
+                                              alpha: 0.25,
+                                            ),
                                             blurRadius: 8,
                                             offset: const Offset(0, 3),
                                           ),
@@ -734,7 +898,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                   cat,
                                   style: HomeThemeTokens.manrope(
                                     fontSize: 12.5,
-                                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                                    fontWeight: isSelected
+                                        ? FontWeight.w700
+                                        : FontWeight.w600,
                                     color: isSelected ? Colors.white : textSec,
                                   ),
                                 ),
@@ -789,7 +955,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                           }
 
                           return MotionEntrance(
-                            delay: Duration(milliseconds: (idx * 45).clamp(0, 200)),
+                            delay: Duration(
+                              milliseconds: (idx * 45).clamp(0, 200),
+                            ),
                             child: Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
@@ -799,7 +967,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                 border: Border.all(color: borderCol),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: isDark ? const Color(0x18000000) : const Color(0x060E1A1F),
+                                    color: isDark
+                                        ? const Color(0x18000000)
+                                        : const Color(0x060E1A1F),
                                     blurRadius: 10,
                                     offset: const Offset(0, 3),
                                   ),
@@ -810,14 +980,17 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                 children: [
                                   // Header: Category Icon & Name + Ticket ID + Date
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
                                     children: [
                                       Container(
                                         width: 36,
                                         height: 36,
                                         decoration: BoxDecoration(
                                           color: softTealCol,
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                         child: Icon(
                                           _getCategoryIcon(comp['category']),
@@ -828,7 +1001,8 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               comp['category'] ?? 'General',
@@ -856,16 +1030,33 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                       ),
                                       // Status Pill
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4.5),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 9,
+                                          vertical: 4.5,
+                                        ),
                                         decoration: BoxDecoration(
-                                          color: isDark ? statusColor.withValues(alpha: 0.18) : statusBg,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                                          color: isDark
+                                              ? statusColor.withValues(
+                                                  alpha: 0.18,
+                                                )
+                                              : statusBg,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border: Border.all(
+                                            color: statusColor.withValues(
+                                              alpha: 0.3,
+                                            ),
+                                          ),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
-                                            Icon(statusIcon, size: 12.5, color: statusColor),
+                                            Icon(
+                                              statusIcon,
+                                              size: 12.5,
+                                              color: statusColor,
+                                            ),
                                             const SizedBox(width: 4.5),
                                             Text(
                                               comp['status'] ?? 'Pending',
@@ -884,7 +1075,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
 
                                   // Issue Title / Description
                                   Text(
-                                    comp['title'] ?? comp['issue'] ?? 'Maintenance Request',
+                                    comp['title'] ??
+                                        comp['issue'] ??
+                                        'Maintenance Request',
                                     style: HomeThemeTokens.manrope(
                                       fontSize: 14.5,
                                       fontWeight: FontWeight.w700,
@@ -894,24 +1087,35 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                   ),
 
                                   // Resolution Note if present
-                                  if (comp['resolutionNote'] != null && comp['resolutionNote'].toString().trim().isNotEmpty) ...[
+                                  if (comp['resolutionNote'] != null &&
+                                      comp['resolutionNote']
+                                          .toString()
+                                          .trim()
+                                          .isNotEmpty) ...[
                                     const SizedBox(height: 10),
                                     Container(
                                       padding: const EdgeInsets.all(10),
                                       decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF142421) : const Color(0xFFF0FDF9),
+                                        color: isDark
+                                            ? const Color(0xFF142421)
+                                            : const Color(0xFFF0FDF9),
                                         borderRadius: BorderRadius.circular(10),
                                         border: Border.all(
-                                          color: isDark ? const Color(0xFF1B4E44) : const Color(0xFFB9EBDD),
+                                          color: isDark
+                                              ? const Color(0xFF1B4E44)
+                                              : const Color(0xFFB9EBDD),
                                         ),
                                       ),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Icon(
                                             Icons.verified_outlined,
                                             size: 15,
-                                            color: HomeThemeTokens.success(context),
+                                            color: HomeThemeTokens.success(
+                                              context,
+                                            ),
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
@@ -920,7 +1124,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                               style: HomeThemeTokens.manrope(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w500,
-                                                color: isDark ? const Color(0xFFB0DBD2) : const Color(0xFF165C51),
+                                                color: isDark
+                                                    ? const Color(0xFFB0DBD2)
+                                                    : const Color(0xFF165C51),
                                                 height: 1.3,
                                               ),
                                             ),
@@ -936,7 +1142,8 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
 
                                   // Priority indicator footer
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       Expanded(
                                         child: Row(
@@ -947,7 +1154,9 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                               height: 7,
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
-                                                color: isHigh ? const Color(0xFFE11D48) : const Color(0xFFD97706),
+                                                color: isHigh
+                                                    ? const Color(0xFFE11D48)
+                                                    : const Color(0xFFD97706),
                                               ),
                                             ),
                                             const SizedBox(width: 6),
@@ -969,16 +1178,25 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                       const SizedBox(width: 8),
                                       InkWell(
                                         onTap: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             SnackBar(
-                                              content: Text('Viewing request details for ${comp['id']}'),
-                                              duration: const Duration(seconds: 1),
+                                              content: Text(
+                                                'Viewing request details for ${comp['id']}',
+                                              ),
+                                              duration: const Duration(
+                                                seconds: 1,
+                                              ),
                                             ),
                                           );
                                         },
                                         borderRadius: BorderRadius.circular(6),
                                         child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 2,
+                                          ),
                                           child: Row(
                                             children: [
                                               Text(
@@ -989,7 +1207,11 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
                                                   color: tealCol,
                                                 ),
                                               ),
-                                              Icon(Icons.chevron_right_rounded, size: 16, color: tealCol),
+                                              Icon(
+                                                Icons.chevron_right_rounded,
+                                                size: 16,
+                                                color: tealCol,
+                                              ),
                                             ],
                                           ),
                                         ),

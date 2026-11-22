@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -87,13 +88,14 @@ class _PaymentsScreenState extends State<PaymentsScreen>
         (AppData.currentResident['stay_details'] as Map?)
             ?.cast<String, dynamic>() ??
         const <String, dynamic>{};
-    final rent = stay['monthly_rent'] ?? AppData.currentResident['rent'] ?? 8000;
+    final rent =
+        stay['monthly_rent'] ?? AppData.currentResident['rent'] ?? 8000;
     final double rentAmount = rent is num
         ? rent.toDouble()
         : (double.tryParse(rent.toString()) ?? 8000.0);
     final isRentPaid =
         AppData.currentResident['rent_status']?.toString().toLowerCase() ==
-            'paid';
+        'paid';
 
     _invoices = [
       {
@@ -160,7 +162,9 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     try {
       final results = await Future.wait([
         ResidentApiService.getInvoices(),
-        ResidentApiService.getPaymentHistory().catchError((_) => <Map<String, dynamic>>[]),
+        ResidentApiService.getPaymentHistory().catchError(
+          (_) => <Map<String, dynamic>>[],
+        ),
       ]);
       final invs = results[0];
       final history = results[1];
@@ -178,8 +182,8 @@ class _PaymentsScreenState extends State<PaymentsScreen>
             final mappedStatus = rawStatus == 'PAID'
                 ? 'Paid'
                 : (rawStatus == 'PARTIAL'
-                    ? 'Partial'
-                    : (rawStatus == 'FAILED' ? 'Failed' : 'Pending'));
+                      ? 'Partial'
+                      : (rawStatus == 'FAILED' ? 'Failed' : 'Pending'));
 
             final rawTotal = inv['amount'];
             final num totalAmt = rawTotal is num
@@ -199,7 +203,9 @@ class _PaymentsScreenState extends State<PaymentsScreen>
             // For settled invoices show settled amount; for pending/partial show balance due.
             final double displayAmount = mappedStatus == 'Paid'
                 ? (paidAmt > 0 ? paidAmt.toDouble() : totalAmt.toDouble())
-                : (balanceAmt > 0 ? balanceAmt.toDouble() : totalAmt.toDouble());
+                : (balanceAmt > 0
+                      ? balanceAmt.toDouble()
+                      : totalAmt.toDouble());
 
             _invoices.add({
               'id': inv['id']?.toString() ?? '',
@@ -245,7 +251,9 @@ class _PaymentsScreenState extends State<PaymentsScreen>
 
   String _formatIndianAmount(dynamic amt) {
     final normalized = _formatAmount(amt);
-    final num val = amt is num ? amt : (num.tryParse(amt?.toString() ?? '') ?? 0);
+    final num val = amt is num
+        ? amt
+        : (num.tryParse(amt?.toString() ?? '') ?? 0);
     final bool hasDecimals = (val % 1) != 0;
     final int whole = val.truncate();
     final String wholeStr = whole.abs().toString();
@@ -322,8 +330,8 @@ class _PaymentsScreenState extends State<PaymentsScreen>
           day: iso.day.toString().padLeft(2, '0'),
         );
       }
-      final humanMatch =
-          RegExp(r'^(\d{1,2})\s+([A-Za-z]{3})').firstMatch(clean);
+      final humanMatch = RegExp(r'^(\d{1,2})\s+([A-Za-z]{3})')
+          .firstMatch(clean);
       if (humanMatch != null) {
         return (
           monthAbbr: humanMatch.group(2)!.toUpperCase(),
@@ -343,35 +351,40 @@ class _PaymentsScreenState extends State<PaymentsScreen>
         (AppData.currentResident['stay_details'] as Map?)
             ?.cast<String, dynamic>() ??
         const <String, dynamic>{};
-    final property = (stay['property_name'] ??
-            AppData.currentResident['property'] ??
-            AppData.currentResident['pg_name'] ??
-            'BNR Luxury PG')
-        .toString()
-        .trim();
-    final rawRoom = (stay['room_number'] ??
-            AppData.currentResident['room_number'] ??
-            AppData.currentResident['room'] ??
-            '')
-        .toString()
-        .trim();
+    final property =
+        (stay['property_name'] ??
+                AppData.currentResident['property'] ??
+                AppData.currentResident['pg_name'] ??
+                'BNR Luxury PG')
+            .toString()
+            .trim();
+    final rawRoom =
+        (stay['room_number'] ??
+                AppData.currentResident['room_number'] ??
+                AppData.currentResident['room'] ??
+                '')
+            .toString()
+            .trim();
 
     if (rawRoom.isEmpty || rawRoom == 'null') {
       return property.isNotEmpty ? property : 'Origin PG';
     }
-    final roomLabel =
-        rawRoom.toLowerCase().startsWith('room') ? rawRoom : 'Room $rawRoom';
+    final roomLabel = rawRoom.toLowerCase().startsWith('room')
+        ? rawRoom
+        : 'Room $rawRoom';
     return property.isNotEmpty ? '$property · $roomLabel' : roomLabel;
   }
 
   void _openRentPayment(BuildContext context, Map<String, dynamic> invoice) {
-    context.push('/rent-payment', extra: {...invoice, 'autoOpen': true}).then((_) {
+    context.push('/rent-payment', extra: {...invoice, 'autoOpen': true}).then((
+      _,
+    ) {
       _loadInvoicesFromApi();
       if (!mounted) return;
       setState(() {
         final isRentPaid =
             AppData.currentResident['rent_status']?.toString().toLowerCase() ==
-                'paid';
+            'paid';
         if (isRentPaid && _invoices.isNotEmpty) {
           final idx = _invoices.indexWhere((i) => i['id'] == invoice['id']);
           if (idx != -1) {
@@ -386,7 +399,8 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     context.push(
       '/receipt',
       extra: {
-        'invoiceId': (invoice['invoice_number'] != null &&
+        'invoiceId':
+            (invoice['invoice_number'] != null &&
                 invoice['invoice_number'].toString().isNotEmpty)
             ? invoice['invoice_number']
             : invoice['id'],
@@ -444,21 +458,23 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                 inv['status'] == 'Failed',
           )
         : (_invoices.isNotEmpty
-            ? _invoices.first
-            : <String, dynamic>{
-                'amount': 0.0,
-                'status': 'Paid',
-                'date': '-',
-                'month': 'Current Month',
-              });
-    final bool isPending = pendingInvoice['status'] == 'Pending' ||
+              ? _invoices.first
+              : <String, dynamic>{
+                  'amount': 0.0,
+                  'status': 'Paid',
+                  'date': '-',
+                  'month': 'Current Month',
+                });
+    final bool isPending =
+        pendingInvoice['status'] == 'Pending' ||
         pendingInvoice['status'] == 'Partial' ||
         pendingInvoice['status'] == 'Failed';
 
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
@@ -647,8 +663,10 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                       ..._invoices.asMap().entries.map((entry) {
                         final idx = entry.key;
                         final invoice = entry.value;
-                        final double start =
-                            (0.24 + idx * 0.09).clamp(0.24, 0.72);
+                        final double start = (0.24 + idx * 0.09).clamp(
+                          0.24,
+                          0.72,
+                        );
                         final double finish = (start + 0.36).clamp(0.45, 1.0);
                         return _staggeredEntrance(
                           begin: start,
@@ -678,19 +696,32 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                       ),
                       const SizedBox(height: 10),
                       ..._paymentHistory.take(8).map((tx) {
-                        final st = (tx['status'] ?? '').toString().toUpperCase();
-                        final invNo = tx['invoice_number']?.toString() ?? 'Rent Invoice';
-                        final txnRef = tx['transaction_ref']?.toString() ?? tx['payment_number']?.toString() ?? '';
-                        final utr = tx['bank_reference']?.toString() ?? tx['client_upi_txn_id']?.toString();
+                        final st = (tx['status'] ?? '')
+                            .toString()
+                            .toUpperCase();
+                        final invNo =
+                            tx['invoice_number']?.toString() ?? 'Rent Invoice';
+                        final txnRef =
+                            tx['transaction_ref']?.toString() ??
+                            tx['payment_number']?.toString() ??
+                            '';
+                        final utr =
+                            tx['bank_reference']?.toString() ??
+                            tx['client_upi_txn_id']?.toString();
                         final amt = tx['amount'] ?? 0;
                         final isVerified = st == 'PAID' || st == 'SUCCESS';
-                        final isPendingVerif = st == 'PENDING_VERIFICATION' || st == 'PENDING';
+                        final isPendingVerif =
+                            st == 'PENDING_VERIFICATION' || st == 'PENDING';
                         final badgeColor = isVerified
                             ? const Color(0xFF16A34A)
-                            : (isPendingVerif ? const Color(0xFFD97706) : const Color(0xFFDC2626));
+                            : (isPendingVerif
+                                  ? const Color(0xFFD97706)
+                                  : const Color(0xFFDC2626));
                         final badgeLabel = isVerified
                             ? 'Verified'
-                            : (st == 'PENDING_VERIFICATION' ? 'Pending Verification' : st);
+                            : (st == 'PENDING_VERIFICATION'
+                                  ? 'Pending Verification'
+                                  : st);
                         return Container(
                           margin: const EdgeInsets.only(bottom: 10),
                           padding: const EdgeInsets.all(14),
@@ -706,12 +737,18 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                                 context.push(
                                   '/payment-status',
                                   extra: {
-                                    'invoiceId': tx['invoice_id']?.toString() ?? '',
-                                    'paymentId': tx['payment_id']?.toString() ?? tx['id']?.toString(),
+                                    'invoiceId':
+                                        tx['invoice_id']?.toString() ?? '',
+                                    'paymentId':
+                                        tx['payment_id']?.toString() ??
+                                        tx['id']?.toString(),
                                     'amount': amt,
-                                    'paymentApp': tx['payment_mode']?.toString() ?? 'UPI',
+                                    'paymentApp':
+                                        tx['payment_mode']?.toString() ?? 'UPI',
                                     'txnRef': txnRef,
-                                    'initialState': isVerified ? 'successful' : null,
+                                    'initialState': isVerified
+                                        ? 'successful'
+                                        : null,
                                     'autoPoll': isPendingVerif,
                                   },
                                 );
@@ -721,7 +758,8 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         '$invNo · ${tx['payment_mode'] ?? 'UPI'}',
@@ -798,10 +836,11 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     required Map<String, dynamic> pendingInvoice,
   }) {
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final String amountText =
-        isPending ? _formatIndianAmount(pendingInvoice['amount']) : '0';
-    final String monthStr =
-        (pendingInvoice['month'] ?? 'November 2026').toString();
+    final String amountText = isPending
+        ? _formatIndianAmount(pendingInvoice['amount'])
+        : '0';
+    final String monthStr = (pendingInvoice['month'] ?? 'November 2026')
+        .toString();
     final String dateStr = (pendingInvoice['date'] ?? '-').toString();
 
     final Gradient topBannerGradient = LinearGradient(
@@ -812,8 +851,9 @@ class _PaymentsScreenState extends State<PaymentsScreen>
           : const [Color(0xFFEFF7F6), Color(0xFFFFFFFF)],
     );
 
-    final Color iconBoxBorder =
-        isDark ? const Color(0xFF476261) : const Color(0xFFD5E7E4);
+    final Color iconBoxBorder = isDark
+        ? const Color(0xFF476261)
+        : const Color(0xFFD5E7E4);
     final Color iconBoxBg = isDark ? const Color(0xFF252F37) : Colors.white;
 
     final popAnimation = CurvedAnimation(
@@ -1077,8 +1117,9 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                                             end: Alignment.bottomRight,
                                             colors: [
                                               Colors.transparent,
-                                              Colors.white
-                                                  .withValues(alpha: 0.16),
+                                              Colors.white.withValues(
+                                                alpha: 0.16,
+                                              ),
                                               Colors.transparent,
                                             ],
                                           ),
@@ -1160,14 +1201,16 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     final isPaid = statusStr == 'Paid';
     final isFailed = statusStr == 'Failed';
     final isPendingOrPartial = !isPaid && !isFailed;
-    final isTest =
-        (invoice['invoice_type'] ?? '').toString().toUpperCase().startsWith('TEST');
+    final isTest = (invoice['invoice_type'] ?? '')
+        .toString()
+        .toUpperCase()
+        .startsWith('TEST');
 
     final Color activeBorderCol = isPendingOrPartial
         ? (isDark ? const Color(0xFF2F6F68) : const Color(0xFF9CCBC4))
         : (isFailed
-            ? (isDark ? const Color(0xFF6B3A37) : const Color(0xFFF8C9C4))
-            : (isDark ? borderCol : const Color(0xFFE8EDEC)));
+              ? (isDark ? const Color(0xFF6B3A37) : const Color(0xFFF8C9C4))
+              : (isDark ? borderCol : const Color(0xFFE8EDEC)));
 
     final badge = _parseDateBadge(
       invoice['date']?.toString(),
@@ -1177,13 +1220,13 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     final Color tileBg = isPaid
         ? HomeThemeTokens.successBg(context)
         : (isFailed
-            ? HomeThemeTokens.errorBg(context)
-            : HomeThemeTokens.warningBg(context));
+              ? HomeThemeTokens.errorBg(context)
+              : HomeThemeTokens.warningBg(context));
     final Color tileFg = isPaid
         ? HomeThemeTokens.success(context)
         : (isFailed
-            ? HomeThemeTokens.error(context)
-            : HomeThemeTokens.warning(context));
+              ? HomeThemeTokens.error(context)
+              : HomeThemeTokens.warning(context));
     final Color tileBorder = tileFg.withValues(alpha: isDark ? 0.22 : 0.14);
 
     final String invNumber = (invoice['invoice_number'] ?? '').toString();
@@ -1381,11 +1424,7 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       if (isPaid)
-                        Icon(
-                          Icons.check_rounded,
-                          size: 13,
-                          color: tileFg,
-                        )
+                        Icon(Icons.check_rounded, size: 13, color: tileFg)
                       else if (isFailed)
                         Icon(
                           Icons.error_outline_rounded,
@@ -1503,13 +1542,21 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                   ),
                   decoration: BoxDecoration(
                     color: isPendingOrPartial
-                        ? (isDark ? const Color(0xFF382310) : const Color(0xFFFEF3C7))
-                        : (isDark ? const Color(0xFF351C1C) : const Color(0xFFFEE2E2)),
+                        ? (isDark
+                              ? const Color(0xFF382310)
+                              : const Color(0xFFFEF3C7))
+                        : (isDark
+                              ? const Color(0xFF351C1C)
+                              : const Color(0xFFFEE2E2)),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isPendingOrPartial
-                          ? (isDark ? const Color(0xFF92400E) : const Color(0xFFFDE68A))
-                          : (isDark ? const Color(0xFF7F1D1D) : const Color(0xFFFECACA)),
+                          ? (isDark
+                                ? const Color(0xFF92400E)
+                                : const Color(0xFFFDE68A))
+                          : (isDark
+                                ? const Color(0xFF7F1D1D)
+                                : const Color(0xFFFECACA)),
                       width: 1,
                     ),
                   ),
@@ -1610,10 +1657,7 @@ class _ScaleTap extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
 
-  const _ScaleTap({
-    required this.child,
-    required this.onTap,
-  });
+  const _ScaleTap({required this.child, required this.onTap});
 
   @override
   State<_ScaleTap> createState() => _ScaleTapState();
@@ -1633,8 +1677,9 @@ class _ScaleTapState extends State<_ScaleTap> {
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: (_pressed && !disableAnim) ? 0.97 : 1.0,
-        duration:
-            disableAnim ? Duration.zero : const Duration(milliseconds: 120),
+        duration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 120),
         curve: Curves.easeOutCubic,
         child: widget.child,
       ),

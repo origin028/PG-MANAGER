@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../network/api_client.dart';
 
 class ResidentApiService {
@@ -29,11 +30,17 @@ class ResidentApiService {
   // ---------------------------------------------------------------------------
   // Invoices & Payments
   // ---------------------------------------------------------------------------
-  static Future<List<Map<String, dynamic>>> getInvoices({String? status}) async {
+  static Future<List<Map<String, dynamic>>> getInvoices({
+    String? status,
+  }) async {
     final query = <String, dynamic>{
-      if (status != null && status.isNotEmpty && status != 'ALL') 'status': status,
+      if (status != null && status.isNotEmpty && status != 'ALL')
+        'status': status,
     };
-    final res = await ApiClient.get('/resident/invoices', queryParameters: query);
+    final res = await ApiClient.get(
+      '/resident/invoices',
+      queryParameters: query,
+    );
     if (res is List) {
       return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
@@ -67,7 +74,8 @@ class ResidentApiService {
         'invoice_id': invoiceId,
         'amount': amount,
         'payment_mode': 'DEMO_ONLINE',
-        if (idempotencyKey != null && idempotencyKey.isNotEmpty) 'idempotency_key': idempotencyKey,
+        if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+          'idempotency_key': idempotencyKey,
       },
     );
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
@@ -90,9 +98,11 @@ class ResidentApiService {
       '/payments/upi/initiate',
       body: {
         'invoice_id': invoiceId,
-        if (idempotencyKey != null && idempotencyKey.isNotEmpty) 'idempotency_key': idempotencyKey,
+        if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+          'idempotency_key': idempotencyKey,
         if (appName != null && appName.isNotEmpty) 'app_name': appName,
-        if (packageName != null && packageName.isNotEmpty) 'package_name': packageName,
+        if (packageName != null && packageName.isNotEmpty)
+          'package_name': packageName,
       },
     );
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
@@ -116,10 +126,14 @@ class ResidentApiService {
         'status': status,
         if (txnRef != null && txnRef.isNotEmpty) 'txn_ref': txnRef,
         if (upiTxnId != null && upiTxnId.isNotEmpty) 'upi_txn_id': upiTxnId,
-        if (approvalRefNo != null && approvalRefNo.isNotEmpty) 'approval_ref_no': approvalRefNo,
-        if (responseCode != null && responseCode.isNotEmpty) 'response_code': responseCode,
-        if (rawResponse != null && rawResponse.isNotEmpty) 'raw_response': rawResponse,
-        if (appPackage != null && appPackage.isNotEmpty) 'app_package': appPackage,
+        if (approvalRefNo != null && approvalRefNo.isNotEmpty)
+          'approval_ref_no': approvalRefNo,
+        if (responseCode != null && responseCode.isNotEmpty)
+          'response_code': responseCode,
+        if (rawResponse != null && rawResponse.isNotEmpty)
+          'raw_response': rawResponse,
+        if (appPackage != null && appPackage.isNotEmpty)
+          'app_package': appPackage,
       },
     );
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
@@ -134,7 +148,10 @@ class ResidentApiService {
       if (invoiceId != null && invoiceId.isNotEmpty) 'invoice_id': invoiceId,
       if (status != null && status.isNotEmpty) 'status': status,
     };
-    final res = await ApiClient.get('/payments/history', queryParameters: query);
+    final res = await ApiClient.get(
+      '/payments/history',
+      queryParameters: query,
+    );
     if (res is List) {
       return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
@@ -143,25 +160,21 @@ class ResidentApiService {
 
   /// Records return from UPI app (sets state to PENDING_VERIFICATION)
   static Future<Map<String, dynamic>> recordUpiReturn(String paymentId) async {
-    final res = await ApiClient.post(
-      '/payments/upi/$paymentId/return',
-    );
+    final res = await ApiClient.post('/payments/upi/$paymentId/return');
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
   /// Records resident cancellation of a pending UPI payment attempt
   static Future<Map<String, dynamic>> cancelUpiPayment(String paymentId) async {
-    final res = await ApiClient.post(
-      '/payments/upi/$paymentId/cancel',
-    );
+    final res = await ApiClient.post('/payments/upi/$paymentId/cancel');
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
   /// Queries authoritative payment status from backend
-  static Future<Map<String, dynamic>> getUpiPaymentStatus(String paymentId) async {
-    final res = await ApiClient.get(
-      '/payments/upi/$paymentId/status',
-    );
+  static Future<Map<String, dynamic>> getUpiPaymentStatus(
+    String paymentId,
+  ) async {
+    final res = await ApiClient.get('/payments/upi/$paymentId/status');
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
@@ -193,7 +206,9 @@ class ResidentApiService {
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
-  static Future<Map<String, dynamic>> getPaymentRequestStatus(String requestId) async {
+  static Future<Map<String, dynamic>> getPaymentRequestStatus(
+    String requestId,
+  ) async {
     final res = await ApiClient.get('/payments/requests/$requestId');
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
@@ -227,7 +242,9 @@ class ResidentApiService {
     return [];
   }
 
-  static Future<Map<String, dynamic>> createComplaint(Map<String, dynamic> payload) async {
+  static Future<Map<String, dynamic>> createComplaint(
+    Map<String, dynamic> payload,
+  ) async {
     final res = await ApiClient.post('/resident/complaints', body: payload);
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
@@ -253,7 +270,9 @@ class ResidentApiService {
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
 
-  static Future<Map<String, dynamic>> updateSettings(Map<String, dynamic> payload) async {
+  static Future<Map<String, dynamic>> updateSettings(
+    Map<String, dynamic> payload,
+  ) async {
     final res = await ApiClient.patch('/resident/settings', body: payload);
     return res is Map<String, dynamic> ? res : <String, dynamic>{};
   }
@@ -281,8 +300,13 @@ class ResidentApiService {
   // ---------------------------------------------------------------------------
   // Notifications & Read Status
   // ---------------------------------------------------------------------------
-  static Future<List<Map<String, dynamic>>> getNotifications({bool unreadOnly = false}) async {
-    final res = await ApiClient.get('/notifications', queryParameters: {'unread_only': unreadOnly});
+  static Future<List<Map<String, dynamic>>> getNotifications({
+    bool unreadOnly = false,
+  }) async {
+    final res = await ApiClient.get(
+      '/notifications',
+      queryParameters: {'unread_only': unreadOnly},
+    );
     if (res is List) {
       return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     }
@@ -297,7 +321,11 @@ class ResidentApiService {
     return 0;
   }
 
-  static Future<Map<String, dynamic>> updateProfile({String? fullName, String? avatarUrl, String? phone}) async {
+  static Future<Map<String, dynamic>> updateProfile({
+    String? fullName,
+    String? avatarUrl,
+    String? phone,
+  }) async {
     final body = <String, dynamic>{};
     if (fullName != null) body['full_name'] = fullName;
     if (avatarUrl != null) body['avatar_url'] = avatarUrl;

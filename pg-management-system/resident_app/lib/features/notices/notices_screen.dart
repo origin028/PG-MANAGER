@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -51,8 +52,7 @@ class _NoticesScreenState extends State<NoticesScreen>
       {
         'id': 'NOTIF-1',
         'title': 'Water supply maintenance',
-        'description':
-            'Water will be off tomorrow from 10:00 AM to 2:00 PM for solar pipeline servicing.',
+        'description': 'Water will be off tomorrow from 10:00 AM to 2:00 PM for solar pipeline servicing.',
         'category': 'Facility',
         'date': 'Today, 10:00 AM',
         'icon': Icons.water_drop_rounded,
@@ -61,8 +61,7 @@ class _NoticesScreenState extends State<NoticesScreen>
       {
         'id': 'NOTIF-3',
         'title': 'High-Speed Wi-Fi Upgrade',
-        'description':
-            'Mesh router firmware across Floor 1 and Floor 2 has been upgraded to 300 Mbps bandwidth.',
+        'description': 'Mesh router firmware across Floor 1 and Floor 2 has been upgraded to 300 Mbps bandwidth.',
         'category': 'Internet',
         'date': '24 Oct 2026',
         'icon': Icons.wifi_rounded,
@@ -71,8 +70,7 @@ class _NoticesScreenState extends State<NoticesScreen>
       {
         'id': 'NOTIF-4',
         'title': 'Visitor Timing Reminder',
-        'description':
-            'Visitors and guests are allowed in the common lounge area until 9:00 PM daily.',
+        'description': 'Visitors and guests are allowed in the common lounge area until 9:00 PM daily.',
         'category': 'Rules',
         'date': '20 Oct 2026',
         'icon': Icons.schedule_rounded,
@@ -81,8 +79,7 @@ class _NoticesScreenState extends State<NoticesScreen>
       {
         'id': 'NOTIF-5',
         'title': 'Scheduled Pest Control Drive',
-        'description':
-            'Bi-monthly pest control and deep cleaning will be conducted this Sunday from 11:00 AM.',
+        'description': 'Bi-monthly pest control and deep cleaning will be conducted this Sunday from 11:00 AM.',
         'category': 'Maintenance',
         'date': '18 Oct 2026',
         'icon': Icons.cleaning_services_rounded,
@@ -131,7 +128,8 @@ class _NoticesScreenState extends State<NoticesScreen>
           for (final n in list) {
             final rawCategory = (n['category'] ?? 'Notice').toString().trim();
             final rawCreatedAt = n['created_at']?.toString() ?? '';
-            final bool isImportant = n['priority'] == 'HIGH' ||
+            final bool isImportant =
+                n['priority'] == 'HIGH' ||
                 n['priority'] == 'URGENT' ||
                 n['is_pinned'] == true;
 
@@ -172,7 +170,8 @@ class _NoticesScreenState extends State<NoticesScreen>
     }
     final local = parsed.toLocal();
     final now = DateTime.now();
-    final isSameDay = local.year == now.year &&
+    final isSameDay =
+        local.year == now.year &&
         local.month == now.month &&
         local.day == now.day;
     if (isSameDay) {
@@ -279,8 +278,7 @@ class _NoticesScreenState extends State<NoticesScreen>
         {
           'id': 'NOTIF-1',
           'title': 'Water supply maintenance',
-          'description':
-              'Water will be off tomorrow from 10:00 AM to 2:00 PM.',
+          'description': 'Water will be off tomorrow from 10:00 AM to 2:00 PM.',
           'category': 'Facility',
           'date': 'Today, 10:00 AM',
           'icon': Icons.water_drop_rounded,
@@ -303,16 +301,16 @@ class _NoticesScreenState extends State<NoticesScreen>
   Widget build(BuildContext context) {
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
 
     final todayNotices = _notices.where(_isTodayNotice).toList();
-    final earlierNotices =
-        _notices.where((n) => !_isTodayNotice(n)).toList();
+    final earlierNotices = _notices.where((n) => !_isTodayNotice(n)).toList();
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -506,10 +504,12 @@ class _NoticesScreenState extends State<NoticesScreen>
                                   const SizedBox(height: 12),
                                   ...todayNotices.asMap().entries.map((entry) {
                                     final idx = entry.key;
-                                    final double begin =
-                                        (0.14 + idx * 0.08).clamp(0.14, 0.72);
-                                    final double end =
-                                        (begin + 0.36).clamp(0.40, 1.0);
+                                    final double begin = (0.14 + idx * 0.08)
+                                        .clamp(0.14, 0.72);
+                                    final double end = (begin + 0.36).clamp(
+                                      0.40,
+                                      1.0,
+                                    );
                                     return _staggeredItem(
                                       begin: begin,
                                       end: end,
@@ -529,7 +529,9 @@ class _NoticesScreenState extends State<NoticesScreen>
                                 ],
                                 if (earlierNotices.isNotEmpty) ...[
                                   _staggeredItem(
-                                    begin: todayNotices.isNotEmpty ? 0.24 : 0.10,
+                                    begin: todayNotices.isNotEmpty
+                                        ? 0.24
+                                        : 0.10,
                                     end: todayNotices.isNotEmpty ? 0.62 : 0.46,
                                     child: _buildGroupHeader(
                                       label: todayNotices.isNotEmpty
@@ -540,16 +542,16 @@ class _NoticesScreenState extends State<NoticesScreen>
                                     ),
                                   ),
                                   const SizedBox(height: 12),
-                                  ...earlierNotices
-                                      .asMap()
-                                      .entries
-                                      .map((entry) {
-                                    final idx =
-                                        entry.key + todayNotices.length;
-                                    final double begin =
-                                        (0.24 + idx * 0.08).clamp(0.20, 0.75);
-                                    final double end =
-                                        (begin + 0.34).clamp(0.45, 1.0);
+                                  ...earlierNotices.asMap().entries.map((
+                                    entry,
+                                  ) {
+                                    final idx = entry.key + todayNotices.length;
+                                    final double begin = (0.24 + idx * 0.08)
+                                        .clamp(0.20, 0.75);
+                                    final double end = (begin + 0.34).clamp(
+                                      0.45,
+                                      1.0,
+                                    );
                                     return _staggeredItem(
                                       begin: begin,
                                       end: end,
@@ -643,15 +645,13 @@ class _NoticesScreenState extends State<NoticesScreen>
           ),
         ),
         const SizedBox(width: 10),
-        Expanded(
-          child: Container(height: 1, color: borderCol),
-        ),
+        Expanded(child: Container(height: 1, color: borderCol)),
       ],
     );
   }
 
   ({Color iconBg, Color iconFg, Color chipBg, Color chipFg})
-      _resolveCategoryPalette({
+  _resolveCategoryPalette({
     required BuildContext context,
     required String category,
     required bool isDark,
@@ -716,18 +716,21 @@ class _NoticesScreenState extends State<NoticesScreen>
       textPri: textPri,
     );
 
-    final Color importantBadgeBg =
-        isDark ? const Color(0xFF4B2841) : const Color(0xFFFCE7F0);
-    final Color importantBadgeFg =
-        isDark ? const Color(0xFFF9A8D4) : const Color(0xFF9D174D);
+    final Color importantBadgeBg = isDark
+        ? const Color(0xFF4B2841)
+        : const Color(0xFFFCE7F0);
+    final Color importantBadgeFg = isDark
+        ? const Color(0xFFF9A8D4)
+        : const Color(0xFF9D174D);
 
     final Color cardBorderColor = isImportant
         ? (isDark ? const Color(0xFF2F6F68) : const Color(0xFFB9D9D4))
         : (isDark ? borderCol : const Color(0xFFE6ECEA));
 
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
-    final Color dotColor =
-        isDark ? HomeThemeTokens.darkBellDot : HomeThemeTokens.lightBellDot;
+    final Color dotColor = isDark
+        ? HomeThemeTokens.darkBellDot
+        : HomeThemeTokens.lightBellDot;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -769,11 +772,7 @@ class _NoticesScreenState extends State<NoticesScreen>
                     width: 1,
                   ),
                 ),
-                child: Icon(
-                  icon,
-                  color: palette.iconFg,
-                  size: 20,
-                ),
+                child: Icon(icon, color: palette.iconFg, size: 20),
               ),
               const SizedBox(width: 14),
               // Right Details Column
@@ -847,8 +846,8 @@ class _NoticesScreenState extends State<NoticesScreen>
                                         builder: (context, _) {
                                           final t = _dotController.value;
                                           final scale = 1.0 + t * 1.4;
-                                          final alpha =
-                                              ((1.0 - t) * 0.45).clamp(0.0, 1.0);
+                                          final alpha = ((1.0 - t) * 0.45)
+                                              .clamp(0.0, 1.0);
                                           return Transform.scale(
                                             scale: scale,
                                             child: Container(
@@ -1029,8 +1028,7 @@ class _NoticesScreenState extends State<NoticesScreen>
                       style: HomeThemeTokens.manrope(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
-                        color:
-                            isDark ? const Color(0xFF04201C) : Colors.white,
+                        color: isDark ? const Color(0xFF04201C) : Colors.white,
                       ),
                     ),
                   ],
@@ -1049,10 +1047,7 @@ class _ScalePress extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
 
-  const _ScalePress({
-    required this.child,
-    required this.onTap,
-  });
+  const _ScalePress({required this.child, required this.onTap});
 
   @override
   State<_ScalePress> createState() => _ScalePressState();
@@ -1072,8 +1067,9 @@ class _ScalePressState extends State<_ScalePress> {
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: (_pressed && !disableAnim) ? 0.985 : 1.0,
-        duration:
-            disableAnim ? Duration.zero : const Duration(milliseconds: 110),
+        duration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
         child: widget.child,
       ),

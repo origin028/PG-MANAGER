@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/network/token_storage.dart';
 import '../../core/theme/app_theme.dart';
@@ -97,9 +98,11 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final savedProfile = TokenStorage.residentProfile;
-    final resident = (savedProfile != null &&
+    final resident =
+        (savedProfile != null &&
             savedProfile.isNotEmpty &&
-            AppData.currentResident['phone'] == AppData.residents.first['phone'] &&
+            AppData.currentResident['phone'] ==
+                AppData.residents.first['phone'] &&
             AppData.currentResident['room_number'] == null)
         ? savedProfile
         : AppData.currentResident;
@@ -111,7 +114,8 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         (resident['stay_details'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
 
-    final rawName = residentInfo['full_name'] ??
+    final rawName =
+        residentInfo['full_name'] ??
         resident['full_name'] ??
         resident['name'] ??
         'Resident';
@@ -119,46 +123,50 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         ? rawName.toString().trim()
         : 'Resident';
 
-    final rawRoom = stayDetails['room_number'] ??
+    final rawRoom =
+        stayDetails['room_number'] ??
         resident['room_number'] ??
         resident['room'];
     final room = (rawRoom != null && rawRoom.toString().trim().isNotEmpty)
         ? rawRoom.toString().trim()
         : null;
 
-    final rawPhone = (residentInfo['phone'] ??
-            resident['phone'] ??
-            '9876543210')
-        .toString()
-        .trim();
-    final formattedPhone =
-        rawPhone.startsWith('+') ? rawPhone : '+91 $rawPhone';
+    final rawPhone =
+        (residentInfo['phone'] ?? resident['phone'] ?? '9876543210')
+            .toString()
+            .trim();
+    final formattedPhone = rawPhone.startsWith('+')
+        ? rawPhone
+        : '+91 $rawPhone';
 
-    final String subtitleMeta =
-        room != null ? 'Room $room · $formattedPhone' : formattedPhone;
+    final String subtitleMeta = room != null
+        ? 'Room $room · $formattedPhone'
+        : formattedPhone;
 
     final bool isRentPaid =
         resident['rent_status']?.toString().toLowerCase() == 'paid';
 
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
-    final avatarPop = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.86, end: 1.04), weight: 60),
-      TweenSequenceItem(tween: Tween(begin: 1.04, end: 1.0), weight: 40),
-    ]).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.06, 0.56, curve: Curves.easeOutCubic),
-      ),
-    );
+    final avatarPop =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0.86, end: 1.04), weight: 60),
+          TweenSequenceItem(tween: Tween(begin: 1.04, end: 1.0), weight: 40),
+        ]).animate(
+          CurvedAnimation(
+            parent: _entranceController,
+            curve: const Interval(0.06, 0.56, curve: Curves.easeOutCubic),
+          ),
+        );
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -236,8 +244,10 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                                             return const SizedBox.shrink();
                                           }
                                           return FractionalTranslation(
-                                            translation:
-                                                Offset(-1.2 + v * 2.5, 0),
+                                            translation: Offset(
+                                              -1.2 + v * 2.5,
+                                              0,
+                                            ),
                                             child: Container(
                                               width: 80,
                                               decoration: BoxDecoration(
@@ -245,12 +255,15 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                                                   begin: Alignment.centerLeft,
                                                   end: Alignment.centerRight,
                                                   colors: [
-                                                    Colors.white
-                                                        .withValues(alpha: 0.0),
                                                     Colors.white.withValues(
-                                                        alpha: 0.11),
-                                                    Colors.white
-                                                        .withValues(alpha: 0.0),
+                                                      alpha: 0.0,
+                                                    ),
+                                                    Colors.white.withValues(
+                                                      alpha: 0.11,
+                                                    ),
+                                                    Colors.white.withValues(
+                                                      alpha: 0.0,
+                                                    ),
                                                   ],
                                                 ),
                                               ),
@@ -323,8 +336,9 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
                                         offset: (!disableAnim && isPressed)
                                             ? const Offset(0.15, 0)
                                             : Offset.zero,
-                                        duration:
-                                            const Duration(milliseconds: 140),
+                                        duration: const Duration(
+                                          milliseconds: 140,
+                                        ),
                                         child: const Icon(
                                           Icons.chevron_right_rounded,
                                           size: 20,
@@ -574,8 +588,8 @@ class _MenuScreenState extends State<MenuScreen> with TickerProviderStateMixin {
         return Container(
           color: isPressed
               ? (isDark
-                  ? HomeThemeTokens.darkSurface.withValues(alpha: 0.55)
-                  : const Color(0xFFF6F9F8))
+                    ? HomeThemeTokens.darkSurface.withValues(alpha: 0.55)
+                    : const Color(0xFFF6F9F8))
               : Colors.transparent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
           child: Row(
@@ -672,10 +686,7 @@ class _InteractivePress extends StatefulWidget {
   final VoidCallback onTap;
   final Widget Function(BuildContext context, bool isPressed) builder;
 
-  const _InteractivePress({
-    required this.onTap,
-    required this.builder,
-  });
+  const _InteractivePress({required this.onTap, required this.builder});
 
   @override
   State<_InteractivePress> createState() => _InteractivePressState();
@@ -695,8 +706,9 @@ class _InteractivePressState extends State<_InteractivePress> {
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: (_pressed && !disableAnim) ? 0.985 : 1.0,
-        duration:
-            disableAnim ? Duration.zero : const Duration(milliseconds: 110),
+        duration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
         child: widget.builder(context, _pressed),
       ),

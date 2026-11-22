@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/widgets/main_layout.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/payments/payments_screen.dart';
@@ -32,10 +33,12 @@ CustomTransitionPage<void> _buildSlideFadePage(
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration:
-        disableAnim ? Duration.zero : const Duration(milliseconds: 240),
-    reverseTransitionDuration:
-        disableAnim ? Duration.zero : const Duration(milliseconds: 200),
+    transitionDuration: disableAnim
+        ? Duration.zero
+        : const Duration(milliseconds: 240),
+    reverseTransitionDuration: disableAnim
+        ? Duration.zero
+        : const Duration(milliseconds: 200),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       if (disableAnim) return child;
       final curved = CurvedAnimation(
@@ -65,17 +68,16 @@ CustomTransitionPage<void> _buildTabFadePage(
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration:
-        disableAnim ? Duration.zero : const Duration(milliseconds: 180),
-    reverseTransitionDuration:
-        disableAnim ? Duration.zero : const Duration(milliseconds: 150),
+    transitionDuration: disableAnim
+        ? Duration.zero
+        : const Duration(milliseconds: 180),
+    reverseTransitionDuration: disableAnim
+        ? Duration.zero
+        : const Duration(milliseconds: 150),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       if (disableAnim) return child;
       return FadeTransition(
-        opacity: CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOut,
-        ),
+        opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
         child: child,
       );
     },
@@ -99,11 +101,8 @@ final GoRouter appRouter = GoRouter(
     }
     return null;
   },
-  errorBuilder: (context, state) => Scaffold(
-    body: Center(
-      child: Text('Route not found: ${state.uri}'),
-    ),
-  ),
+  errorBuilder: (context, state) =>
+      Scaffold(body: Center(child: Text('Route not found: ${state.uri}'))),
   routes: [
     // Top-Level Screens (Bottom Navigation is HIDDEN)
     GoRoute(

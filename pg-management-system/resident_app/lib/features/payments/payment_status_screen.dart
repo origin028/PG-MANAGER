@@ -1,7 +1,9 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
+
 import '../../core/services/payment_verification_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/motion_wrappers.dart';
@@ -17,7 +19,8 @@ class PaymentStatusScreen extends StatefulWidget {
 }
 
 class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
-  PaymentVerificationState _currentState = PaymentVerificationState.pendingVerification;
+  PaymentVerificationState _currentState =
+      PaymentVerificationState.pendingVerification;
   PaymentVerificationResult? _verificationResult;
   Timer? _pollingTimer;
   int _pollCount = 0;
@@ -26,7 +29,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
   @override
   void initState() {
     super.initState();
-    final initial = widget.paymentData['initialState']?.toString().toLowerCase();
+    final initial = widget.paymentData['initialState']
+        ?.toString()
+        .toLowerCase();
     if (initial == 'failed') {
       _currentState = PaymentVerificationState.failed;
     } else if (initial == 'cancelled') {
@@ -75,9 +80,11 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     }
 
     _pollCount++;
-    final invoiceId = widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
+    final invoiceId =
+        widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
     final txnRef = widget.paymentData['txnRef']?.toString() ?? 'TXN-998877';
-    final paymentApp = widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
+    final paymentApp =
+        widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
     final num amount = (widget.paymentData['amount'] as num?) ?? 8000;
     final paymentId = widget.paymentData['paymentId']?.toString();
 
@@ -109,9 +116,11 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
 
   Future<void> _simulateSettlementState() async {
     _pollingTimer?.cancel();
-    final invoiceId = widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
+    final invoiceId =
+        widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
     final txnRef = widget.paymentData['txnRef']?.toString() ?? 'TXN-998877';
-    final paymentApp = widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
+    final paymentApp =
+        widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
     final amount = (widget.paymentData['amount'] as num?)?.toInt() ?? 8000;
 
     final res = await PaymentVerificationService.simulateBankSettlement(
@@ -131,9 +140,11 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
 
   Future<void> _simulateFailedState() async {
     _pollingTimer?.cancel();
-    final invoiceId = widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
+    final invoiceId =
+        widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
     final txnRef = widget.paymentData['txnRef']?.toString() ?? 'TXN-998877';
-    final paymentApp = widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
+    final paymentApp =
+        widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
     final num amount = (widget.paymentData['amount'] as num?) ?? 8000;
 
     final res = await PaymentVerificationService.verifyWithBackend(
@@ -154,9 +165,11 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
 
   Future<void> _simulateCancelledState() async {
     _pollingTimer?.cancel();
-    final invoiceId = widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
+    final invoiceId =
+        widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
     final txnRef = widget.paymentData['txnRef']?.toString() ?? 'TXN-998877';
-    final paymentApp = widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
+    final paymentApp =
+        widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
     final num amount = (widget.paymentData['amount'] as num?) ?? 8000;
     final paymentId = widget.paymentData['paymentId']?.toString();
 
@@ -190,7 +203,11 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         appBar: AppBar(
           title: Text(
             'Payment Status',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: textPri),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
+              color: textPri,
+            ),
           ),
           backgroundColor: cardBg,
           elevation: 0,
@@ -211,7 +228,8 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(24.0),
                 child: AnimatedSwitcher(
-                  duration: (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
+                  duration:
+                      (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
                       ? Duration.zero
                       : const Duration(milliseconds: 280),
                   switchInCurve: Curves.easeOutCubic,
@@ -219,7 +237,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
                   transitionBuilder: (child, animation) => FadeTransition(
                     opacity: animation,
                     child: ScaleTransition(
-                      scale: Tween<double>(begin: 0.97, end: 1.0).animate(animation),
+                      scale: Tween<double>(
+                        begin: 0.97,
+                        end: 1.0,
+                      ).animate(animation),
                       child: child,
                     ),
                   ),
@@ -281,21 +302,32 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
                 color: AppTheme.primaryBlue,
               ),
             ),
-            const Icon(Icons.hourglass_top_rounded, color: AppTheme.primaryBlue, size: 28),
+            const Icon(
+              Icons.hourglass_top_rounded,
+              color: AppTheme.primaryBlue,
+              size: 28,
+            ),
           ],
         ),
         const SizedBox(height: 24),
 
         const Text(
           'Payment Pending Verification',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
-          widget.paymentData['statusMessage']?.toString() ??
-              'Payment initiated. Waiting for confirmation. Please do not pay again.',
-          style: const TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
+          widget.paymentData['statusMessage']?.toString() ?? 'Payment initiated. Waiting for confirmation. Please do not pay again.',
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppTheme.textGrey,
+            height: 1.4,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
@@ -314,12 +346,19 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
               const SizedBox(
                 width: 10,
                 height: 10,
-                child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF64748B)),
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.5,
+                  color: Color(0xFF64748B),
+                ),
               ),
               const SizedBox(width: 8),
               Text(
                 'Checking backend status (Attempt $_pollCount)...',
-                style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  color: Color(0xFF64748B),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -346,16 +385,29 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _isManualChecking ? null : () => _checkStatusWithBackend(isManual: true),
+                onPressed: _isManualChecking
+                    ? null
+                    : () => _checkStatusWithBackend(isManual: true),
                 icon: _isManualChecking
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Icon(Icons.refresh_rounded, size: 18),
-                label: Text(_isManualChecking ? 'Querying Backend...' : 'Refresh Status'),
+                label: Text(
+                  _isManualChecking ? 'Querying Backend...' : 'Refresh Status',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -367,11 +419,20 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () => _simulateCancelledState(),
-              icon: const Icon(Icons.close_rounded, size: 16, color: Color(0xFF64748B)),
-              label: const Text('Cancel Payment Attempt', style: TextStyle(color: Color(0xFF64748B))),
+              icon: const Icon(
+                Icons.close_rounded,
+                size: 16,
+                color: Color(0xFF64748B),
+              ),
+              label: const Text(
+                'Cancel Payment Attempt',
+                style: TextStyle(color: Color(0xFF64748B)),
+              ),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 side: const BorderSide(color: Color(0xFFCBD5E1)),
               ),
             ),
@@ -387,17 +448,26 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           children: [
             TextButton(
               onPressed: _simulateSettlementState,
-              child: const Text('Simulate Settlement', style: TextStyle(fontSize: 12, color: Color(0xFF16A34A))),
+              child: const Text(
+                'Simulate Settlement',
+                style: TextStyle(fontSize: 12, color: Color(0xFF16A34A)),
+              ),
             ),
             const Text('•', style: TextStyle(color: Color(0xFFCBD5E1))),
             TextButton(
               onPressed: _simulateCancelledState,
-              child: const Text('Simulate Cancelled', style: TextStyle(fontSize: 12, color: Color(0xFFD97706))),
+              child: const Text(
+                'Simulate Cancelled',
+                style: TextStyle(fontSize: 12, color: Color(0xFFD97706)),
+              ),
             ),
             const Text('•', style: TextStyle(color: Color(0xFFCBD5E1))),
             TextButton(
               onPressed: _simulateFailedState,
-              child: const Text('Simulate Failed', style: TextStyle(fontSize: 12, color: Color(0xFFEF4444))),
+              child: const Text(
+                'Simulate Failed',
+                style: TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
+              ),
             ),
           ],
         ),
@@ -407,11 +477,22 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
 
   // 2. Successful Payment State
   Widget _buildSuccessfulView() {
-    final invoiceId = _verificationResult?.invoiceId ?? widget.paymentData['invoiceId'] ?? 'INV-2026-010';
-    final txnRef = _verificationResult?.transactionRef ?? widget.paymentData['txnRef'] ?? 'TXN-998877';
-    final amount = _verificationResult?.amount ?? widget.paymentData['amount'] ?? 8000;
-    final paymentApp = _verificationResult?.paymentApp ?? widget.paymentData['paymentApp'] ?? 'Google Pay';
-    final approvalCode = _verificationResult?.bankApprovalCode ?? 'BANK-AUTH-88219';
+    final invoiceId =
+        _verificationResult?.invoiceId ??
+        widget.paymentData['invoiceId'] ??
+        'INV-2026-010';
+    final txnRef =
+        _verificationResult?.transactionRef ??
+        widget.paymentData['txnRef'] ??
+        'TXN-998877';
+    final amount =
+        _verificationResult?.amount ?? widget.paymentData['amount'] ?? 8000;
+    final paymentApp =
+        _verificationResult?.paymentApp ??
+        widget.paymentData['paymentApp'] ??
+        'Google Pay';
+    final approvalCode =
+        _verificationResult?.bankApprovalCode ?? 'BANK-AUTH-88219';
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
     return Column(
@@ -457,12 +538,20 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             children: [
               const Text(
                 'Payment Successful!',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
               ),
               const SizedBox(height: 6),
               const Text(
                 'Payment verified successfully.',
-                style: TextStyle(fontSize: 13, color: Color(0xFF059669), fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF059669),
+                  fontWeight: FontWeight.w600,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -524,19 +613,21 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (ctx) => ReceiptScreen(
-                            receiptData: _verificationResult?.receiptData ?? {
-                              'receiptNumber': 'REC-2026-11-0084',
-                              'invoiceId': invoiceId,
-                              'amount': amount,
-                              'paymentApp': paymentApp,
-                              'transactionRef': txnRef,
-                              'bankApprovalCode': approvalCode,
-                              'paidAt': DateTime.now().toIso8601String(),
-                              'residentName': 'Resident',
-                              'roomNumber': '101',
-                              'propertyName': 'BNR Luxury PG',
-                              'status': 'Verified & Settled',
-                            },
+                            receiptData:
+                                _verificationResult?.receiptData ??
+                                {
+                                  'receiptNumber': 'REC-2026-11-0084',
+                                  'invoiceId': invoiceId,
+                                  'amount': amount,
+                                  'paymentApp': paymentApp,
+                                  'transactionRef': txnRef,
+                                  'bankApprovalCode': approvalCode,
+                                  'paidAt': DateTime.now().toIso8601String(),
+                                  'residentName': 'Resident',
+                                  'roomNumber': '101',
+                                  'propertyName': 'BNR Luxury PG',
+                                  'status': 'Verified & Settled',
+                                },
                           ),
                         ),
                       );
@@ -547,7 +638,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
                       backgroundColor: AppTheme.primaryBlue,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 15),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -560,10 +653,18 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
                     onPressed: () => context.go('/home'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       side: const BorderSide(color: Color(0xFFE2E8F0)),
                     ),
-                    child: const Text('Back to Home Screen', style: TextStyle(color: AppTheme.textDark, fontWeight: FontWeight.bold)),
+                    child: const Text(
+                      'Back to Home Screen',
+                      style: TextStyle(
+                        color: AppTheme.textDark,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -590,19 +691,31 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             border: Border.all(color: const Color(0xFFFCA5A5), width: 2),
           ),
           child: const Center(
-            child: Icon(Icons.cancel_rounded, color: Color(0xFFDC2626), size: 54),
+            child: Icon(
+              Icons.cancel_rounded,
+              color: Color(0xFFDC2626),
+              size: 54,
+            ),
           ),
         ),
         const SizedBox(height: 20),
         const Text(
           'Payment Failed',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           widget.paymentData['statusMessage']?.toString() ??
               'Payment was not completed. Please check your UPI application.',
-          style: const TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppTheme.textGrey,
+            height: 1.4,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 28),
@@ -620,7 +733,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
                   backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -629,7 +744,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         const SizedBox(height: 12),
         TextButton(
           onPressed: () => context.go('/home'),
-          child: const Text('Return to Home', style: TextStyle(color: AppTheme.textGrey)),
+          child: const Text(
+            'Return to Home',
+            style: TextStyle(color: AppTheme.textGrey),
+          ),
         ),
       ],
     );
@@ -651,19 +769,31 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             border: Border.all(color: const Color(0xFFFCD34D), width: 2),
           ),
           child: const Center(
-            child: Icon(Icons.error_outline_rounded, color: Color(0xFFD97706), size: 54),
+            child: Icon(
+              Icons.error_outline_rounded,
+              color: Color(0xFFD97706),
+              size: 54,
+            ),
           ),
         ),
         const SizedBox(height: 20),
         const Text(
           'Payment Cancelled',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           widget.paymentData['statusMessage']?.toString() ??
               'Payment was cancelled.',
-          style: const TextStyle(fontSize: 13, color: AppTheme.textGrey, height: 1.4),
+          style: const TextStyle(
+            fontSize: 13,
+            color: AppTheme.textGrey,
+            height: 1.4,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 28),
@@ -681,7 +811,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
                   backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
             ),
@@ -690,7 +822,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         const SizedBox(height: 12),
         TextButton(
           onPressed: () => context.go('/home'),
-          child: const Text('Return to Home', style: TextStyle(color: AppTheme.textGrey)),
+          child: const Text(
+            'Return to Home',
+            style: TextStyle(color: AppTheme.textGrey),
+          ),
         ),
       ],
     );
@@ -743,13 +878,23 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             _buildDetailRow('Bank Approval', approvalCode),
           ],
           Divider(height: 18, color: borderCol),
-          _buildDetailRow('Status', statusText, valueColor: statusColor, isBold: true),
+          _buildDetailRow(
+            'Status',
+            statusText,
+            valueColor: statusColor,
+            isBold: true,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {Color? valueColor, bool isBold = false}) {
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    Color? valueColor,
+    bool isBold = false,
+  }) {
     final textPri = AppTheme.textPrimary(context);
     final textSec = AppTheme.textSecondary(context);
 

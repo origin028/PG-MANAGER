@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../data/app_data.dart';
 import 'resident_api_service.dart';
 
@@ -86,7 +88,8 @@ class PaymentVerificationService {
   static String generateTxnReference(String invoiceId) {
     final rand = Random().nextInt(899999) + 100000;
     final now = DateTime.now();
-    final dateStr = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final dateStr =
+        '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
     return 'UPI$dateStr$rand';
   }
 
@@ -105,12 +108,16 @@ class PaymentVerificationService {
       amount: amount,
       paymentApp: paymentApp,
       timestamp: DateTime.now(),
-      message: 'Payment initiated via $paymentApp. Waiting for bank & backend verification.',
+      message:
+          'Payment initiated via $paymentApp. Waiting for bank & backend verification.',
     );
 
     // Save to storage
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(result.toJson()));
+    await prefs.setString(
+      '$_storageKeyPrefix$invoiceId',
+      jsonEncode(result.toJson()),
+    );
 
     return result;
   }
@@ -145,7 +152,10 @@ class PaymentVerificationService {
         timestamp: DateTime.now(),
         message: 'Payment was cancelled in $paymentApp.',
       );
-      await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(cancelledResult.toJson()));
+      await prefs.setString(
+        '$_storageKeyPrefix$invoiceId',
+        jsonEncode(cancelledResult.toJson()),
+      );
       return cancelledResult;
     }
 
@@ -159,16 +169,24 @@ class PaymentVerificationService {
         timestamp: DateTime.now(),
         message: 'Bank transaction could not be completed or timed out.',
       );
-      await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(failedResult.toJson()));
+      await prefs.setString(
+        '$_storageKeyPrefix$invoiceId',
+        jsonEncode(failedResult.toJson()),
+      );
       return failedResult;
     }
 
     // 1. Authoritative Backend Check (for real backend payments)
-    if (paymentId != null && paymentId.isNotEmpty && !paymentId.startsWith('INV-')) {
+    if (paymentId != null &&
+        paymentId.isNotEmpty &&
+        !paymentId.startsWith('INV-')) {
       try {
-        final statusRes = await ResidentApiService.getUpiPaymentStatus(paymentId);
+        final statusRes = await ResidentApiService.getUpiPaymentStatus(
+          paymentId,
+        );
         if (statusRes.isNotEmpty) {
-          final isSettled = statusRes['is_settled'] == true ||
+          final isSettled =
+              statusRes['is_settled'] == true ||
               statusRes['status'] == 'PAID' ||
               statusRes['status'] == 'SUCCESS';
           if (isSettled) {
@@ -191,7 +209,10 @@ class PaymentVerificationService {
               timestamp: DateTime.now(),
               message: 'Payment was declined or timed out at bank.',
             );
-            await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(failedResult.toJson()));
+            await prefs.setString(
+              '$_storageKeyPrefix$invoiceId',
+              jsonEncode(failedResult.toJson()),
+            );
             return failedResult;
           } else if (statusRes['status'] == 'CANCELLED') {
             final cancelledResult = PaymentVerificationResult(
@@ -203,7 +224,10 @@ class PaymentVerificationService {
               timestamp: DateTime.now(),
               message: 'Payment was cancelled in UPI application.',
             );
-            await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(cancelledResult.toJson()));
+            await prefs.setString(
+              '$_storageKeyPrefix$invoiceId',
+              jsonEncode(cancelledResult.toJson()),
+            );
             return cancelledResult;
           }
         }
@@ -233,7 +257,10 @@ class PaymentVerificationService {
       timestamp: DateTime.now(),
       message: 'Transaction submitted. Awaiting bank reconciliation and PG confirmation.',
     );
-    await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(pendingResult.toJson()));
+    await prefs.setString(
+      '$_storageKeyPrefix$invoiceId',
+      jsonEncode(pendingResult.toJson()),
+    );
     return pendingResult;
   }
 
@@ -262,7 +289,9 @@ class PaymentVerificationService {
     required num amount,
     String? paymentId,
   }) async {
-    if (paymentId != null && paymentId.isNotEmpty && !paymentId.startsWith('INV-')) {
+    if (paymentId != null &&
+        paymentId.isNotEmpty &&
+        !paymentId.startsWith('INV-')) {
       try {
         await ResidentApiService.cancelUpiPayment(paymentId);
       } catch (_) {}
@@ -278,7 +307,10 @@ class PaymentVerificationService {
       timestamp: DateTime.now(),
       message: 'Payment cancelled by resident.',
     );
-    await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(cancelledResult.toJson()));
+    await prefs.setString(
+      '$_storageKeyPrefix$invoiceId',
+      jsonEncode(cancelledResult.toJson()),
+    );
     return cancelledResult;
   }
 
@@ -291,8 +323,11 @@ class PaymentVerificationService {
     String? receiptNumber,
     String? bankApprovalCode,
   }) async {
-    final approvalCode = bankApprovalCode ?? 'BANK-AUTH-${Random().nextInt(89999) + 10000}';
-    final recNo = receiptNumber ?? 'REC-${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${Random().nextInt(8999) + 1000}';
+    final approvalCode =
+        bankApprovalCode ?? 'BANK-AUTH-${Random().nextInt(89999) + 10000}';
+    final recNo =
+        receiptNumber ??
+        'REC-${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${Random().nextInt(8999) + 1000}';
 
     final receipt = {
       'receiptNumber': recNo,
@@ -303,7 +338,10 @@ class PaymentVerificationService {
       'bankApprovalCode': approvalCode,
       'paidAt': DateTime.now().toIso8601String(),
       'residentName': AppData.currentResident['name'] ?? 'Akshay B',
-      'roomNumber': AppData.currentResident['room_number'] ?? AppData.currentResident['room'] ?? '101',
+      'roomNumber':
+          AppData.currentResident['room_number'] ??
+          AppData.currentResident['room'] ??
+          '101',
       'propertyName': verifiedPayeeName,
       'status': 'Verified & Settled',
     };
@@ -321,11 +359,16 @@ class PaymentVerificationService {
     );
 
     // Save transaction state
-    await prefs.setString('$_storageKeyPrefix$invoiceId', jsonEncode(verifiedResult.toJson()));
+    await prefs.setString(
+      '$_storageKeyPrefix$invoiceId',
+      jsonEncode(verifiedResult.toJson()),
+    );
 
     // Save receipt to verified receipts list
     final receiptsJson = prefs.getString(_verifiedReceiptsKey);
-    List<dynamic> receiptsList = receiptsJson != null ? jsonDecode(receiptsJson) : [];
+    List<dynamic> receiptsList = receiptsJson != null
+        ? jsonDecode(receiptsJson)
+        : [];
     receiptsList.removeWhere((r) => r['invoiceId'] == invoiceId);
     receiptsList.insert(0, receipt);
     await prefs.setString(_verifiedReceiptsKey, jsonEncode(receiptsList));

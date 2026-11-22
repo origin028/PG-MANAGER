@@ -1,8 +1,10 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
 import '../../core/theme/app_theme.dart';
 import 'poc_flutter_upi_service.dart';
 
@@ -98,7 +100,9 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
     _dueDate = inv?['date']?.toString() ?? 'Today';
 
     _consoleLogs.add('--- Diagnostic Workbench Initialized ---');
-    _consoleLogs.add('Payee: ${PocFlutterUpiService.verifiedPayeeName} (${PocFlutterUpiService.verifiedPayeeVpa})');
+    _consoleLogs.add(
+      'Payee: ${PocFlutterUpiService.verifiedPayeeName} (${PocFlutterUpiService.verifiedPayeeVpa})',
+    );
     _consoleLogs.add('Payer Bank: Bank of Baroda | Amount: ₹1.00');
   }
 
@@ -169,7 +173,9 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
         );
         break;
       case UpiApproach.officialGooglePayApi:
-        final spec = PocFlutterUpiService.getOfficialGooglePayApiSpec(amount: _amount);
+        final spec = PocFlutterUpiService.getOfficialGooglePayApiSpec(
+          amount: _amount,
+        );
         result = PocPaymentResult(
           approach: UpiApproach.officialGooglePayApi,
           status: PocPaymentStatus.failure,
@@ -220,13 +226,18 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
     final borderCol = AppTheme.borderCol(context);
 
     final currentApproach = _approaches[_selectedApproachIndex];
-    final isQrApproach = currentApproach['approach'] == UpiApproach.dynamicQrCodeMode01;
-    final isApiApproach = currentApproach['approach'] == UpiApproach.officialGooglePayApi;
+    final isQrApproach =
+        currentApproach['approach'] == UpiApproach.dynamicQrCodeMode01;
+    final isApiApproach =
+        currentApproach['approach'] == UpiApproach.officialGooglePayApi;
 
     return Scaffold(
       backgroundColor: AppTheme.pageBg(context),
       appBar: AppBar(
-        title: const Text('UPI Integration Workbench', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        title: const Text(
+          'UPI Integration Workbench',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         backgroundColor: cardBg,
         foregroundColor: textPri,
         elevation: 0,
@@ -264,28 +275,63 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Test Payable Amount', style: TextStyle(fontSize: 11, color: textSec)),
-                          Text('₹ ${_amount.toStringAsFixed(2)}', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                          Text(
+                            'Test Payable Amount',
+                            style: TextStyle(fontSize: 11, color: textSec),
+                          ),
+                          Text(
+                            '₹ ${_amount.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
                         ],
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFFEF3C7),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('₹1 TEST INVOICE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                        child: const Text(
+                          '₹1 TEST INVOICE',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFB45309),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                   const Divider(height: 16),
                   _buildDetailRow('Due Date', _dueDate, textPri, textSec),
                   const SizedBox(height: 4),
-                  _buildDetailRow('Payee VPA', PocFlutterUpiService.verifiedPayeeVpa, textPri, textSec),
+                  _buildDetailRow(
+                    'Payee VPA',
+                    PocFlutterUpiService.verifiedPayeeVpa,
+                    textPri,
+                    textSec,
+                  ),
                   const SizedBox(height: 4),
-                  _buildDetailRow('Payee Name', PocFlutterUpiService.verifiedPayeeName, textPri, textSec),
+                  _buildDetailRow(
+                    'Payee Name',
+                    PocFlutterUpiService.verifiedPayeeName,
+                    textPri,
+                    textSec,
+                  ),
                   const SizedBox(height: 4),
-                  _buildDetailRow('Payer Bank', 'Bank of Baroda (BoB)', textPri, textSec),
+                  _buildDetailRow(
+                    'Payer Bank',
+                    'Bank of Baroda (BoB)',
+                    textPri,
+                    textSec,
+                  ),
                 ],
               ),
             ),
@@ -294,7 +340,11 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
             // Approach Selector Header
             Text(
               'Select Supported Integration Approach',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5, color: textPri),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13.5,
+                color: textPri,
+              ),
             ),
             const SizedBox(height: 8),
 
@@ -317,7 +367,9 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                       margin: const EdgeInsets.only(right: 10),
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isSelected ? color.withValues(alpha: 0.1) : cardBg,
+                        color: isSelected
+                            ? color.withValues(alpha: 0.1)
+                            : cardBg,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: isSelected ? color : borderCol,
@@ -331,21 +383,33 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                           const SizedBox(height: 8),
                           Text(
                             app['title'] as String,
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: textPri),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              color: textPri,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 4),
                           Text(
                             app['npciMode'] as String,
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: color,
+                            ),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            app['personalVpaSupported'] == true ? '✓ Works on Personal' : '✗ Blocked on BoB',
+                            app['personalVpaSupported'] == true
+                                ? '✓ Works on Personal'
+                                : '✗ Blocked on BoB',
                             style: TextStyle(
                               fontSize: 9.5,
-                              color: app['personalVpaSupported'] == true ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                              color: app['personalVpaSupported'] == true
+                                  ? const Color(0xFF10B981)
+                                  : const Color(0xFFEF4444),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -371,12 +435,20 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(currentApproach['icon'] as IconData, color: currentApproach['color'] as Color, size: 20),
+                      Icon(
+                        currentApproach['icon'] as IconData,
+                        color: currentApproach['color'] as Color,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           currentApproach['title'] as String,
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textPri),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: textPri,
+                          ),
                         ),
                       ),
                     ],
@@ -387,11 +459,28 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                     style: TextStyle(fontSize: 11.5, color: textSec),
                   ),
                   const Divider(height: 16),
-                  _buildDetailRow('NPCI Initiation Mode', currentApproach['npciMode'] as String, textPri, textSec),
+                  _buildDetailRow(
+                    'NPCI Initiation Mode',
+                    currentApproach['npciMode'] as String,
+                    textPri,
+                    textSec,
+                  ),
                   const SizedBox(height: 4),
-                  _buildDetailRow('BoB CBS Limit Status', currentApproach['bobStatus'] as String, textPri, textSec),
+                  _buildDetailRow(
+                    'BoB CBS Limit Status',
+                    currentApproach['bobStatus'] as String,
+                    textPri,
+                    textSec,
+                  ),
                   const SizedBox(height: 4),
-                  _buildDetailRow('Personal VPA Viability', currentApproach['personalVpaSupported'] == true ? 'YES' : 'NO (Limit ₹0.00 / Error U16)', textPri, textSec),
+                  _buildDetailRow(
+                    'Personal VPA Viability',
+                    currentApproach['personalVpaSupported'] == true
+                        ? 'YES'
+                        : 'NO (Limit ₹0.00 / Error U16)',
+                    textPri,
+                    textSec,
+                  ),
 
                   // If QR Approach, render QR Code directly inside card
                   if (isQrApproach) ...[
@@ -405,7 +494,10 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: QrImageView(
-                          data: PocFlutterUpiService.buildQrCodeData(invoiceId: _invoiceId, amount: _amount),
+                          data: PocFlutterUpiService.buildQrCodeData(
+                            invoiceId: _invoiceId,
+                            amount: _amount,
+                          ),
                           version: QrVersions.auto,
                           size: 160.0,
                         ),
@@ -415,7 +507,11 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                     Center(
                       child: Text(
                         'Scan with Google Pay camera (Mode 01 P2P - Approved by BoB)',
-                        style: TextStyle(fontSize: 11, color: textSec, fontStyle: FontStyle.italic),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: textSec,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ),
                   ],
@@ -426,20 +522,33 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        color: isDark
+                            ? const Color(0xFF0F172A)
+                            : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(color: borderCol),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: const [
-                          Text('Documentation: developers.google.com/pay/india/api/android', style: TextStyle(fontSize: 10, color: Color(0xFF0284C7), fontWeight: FontWeight.bold)),
+                          Text(
+                            'Documentation: developers.google.com/pay/india/api/android',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF0284C7),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           SizedBox(height: 4),
                           Text(
                             'AllowedPaymentMethods: [{ "type": "UPI", "parameters": { "payeeVpa": "...", "mcc": "6513" } }]\n'
                             'MerchantInfo: { "merchantId": "ISSUED_BY_GPAY_CONSOLE" }\n'
                             'Requires verified acquiring bank merchant contract. Unverified personal VPAs are rejected during console onboarding.',
-                            style: TextStyle(fontFamily: 'monospace', fontSize: 10, height: 1.35),
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 10,
+                              height: 1.35,
+                            ),
                           ),
                         ],
                       ),
@@ -457,16 +566,30 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
               child: ElevatedButton.icon(
                 onPressed: _isExecuting ? null : _executeSelectedApproach,
                 icon: _isExecuting
-                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
                     : const Icon(Icons.play_circle_fill_rounded, size: 20),
                 label: Text(
-                  _isExecuting ? 'Executing...' : 'Test ${currentApproach['title']}',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  _isExecuting
+                      ? 'Executing...'
+                      : 'Test ${currentApproach['title']}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: currentApproach['color'] as Color,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                   elevation: 1,
                 ),
               ),
@@ -475,7 +598,14 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
 
             // Execution Result Card
             if (_lastResult != null) ...[
-              _buildResultCard(_lastResult!, isDark, cardBg, textPri, textSec, borderCol),
+              _buildResultCard(
+                _lastResult!,
+                isDark,
+                cardBg,
+                textPri,
+                textSec,
+                borderCol,
+              ),
               const SizedBox(height: 20),
             ],
 
@@ -483,7 +613,9 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF0F172A) : const Color(0xFF1E293B),
+                color: isDark
+                    ? const Color(0xFF0F172A)
+                    : const Color(0xFF1E293B),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFF334155)),
               ),
@@ -495,13 +627,28 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                     children: [
                       Row(
                         children: const [
-                          Icon(Icons.terminal_rounded, color: Color(0xFF38BDF8), size: 16),
+                          Icon(
+                            Icons.terminal_rounded,
+                            color: Color(0xFF38BDF8),
+                            size: 16,
+                          ),
                           SizedBox(width: 6),
-                          Text('Diagnostic Console', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12.5)),
+                          Text(
+                            'Diagnostic Console',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              fontSize: 12.5,
+                            ),
+                          ),
                         ],
                       ),
                       IconButton(
-                        icon: const Icon(Icons.copy_rounded, color: Color(0xFF94A3B8), size: 15),
+                        icon: const Icon(
+                          Icons.copy_rounded,
+                          color: Color(0xFF94A3B8),
+                          size: 15,
+                        ),
                         tooltip: 'Copy Logs',
                         onPressed: _copyConsoleLogs,
                       ),
@@ -513,7 +660,12 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
                     child: SingleChildScrollView(
                       child: Text(
                         _consoleLogs.join('\n'),
-                        style: const TextStyle(fontFamily: 'monospace', fontSize: 10.5, color: Color(0xFFE2E8F0), height: 1.35),
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 10.5,
+                          color: Color(0xFFE2E8F0),
+                          height: 1.35,
+                        ),
                       ),
                     ),
                   ),
@@ -526,7 +678,12 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, Color textPri, Color textSec) {
+  Widget _buildDetailRow(
+    String label,
+    String value,
+    Color textPri,
+    Color textSec,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -536,7 +693,11 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: textPri),
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: textPri,
+            ),
           ),
         ),
       ],
@@ -552,56 +713,119 @@ class _PocFlutterUpiScreenState extends State<PocFlutterUpiScreen> {
     Color borderCol,
   ) {
     final isBankSuccess = res.bankTransactionSuccess == true;
-    final statusColor = isBankSuccess ? const Color(0xFF10B981) : (res.isBankLimitError ? const Color(0xFFEF4444) : const Color(0xFFF59E0B));
+    final statusColor = isBankSuccess
+        ? const Color(0xFF10B981)
+        : (res.isBankLimitError
+              ? const Color(0xFFEF4444)
+              : const Color(0xFFF59E0B));
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statusColor.withValues(alpha: 0.5), width: 1.5),
+        border: Border.all(
+          color: statusColor.withValues(alpha: 0.5),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(isBankSuccess ? Icons.check_circle_rounded : Icons.info_rounded, color: statusColor, size: 22),
+              Icon(
+                isBankSuccess ? Icons.check_circle_rounded : Icons.info_rounded,
+                color: statusColor,
+                size: 22,
+              ),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isBankSuccess ? 'BANK TRANSACTION AUTHORIZED' : (res.isBankLimitError ? 'BANK LIMIT EXCEEDED (U16)' : res.status.name.toUpperCase()),
-                  style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold, color: statusColor),
+                  isBankSuccess
+                      ? 'BANK TRANSACTION AUTHORIZED'
+                      : (res.isBankLimitError
+                            ? 'BANK LIMIT EXCEEDED (U16)'
+                            : res.status.name.toUpperCase()),
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
                 ),
               ),
             ],
           ),
           const Divider(height: 16),
-          _buildDetailRow('App Launch Result', res.appLaunchSuccess ? 'SUCCESS (Intent Dispatched)' : 'FAILED', textPri, textSec),
+          _buildDetailRow(
+            'App Launch Result',
+            res.appLaunchSuccess ? 'SUCCESS (Intent Dispatched)' : 'FAILED',
+            textPri,
+            textSec,
+          ),
           const SizedBox(height: 4),
-          _buildDetailRow('Bank Authorization', isBankSuccess ? 'AUTHORIZED (Mode ${res.npciInitiationMode})' : 'REJECTED (Channel Limit ₹0.00)', textPri, textSec),
+          _buildDetailRow(
+            'Bank Authorization',
+            isBankSuccess
+                ? 'AUTHORIZED (Mode ${res.npciInitiationMode})'
+                : 'REJECTED (Channel Limit ₹0.00)',
+            textPri,
+            textSec,
+          ),
           const SizedBox(height: 4),
-          _buildDetailRow('NPCI Initiation Mode', 'Mode ${res.npciInitiationMode}', textPri, textSec),
+          _buildDetailRow(
+            'NPCI Initiation Mode',
+            'Mode ${res.npciInitiationMode}',
+            textPri,
+            textSec,
+          ),
           const SizedBox(height: 4),
-          _buildDetailRow('Response Code', res.responseCode ?? 'None', textPri, textSec),
+          _buildDetailRow(
+            'Response Code',
+            res.responseCode ?? 'None',
+            textPri,
+            textSec,
+          ),
           const SizedBox(height: 4),
-          _buildDetailRow('Transaction ID', res.transactionId ?? 'None', textPri, textSec),
+          _buildDetailRow(
+            'Transaction ID',
+            res.transactionId ?? 'None',
+            textPri,
+            textSec,
+          ),
           const SizedBox(height: 4),
-          _buildDetailRow('Verification State', res.verificationState, textPri, textSec),
+          _buildDetailRow(
+            'Verification State',
+            res.verificationState,
+            textPri,
+            textSec,
+          ),
 
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: isBankSuccess ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2),
+              color: isBankSuccess
+                  ? const Color(0xFFF0FDF4)
+                  : const Color(0xFFFEF2F2),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: isBankSuccess ? const Color(0xFFBBF7D0) : const Color(0xFFFCA5A5)),
+              border: Border.all(
+                color: isBankSuccess
+                    ? const Color(0xFFBBF7D0)
+                    : const Color(0xFFFCA5A5),
+              ),
             ),
             child: Text(
               isBankSuccess
                   ? 'Evidence: This approach succeeds with a personal VPA because it runs under NPCI ${res.npciInitiationMode == "00" ? "Mode 00 (In-App Push P2P)" : "Mode 01 (Static QR P2P)"}, which Bank of Baroda authorizes under normal daily caps.'
                   : 'Evidence: App launch succeeds, but Bank of Baroda rejects the transaction because external app intents (Mode 04) are restricted to registered merchants under NPCI OC No. 76A.',
-              style: TextStyle(fontSize: 11, color: isBankSuccess ? const Color(0xFF15803D) : const Color(0xFF991B1B), height: 1.3),
+              style: TextStyle(
+                fontSize: 11,
+                color: isBankSuccess
+                    ? const Color(0xFF15803D)
+                    : const Color(0xFF991B1B),
+                height: 1.3,
+              ),
             ),
           ),
         ],

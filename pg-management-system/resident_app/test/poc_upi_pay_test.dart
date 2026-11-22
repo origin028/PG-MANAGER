@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -7,7 +8,9 @@ import 'package:upi_pay/upi_pay.dart' as upi;
 import 'package:resident_app/features/payments/poc_upi_pay_service.dart';
 import 'package:resident_app/features/payments/poc_upi_pay_screen.dart';
 
-final Uint8List testIconBytes = base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA=');
+final Uint8List testIconBytes = base64Decode(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAA=',
+);
 
 /// Mock Runner implementation for isolated unit testing
 class MockPocUpiPayRunner implements PocUpiPayRunner {
@@ -24,7 +27,10 @@ class MockPocUpiPayRunner implements PocUpiPayRunner {
     this.isGooglePayInstalled = true,
     this.isPhonePeInstalled = true,
     this.isNaviInstalled = true,
-    this.mockNativePhonePeResult = const {'status': 'SUCCESS', 'method': 'EXPLICIT_UPI_INTENT'},
+    this.mockNativePhonePeResult = const {
+      'status': 'SUCCESS',
+      'method': 'EXPLICIT_UPI_INTENT',
+    },
   });
 
   @override
@@ -54,8 +60,12 @@ class MockPocUpiPayRunner implements PocUpiPayRunner {
 
   @override
   Future<bool> checkPackageInstalledNative(String packageName) async {
-    if (packageName == PocUpiPayService.googlePayPackage) return isGooglePayInstalled;
-    if (packageName == PocUpiPayService.phonePePackage) return isPhonePeInstalled;
+    if (packageName == PocUpiPayService.googlePayPackage) {
+      return isGooglePayInstalled;
+    }
+    if (packageName == PocUpiPayService.phonePePackage) {
+      return isPhonePeInstalled;
+    }
     if (packageName == PocUpiPayService.naviPackage) return isNaviInstalled;
     return false;
   }
@@ -90,7 +100,10 @@ void main() {
       expect(PocUpiPayService.verifiedPayeeVpa, '9886699258-3@ybl');
       expect(PocUpiPayService.verifiedPayeeName, "SMART GROUP PG'S");
       expect(PocUpiPayService.defaultCurrency, 'INR');
-      expect(PocUpiPayService.googlePayPackage, 'com.google.android.apps.nbu.paisa.user');
+      expect(
+        PocUpiPayService.googlePayPackage,
+        'com.google.android.apps.nbu.paisa.user',
+      );
       expect(PocUpiPayService.phonePePackage, 'com.phonepe.app');
       expect(PocUpiPayService.naviPackage, 'com.navi.curiosity');
     });
@@ -120,17 +133,23 @@ void main() {
       final discovered = await PocUpiPayService.discoverInstalledApps();
 
       // Should discover Google Pay from upi_pay
-      final gpay = discovered.firstWhere((a) => a.packageName == PocUpiPayService.googlePayPackage);
+      final gpay = discovered.firstWhere(
+        (a) => a.packageName == PocUpiPayService.googlePayPackage,
+      );
       expect(gpay.appName, 'Google Pay');
       expect(gpay.isNativelySupportedByPackage, isTrue);
 
       // Should discover PhonePe via auxiliary native check
-      final phonepe = discovered.firstWhere((a) => a.packageName == PocUpiPayService.phonePePackage);
+      final phonepe = discovered.firstWhere(
+        (a) => a.packageName == PocUpiPayService.phonePePackage,
+      );
       expect(phonepe.appName, 'PhonePe');
       expect(phonepe.isNativelySupportedByPackage, isTrue);
 
       // Should discover Navi via custom application resolution
-      final navi = discovered.firstWhere((a) => a.packageName == PocUpiPayService.naviPackage);
+      final navi = discovered.firstWhere(
+        (a) => a.packageName == PocUpiPayService.naviPackage,
+      );
       expect(navi.appName, 'Navi UPI');
       expect(navi.isNativelySupportedByPackage, isFalse);
     });
@@ -174,8 +193,13 @@ void main() {
 
     test('initiatePocPayment handles activity_unavailable for PhonePe and triggers native fallback when enabled', () async {
       final mock = MockPocUpiPayRunner(
-        mockResponse: upi.UpiTransactionResponse.android('activity_unavailable'),
-        mockNativePhonePeResult: {'status': 'SUCCESS', 'method': 'EXPLICIT_UPI_INTENT'},
+        mockResponse: upi.UpiTransactionResponse.android(
+          'activity_unavailable',
+        ),
+        mockNativePhonePeResult: {
+          'status': 'SUCCESS',
+          'method': 'EXPLICIT_UPI_INTENT',
+        },
       );
       PocUpiPayService.runner = mock;
 
@@ -192,13 +216,18 @@ void main() {
       expect(result.rawResponse, 'activity_unavailable');
       // Launched becomes true because of native fallback
       expect(result.launched, isTrue);
-      expect(result.message, contains('Launched PhonePe via Native Kotlin fallback'));
+      expect(
+        result.message,
+        contains('Launched PhonePe via Native Kotlin fallback'),
+      );
       expect(result.verificationState, 'pendingVerification');
     });
 
     test('initiatePocPayment without native fallback reports activity_unavailable cleanly', () async {
       final mock = MockPocUpiPayRunner(
-        mockResponse: upi.UpiTransactionResponse.android('activity_unavailable'),
+        mockResponse: upi.UpiTransactionResponse.android(
+          'activity_unavailable',
+        ),
       );
       PocUpiPayService.runner = mock;
 
@@ -212,7 +241,10 @@ void main() {
       );
 
       expect(result.launched, isFalse);
-      expect(result.message, contains('has no activity resolving standard upi://pay intent'));
+      expect(
+        result.message,
+        contains('has no activity resolving standard upi://pay intent'),
+      );
       expect(result.verificationState, 'pendingVerification');
     });
 
@@ -261,69 +293,80 @@ void main() {
   });
 
   group('PocUpiPayScreen Widget Tests', () {
-    testWidgets('Renders PocUpiPayScreen, safe test invoice banner, apps list, and test action tiles', (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() => tester.view.resetPhysicalSize());
+    testWidgets(
+      'Renders PocUpiPayScreen, safe test invoice banner, apps list, and test action tiles',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
 
-      final mock = MockPocUpiPayRunner(
-        mockApps: [
-          upi.ApplicationMeta.android(
-            upi.UpiApplication.googlePay,
-            testIconBytes,
-            1,
-            1,
+        final mock = MockPocUpiPayRunner(
+          mockApps: [
+            upi.ApplicationMeta.android(
+              upi.UpiApplication.googlePay,
+              testIconBytes,
+              1,
+              1,
+            ),
+            upi.ApplicationMeta.android(
+              upi.UpiApplication.phonePe,
+              testIconBytes,
+              2,
+              2,
+            ),
+          ],
+          isGooglePayInstalled: true,
+          isPhonePeInstalled: true,
+          isNaviInstalled: true,
+        );
+        PocUpiPayService.runner = mock;
+
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: PocUpiPayScreen(
+              invoiceData: {'id': 'INV-2026-TEST', 'amount': 1.00},
+            ),
           ),
-          upi.ApplicationMeta.android(
-            upi.UpiApplication.phonePe,
-            testIconBytes,
-            2,
-            2,
+        );
+        await tester.pumpAndSettle();
+
+        // Banner checks
+        expect(find.text('upi_pay Package Evaluation POC'), findsOneWidget);
+        expect(
+          find.text('Test Invoice: INV-2026-TEST (₹1.00)'),
+          findsOneWidget,
+        );
+        expect(find.textContaining("SMART GROUP PG'S"), findsWidgets);
+        expect(find.textContaining('9886699258-3@ybl'), findsWidgets);
+
+        // Discovered Apps checks
+        expect(find.textContaining('Discovered UPI Apps'), findsOneWidget);
+        expect(find.text('Google Pay'), findsWidgets);
+        expect(find.text('PhonePe'), findsWidgets);
+        expect(find.text('Navi UPI'), findsWidgets);
+
+        // Test tiles checks
+        expect(find.text('1. Test Google Pay via upi_pay'), findsOneWidget);
+        expect(find.text('2. Test PhonePe via upi_pay'), findsOneWidget);
+        expect(
+          find.text('3. Test Navi UPI via Custom upi_pay App'),
+          findsOneWidget,
+        );
+
+        // Execute Google Pay test launch
+        await tester.tap(find.text('Test ₹1').first);
+        await tester.pumpAndSettle();
+
+        // Result card should appear with PENDING_VERIFICATION badge
+        expect(find.text('Execution Result: Google Pay'), findsOneWidget);
+        expect(find.text('LAUNCHED'), findsOneWidget);
+        expect(
+          find.text(
+            'State: PENDING_VERIFICATION (Invoice not marked paid on callback)',
           ),
-        ],
-        isGooglePayInstalled: true,
-        isPhonePeInstalled: true,
-        isNaviInstalled: true,
-      );
-      PocUpiPayService.runner = mock;
-
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: PocUpiPayScreen(
-            invoiceData: {
-              'id': 'INV-2026-TEST',
-              'amount': 1.00,
-            },
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      // Banner checks
-      expect(find.text('upi_pay Package Evaluation POC'), findsOneWidget);
-      expect(find.text('Test Invoice: INV-2026-TEST (₹1.00)'), findsOneWidget);
-      expect(find.textContaining("SMART GROUP PG'S"), findsWidgets);
-      expect(find.textContaining('9886699258-3@ybl'), findsWidgets);
-
-      // Discovered Apps checks
-      expect(find.textContaining('Discovered UPI Apps'), findsOneWidget);
-      expect(find.text('Google Pay'), findsWidgets);
-      expect(find.text('PhonePe'), findsWidgets);
-      expect(find.text('Navi UPI'), findsWidgets);
-
-      // Test tiles checks
-      expect(find.text('1. Test Google Pay via upi_pay'), findsOneWidget);
-      expect(find.text('2. Test PhonePe via upi_pay'), findsOneWidget);
-      expect(find.text('3. Test Navi UPI via Custom upi_pay App'), findsOneWidget);
-
-      // Execute Google Pay test launch
-      await tester.tap(find.text('Test ₹1').first);
-      await tester.pumpAndSettle();
-
-      // Result card should appear with PENDING_VERIFICATION badge
-      expect(find.text('Execution Result: Google Pay'), findsOneWidget);
-      expect(find.text('LAUNCHED'), findsOneWidget);
-      expect(find.text('State: PENDING_VERIFICATION (Invoice not marked paid on callback)'), findsOneWidget);
-    });
+          findsOneWidget,
+        );
+      },
+    );
   });
 }

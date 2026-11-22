@@ -48,7 +48,8 @@ class MockPocUpiRunner implements PocUpiRunner {
     lastNote = transactionNote;
 
     if (exceptionToThrow != null) throw exceptionToThrow!;
-    return responseToReturn ?? UpiTransactionResponse.android('status=failure&responseCode=U16');
+    return responseToReturn ??
+        UpiTransactionResponse.android('status=failure&responseCode=U16');
   }
 
   @override
@@ -73,28 +74,37 @@ void main() {
       expect(PocFlutterUpiService.verifiedPayeeVpa, '9886699258-3@ybl');
       expect(PocFlutterUpiService.verifiedPayeeName, "SMART GROUP PG'S");
       expect(PocFlutterUpiService.defaultCurrency, 'INR');
-      expect(PocFlutterUpiService.googlePayPackage, 'com.google.android.apps.nbu.paisa.user');
-    });
-
-    test('buildStandardUpiUri builds RFC compliant NPCI URI with package option', () {
-      final uri = PocFlutterUpiService.buildStandardUpiUri(
-        payeeVpa: '9886699258-3@ybl',
-        payeeName: "SMART GROUP PG'S",
-        amount: 1.00,
-        transactionRef: 'TXN-TEST-1',
-        transactionNote: 'Test Note',
-        targetedPackage: 'com.google.android.apps.nbu.paisa.user',
+      expect(
+        PocFlutterUpiService.googlePayPackage,
+        'com.google.android.apps.nbu.paisa.user',
       );
-
-      expect(uri.scheme, 'upi');
-      expect(uri.host, 'pay');
-      expect(uri.queryParameters['pa'], '9886699258-3@ybl');
-      expect(uri.queryParameters['pn'], "SMART GROUP PG'S");
-      expect(uri.queryParameters['am'], '1.00');
-      expect(uri.queryParameters['cu'], 'INR');
-      expect(uri.queryParameters['tr'], 'TXN-TEST-1');
-      expect(uri.queryParameters['package'], 'com.google.android.apps.nbu.paisa.user');
     });
+
+    test(
+      'buildStandardUpiUri builds RFC compliant NPCI URI with package option',
+      () {
+        final uri = PocFlutterUpiService.buildStandardUpiUri(
+          payeeVpa: '9886699258-3@ybl',
+          payeeName: "SMART GROUP PG'S",
+          amount: 1.00,
+          transactionRef: 'TXN-TEST-1',
+          transactionNote: 'Test Note',
+          targetedPackage: 'com.google.android.apps.nbu.paisa.user',
+        );
+
+        expect(uri.scheme, 'upi');
+        expect(uri.host, 'pay');
+        expect(uri.queryParameters['pa'], '9886699258-3@ybl');
+        expect(uri.queryParameters['pn'], "SMART GROUP PG'S");
+        expect(uri.queryParameters['am'], '1.00');
+        expect(uri.queryParameters['cu'], 'INR');
+        expect(uri.queryParameters['tr'], 'TXN-TEST-1');
+        expect(
+          uri.queryParameters['package'],
+          'com.google.android.apps.nbu.paisa.user',
+        );
+      },
+    );
 
     test('Approach 1: executeTargetedIntent launches Google Pay package directly and notes Mode 04', () async {
       final mock = MockPocUpiRunner(launchUrlResult: true);
@@ -110,7 +120,10 @@ void main() {
       expect(res.appLaunchSuccess, isTrue);
       expect(res.bankTransactionSuccess, isFalse);
       expect(res.isBankLimitError, isTrue);
-      expect(mock.lastLaunchedUri?.queryParameters['package'], 'com.google.android.apps.nbu.paisa.user');
+      expect(
+        mock.lastLaunchedUri?.queryParameters['package'],
+        'com.google.android.apps.nbu.paisa.user',
+      );
       expect(res.verificationState, 'PENDING_VERIFICATION');
     });
 
@@ -126,7 +139,10 @@ void main() {
       expect(res.approach, UpiApproach.genericChooserUrlLauncher);
       expect(res.npciInitiationMode, '04');
       expect(res.appLaunchSuccess, isTrue);
-      expect(mock.lastLaunchedUri?.queryParameters.containsKey('package'), isFalse);
+      expect(
+        mock.lastLaunchedUri?.queryParameters.containsKey('package'),
+        isFalse,
+      );
     });
 
     test('Approach 3: executeActivityResultIntent captures U16 limit error via flutter_upi_india', () async {
@@ -176,98 +192,103 @@ void main() {
     });
 
     test('Approach 6: getOfficialGooglePayApiSpec mandates Google Pay & Wallet Console and rejects personal VPA', () {
-      final spec = PocFlutterUpiService.getOfficialGooglePayApiSpec(amount: 1.00);
+      final spec = PocFlutterUpiService.getOfficialGooglePayApiSpec(
+        amount: 1.00,
+      );
 
       expect(spec['apiVersion'], 2);
       expect(spec['canUsePersonalVpa'], isFalse);
-      expect(spec['documentationUrl'], 'https://developers.google.com/pay/india/api/android');
+      expect(
+        spec['documentationUrl'],
+        'https://developers.google.com/pay/india/api/android',
+      );
       final methods = spec['allowedPaymentMethods'] as List;
       expect(methods.first['type'], 'UPI');
     });
   });
 
   group('PocFlutterUpiScreen Widget Tests', () {
-    testWidgets('Renders workbench, payee details, and allows approach switching', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
+    testWidgets(
+      'Renders workbench, payee details, and allows approach switching',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
 
-      final mock = MockPocUpiRunner(launchUrlResult: true);
-      PocFlutterUpiService.runner = mock;
+        final mock = MockPocUpiRunner(launchUrlResult: true);
+        PocFlutterUpiService.runner = mock;
 
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: PocFlutterUpiScreen(
-            invoiceData: {
-              'id': 'INV-TEST-001',
-              'amount': 1.00,
-            },
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: PocFlutterUpiScreen(
+              invoiceData: {'id': 'INV-TEST-001', 'amount': 1.00},
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('UPI Integration Workbench'), findsOneWidget);
-      expect(find.text('₹ 1.00'), findsOneWidget);
-      expect(find.text('9886699258-3@ybl'), findsOneWidget);
-      expect(find.text("SMART GROUP PG'S"), findsOneWidget);
-      expect(find.text('1. Targeted Intent'), findsWidgets);
-      expect(find.text('2. Generic Chooser'), findsOneWidget);
-      expect(find.text('3. Result Intent'), findsOneWidget);
-      expect(find.text('4. Auto-Copy + Launch'), findsOneWidget);
-      expect(find.text('5. Dynamic QR Code'), findsOneWidget);
-      expect(find.text('6. Official GPay API'), findsOneWidget);
+        expect(find.text('UPI Integration Workbench'), findsOneWidget);
+        expect(find.text('₹ 1.00'), findsOneWidget);
+        expect(find.text('9886699258-3@ybl'), findsOneWidget);
+        expect(find.text("SMART GROUP PG'S"), findsOneWidget);
+        expect(find.text('1. Targeted Intent'), findsWidgets);
+        expect(find.text('2. Generic Chooser'), findsOneWidget);
+        expect(find.text('3. Result Intent'), findsOneWidget);
+        expect(find.text('4. Auto-Copy + Launch'), findsOneWidget);
+        expect(find.text('5. Dynamic QR Code'), findsOneWidget);
+        expect(find.text('6. Official GPay API'), findsOneWidget);
 
-      // Tap on Approach 4 (Auto-Copy)
-      await tester.tap(find.text('4. Auto-Copy + Launch'));
-      await tester.pumpAndSettle();
+        // Tap on Approach 4 (Auto-Copy)
+        await tester.tap(find.text('4. Auto-Copy + Launch'));
+        await tester.pumpAndSettle();
 
-      expect(find.text('APPROVED (₹1L limit)'), findsWidgets);
-    });
+        expect(find.text('APPROVED (₹1L limit)'), findsWidgets);
+      },
+    );
 
-    testWidgets('Executing Approach 1 displays Bank Limit Exceeded (U16) diagnostic card', (tester) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
+    testWidgets(
+      'Executing Approach 1 displays Bank Limit Exceeded (U16) diagnostic card',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
 
-      final mock = MockPocUpiRunner(launchUrlResult: true);
-      PocFlutterUpiService.runner = mock;
+        final mock = MockPocUpiRunner(launchUrlResult: true);
+        PocFlutterUpiService.runner = mock;
 
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: PocFlutterUpiScreen(
-            invoiceData: {
-              'id': 'INV-TEST-001',
-              'amount': 1.00,
-            },
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: PocFlutterUpiScreen(
+              invoiceData: {'id': 'INV-TEST-001', 'amount': 1.00},
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        await tester.pumpAndSettle();
 
-      final execBtn = find.text('Test 1. Targeted Intent');
-      expect(execBtn, findsOneWidget);
+        final execBtn = find.text('Test 1. Targeted Intent');
+        expect(execBtn, findsOneWidget);
 
-      await tester.ensureVisible(execBtn);
-      await tester.pumpAndSettle();
+        await tester.ensureVisible(execBtn);
+        await tester.pumpAndSettle();
 
-      await tester.tap(execBtn);
-      await tester.pumpAndSettle();
+        await tester.tap(execBtn);
+        await tester.pumpAndSettle();
 
-      final statusFinder = find.text('BANK LIMIT EXCEEDED (U16)');
-      await tester.ensureVisible(statusFinder);
-      await tester.pumpAndSettle();
+        final statusFinder = find.text('BANK LIMIT EXCEEDED (U16)');
+        await tester.ensureVisible(statusFinder);
+        await tester.pumpAndSettle();
 
-      expect(statusFinder, findsOneWidget);
-      expect(find.text('Mode 04'), findsWidgets);
-      expect(find.text('SUCCESS (Intent Dispatched)'), findsOneWidget);
-      expect(find.text('REJECTED (Channel Limit ₹0.00)'), findsOneWidget);
-    });
+        expect(statusFinder, findsOneWidget);
+        expect(find.text('Mode 04'), findsWidgets);
+        expect(find.text('SUCCESS (Intent Dispatched)'), findsOneWidget);
+        expect(find.text('REJECTED (Channel Limit ₹0.00)'), findsOneWidget);
+      },
+    );
   });
 }

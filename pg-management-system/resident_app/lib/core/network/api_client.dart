@@ -1,27 +1,26 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
 import 'api_exception.dart';
 import 'token_storage.dart';
 
 class ApiClient {
+  static const String _defaultProductionBaseUrl =
+      'https://pg-management-api-sw09.onrender.com/api/v1';
   static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
 
   static String get baseUrl {
     if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.10.5.135:8000/api/v1';
-    }
-    if (kIsWeb) {
-      final host = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
-      return 'http://$host:8000/api/v1';
-    }
-    return 'http://localhost:8000/api/v1';
+    return _defaultProductionBaseUrl;
   }
 
-  static const Duration timeout = Duration(seconds: 15);
+  static const Duration timeout = Duration(seconds: 45);
 
-  static Map<String, String> _buildHeaders([Map<String, String>? extraHeaders]) {
+  static Map<String, String> _buildHeaders([
+    Map<String, String>? extraHeaders,
+  ]) {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -76,10 +75,16 @@ class ApiClient {
     throw ApiException.fromResponse(response.statusCode, jsonBody);
   }
 
-  static Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(path, queryParameters);
-      final response = await http.get(uri, headers: _buildHeaders(headers)).timeout(timeout);
+      final response = await http
+          .get(uri, headers: _buildHeaders(headers))
+          .timeout(timeout);
       return _handleResponse(response);
     } on ApiException {
       rethrow;
@@ -89,10 +94,16 @@ class ApiClient {
   }
 
   /// Downloads binary bytes directly (e.g. for PDF payment receipts).
-  static Future<Uint8List> getBytes(String path, {Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<Uint8List> getBytes(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(path, queryParameters);
-      final response = await http.get(uri, headers: _buildHeaders(headers)).timeout(timeout);
+      final response = await http
+          .get(uri, headers: _buildHeaders(headers))
+          .timeout(timeout);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return response.bodyBytes;
       }
@@ -111,7 +122,12 @@ class ApiClient {
     }
   }
 
-  static Future<dynamic> post(String path, {dynamic body, Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> post(
+    String path, {
+    dynamic body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(path, queryParameters);
       final response = await http
@@ -129,7 +145,12 @@ class ApiClient {
     }
   }
 
-  static Future<dynamic> patch(String path, {dynamic body, Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> patch(
+    String path, {
+    dynamic body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(path, queryParameters);
       final response = await http
@@ -147,10 +168,16 @@ class ApiClient {
     }
   }
 
-  static Future<dynamic> delete(String path, {Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(path, queryParameters);
-      final response = await http.delete(uri, headers: _buildHeaders(headers)).timeout(timeout);
+      final response = await http
+          .delete(uri, headers: _buildHeaders(headers))
+          .timeout(timeout);
       return _handleResponse(response);
     } on ApiException {
       rethrow;
@@ -183,7 +210,9 @@ class ApiClient {
         request.files.addAll(files);
       }
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 45));
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 45),
+      );
       final response = await http.Response.fromStream(streamedResponse);
       return _handleResponse(response);
     } on ApiException {
@@ -214,13 +243,13 @@ class ApiClient {
         request.fields.addAll(fields);
       }
 
-      request.files.add(http.MultipartFile.fromBytes(
-        fieldName,
-        fileBytes,
-        filename: filename,
-      ));
+      request.files.add(
+        http.MultipartFile.fromBytes(fieldName, fileBytes, filename: filename),
+      );
 
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 30));
+      final streamedResponse = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
       final response = await http.Response.fromStream(streamedResponse);
       return _handleResponse(response);
     } on ApiException {

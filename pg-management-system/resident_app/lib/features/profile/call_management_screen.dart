@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -72,8 +73,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
           } else if (role.contains('CARETAKER') ||
               role.contains('WARDEN') ||
               role.contains('SECURITY')) {
-            _caretakerName =
-                name.isNotEmpty ? '$name (Caretaker)' : _caretakerName;
+            _caretakerName = name.isNotEmpty
+                ? '$name (Caretaker)'
+                : _caretakerName;
             _caretakerPhone = phone.isNotEmpty ? phone : _caretakerPhone;
             if (timing.isNotEmpty) {
               _caretakerTitle = timing;
@@ -105,9 +107,8 @@ class _CallManagementScreenState extends State<CallManagementScreen>
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Dialer error: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Dialer error: $e')));
     }
   }
 
@@ -125,9 +126,8 @@ class _CallManagementScreenState extends State<CallManagementScreen>
       }
     } catch (e) {
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('WhatsApp error: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('WhatsApp error: $e')));
     }
   }
 
@@ -191,26 +191,29 @@ class _CallManagementScreenState extends State<CallManagementScreen>
   Widget build(BuildContext context) {
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
-    final surfaceBg =
-        isDark ? HomeThemeTokens.darkSurface : const Color(0xFFF1F5F4);
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
+    final surfaceBg = isDark
+        ? HomeThemeTokens.darkSurface
+        : const Color(0xFFF1F5F4);
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
     final softTealCol = HomeThemeTokens.softTeal(context);
 
-    final waSurfaceBg =
-        isDark ? const Color(0xFF1E4838) : const Color(0xFFE4F5EC);
-    final waIconCol =
-        isDark ? const Color(0xFF3DD598) : const Color(0xFF0F7A4F);
-    final waCtaBg =
-        isDark ? const Color(0xFF3DD598) : const Color(0xFF0F7A4F);
-    final waSubtitleCol =
-        isDark ? const Color(0xFFA7DEC5) : textSec;
-    final dividerCol =
-        isDark ? HomeThemeTokens.darkBorder : const Color(0xFFEDF2F1);
+    final waSurfaceBg = isDark
+        ? const Color(0xFF1E4838)
+        : const Color(0xFFE4F5EC);
+    final waIconCol = isDark
+        ? const Color(0xFF3DD598)
+        : const Color(0xFF0F7A4F);
+    final waCtaBg = isDark ? const Color(0xFF3DD598) : const Color(0xFF0F7A4F);
+    final waSubtitleCol = isDark ? const Color(0xFFA7DEC5) : textSec;
+    final dividerCol = isDark
+        ? HomeThemeTokens.darkBorder
+        : const Color(0xFFEDF2F1);
 
     final formattedManagerPhone = _formatPhoneDisplay(_managerPhone);
     final formattedCaretakerPhone = _formatPhoneDisplay(_caretakerPhone);
@@ -311,9 +314,7 @@ class _CallManagementScreenState extends State<CallManagementScreen>
             // ----------------------------------------------------------------
             Expanded(
               child: _isLoading
-                  ? Center(
-                      child: CircularProgressIndicator(color: tealCol),
-                    )
+                  ? Center(child: CircularProgressIndicator(color: tealCol))
                   : RefreshIndicator(
                       color: tealCol,
                       onRefresh: _loadPropertyContacts,
@@ -334,12 +335,14 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                   end: 0.42,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      gradient:
-                                          HomeThemeTokens.heroGradient(context),
+                                      gradient: HomeThemeTokens.heroGradient(
+                                        context,
+                                      ),
                                       borderRadius: BorderRadius.circular(22),
                                       border: Border.all(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.08),
+                                        color: Colors.white.withValues(
+                                          alpha: 0.08,
+                                        ),
                                         width: 1,
                                       ),
                                       boxShadow: heroShadow,
@@ -360,13 +363,14 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                             child: Row(
                                               children: [
                                                 AnimatedBuilder(
-                                                  animation: _entranceController,
+                                                  animation:
+                                                      _entranceController,
                                                   builder: (context, iconChild) {
                                                     final disableAnim =
                                                         MediaQuery.maybeDisableAnimationsOf(
-                                                              context,
-                                                            ) ??
-                                                            false;
+                                                          context,
+                                                        ) ??
+                                                        false;
                                                     final t = disableAnim
                                                         ? 1.0
                                                         : CurvedAnimation(
@@ -395,18 +399,17 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                             child: Container(
                                                               width: 58,
                                                               height: 58,
-                                                              decoration:
-                                                                  BoxDecoration(
+                                                              decoration: BoxDecoration(
                                                                 shape: BoxShape
                                                                     .circle,
-                                                                border:
-                                                                    Border.all(
-                                                                  color: const Color(
-                                                                    0xFF8BE3D4,
-                                                                  ).withValues(
-                                                                    alpha:
-                                                                        ringAlpha,
-                                                                  ),
+                                                                border: Border.all(
+                                                                  color:
+                                                                      const Color(
+                                                                        0xFF8BE3D4,
+                                                                      ).withValues(
+                                                                        alpha:
+                                                                            ringAlpha,
+                                                                      ),
                                                                   width: 1.5,
                                                                 ),
                                                               ),
@@ -423,8 +426,8 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                     decoration: BoxDecoration(
                                                       color: Colors.white
                                                           .withValues(
-                                                        alpha: 0.14,
-                                                      ),
+                                                            alpha: 0.14,
+                                                          ),
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: const Icon(
@@ -446,28 +449,33 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                         maxLines: 2,
                                                         overflow: TextOverflow
                                                             .ellipsis,
-                                                        style: HomeThemeTokens
-                                                            .manrope(
-                                                          fontSize: 15.5,
-                                                          fontWeight:
-                                                              FontWeight.w800,
-                                                          color: Colors.white,
-                                                          letterSpacing: -0.2,
-                                                        ),
+                                                        style:
+                                                            HomeThemeTokens.manrope(
+                                                              fontSize: 15.5,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w800,
+                                                              color:
+                                                                  Colors.white,
+                                                              letterSpacing:
+                                                                  -0.2,
+                                                            ),
                                                       ),
                                                       const SizedBox(height: 3),
                                                       Text(
                                                         'Connect instantly with the property manager and on-site staff via phone call or WhatsApp.',
-                                                        style: HomeThemeTokens
-                                                            .manrope(
-                                                          fontSize: 12.5,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color: const Color(
-                                                            0xFFB7C6D2,
-                                                          ),
-                                                          height: 1.4,
-                                                        ),
+                                                        style:
+                                                            HomeThemeTokens.manrope(
+                                                              fontSize: 12.5,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                              color:
+                                                                  const Color(
+                                                                    0xFFB7C6D2,
+                                                                  ),
+                                                              height: 1.4,
+                                                            ),
                                                       ),
                                                     ],
                                                   ),
@@ -530,10 +538,11 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                   _getInitials(_managerName),
                                                   style:
                                                       HomeThemeTokens.manrope(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: Colors.white,
-                                                  ),
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        color: Colors.white,
+                                                      ),
                                                 ),
                                               ),
                                             ),
@@ -550,11 +559,11 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                         TextOverflow.ellipsis,
                                                     style:
                                                         HomeThemeTokens.manrope(
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      color: textPri,
-                                                    ),
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          color: textPri,
+                                                        ),
                                                   ),
                                                   const SizedBox(height: 2),
                                                   Text(
@@ -564,11 +573,11 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                         TextOverflow.ellipsis,
                                                     style:
                                                         HomeThemeTokens.manrope(
-                                                      fontSize: 12.5,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color: textSec,
-                                                    ),
+                                                          fontSize: 12.5,
+                                                          fontWeight:
+                                                              FontWeight.w500,
+                                                          color: textSec,
+                                                        ),
                                                   ),
                                                 ],
                                               ),
@@ -583,8 +592,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                         _InteractivePress(
                                           child: Material(
                                             color: surfaceBg,
-                                            borderRadius:
-                                                BorderRadius.circular(16),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
                                             child: InkWell(
                                               onTap: () => _makePhoneCall(
                                                 context,
@@ -593,8 +603,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                               child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(12),
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
                                                 child: Row(
                                                   children: [
                                                     Container(
@@ -603,8 +614,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                       decoration: BoxDecoration(
                                                         color: cardBg,
                                                         borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
                                                       ),
                                                       child: Icon(
                                                         Icons.phone_outlined,
@@ -625,14 +637,16 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                             overflow:
                                                                 TextOverflow
                                                                     .ellipsis,
-                                                            style: HomeThemeTokens
-                                                                .manrope(
-                                                              color: textSec,
-                                                              fontSize: 11.5,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w500,
-                                                            ),
+                                                            style:
+                                                                HomeThemeTokens.manrope(
+                                                                  color:
+                                                                      textSec,
+                                                                  fontSize:
+                                                                      11.5,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                ),
                                                           ),
                                                           const SizedBox(
                                                             height: 2,
@@ -643,32 +657,34 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                             overflow:
                                                                 TextOverflow
                                                                     .ellipsis,
-                                                            style: HomeThemeTokens
-                                                                .manrope(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w800,
-                                                              fontSize: 15,
-                                                              letterSpacing:
-                                                                  -0.2,
-                                                              color: textPri,
-                                                            ),
+                                                            style:
+                                                                HomeThemeTokens.manrope(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w800,
+                                                                  fontSize: 15,
+                                                                  letterSpacing:
+                                                                      -0.2,
+                                                                  color:
+                                                                      textPri,
+                                                                ),
                                                           ),
                                                         ],
                                                       ),
                                                     ),
                                                     const SizedBox(width: 8),
                                                     Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                        horizontal: 14,
-                                                        vertical: 9,
-                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 14,
+                                                            vertical: 9,
+                                                          ),
                                                       decoration: BoxDecoration(
                                                         color: tealCol,
                                                         borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
                                                       ),
                                                       child: Row(
                                                         mainAxisSize:
@@ -688,14 +704,13 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                           ),
                                                           Text(
                                                             'Call',
-                                                            style: HomeThemeTokens
-                                                                .manrope(
+                                                            style: HomeThemeTokens.manrope(
                                                               color: isDark
                                                                   ? const Color(
                                                                       0xFF04201C,
                                                                     )
                                                                   : Colors
-                                                                      .white,
+                                                                        .white,
                                                               fontSize: 13,
                                                               fontWeight:
                                                                   FontWeight
@@ -717,8 +732,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                         _InteractivePress(
                                           child: Material(
                                             color: waSurfaceBg,
-                                            borderRadius:
-                                                BorderRadius.circular(16),
+                                            borderRadius: BorderRadius.circular(
+                                              16,
+                                            ),
                                             child: InkWell(
                                               onTap: () => _openWhatsApp(
                                                 context,
@@ -727,8 +743,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                               borderRadius:
                                                   BorderRadius.circular(16),
                                               child: Padding(
-                                                padding:
-                                                    const EdgeInsets.all(12),
+                                                padding: const EdgeInsets.all(
+                                                  12,
+                                                ),
                                                 child: Row(
                                                   children: [
                                                     Container(
@@ -737,8 +754,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                       decoration: BoxDecoration(
                                                         color: cardBg,
                                                         borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
                                                       ),
                                                       child: Icon(
                                                         Icons
@@ -760,8 +778,7 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                             overflow:
                                                                 TextOverflow
                                                                     .ellipsis,
-                                                            style: HomeThemeTokens
-                                                                .manrope(
+                                                            style: HomeThemeTokens.manrope(
                                                               color:
                                                                   waSubtitleCol,
                                                               fontSize: 11.5,
@@ -779,32 +796,34 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                             overflow:
                                                                 TextOverflow
                                                                     .ellipsis,
-                                                            style: HomeThemeTokens
-                                                                .manrope(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w800,
-                                                              fontSize: 15,
-                                                              letterSpacing:
-                                                                  -0.2,
-                                                              color: textPri,
-                                                            ),
+                                                            style:
+                                                                HomeThemeTokens.manrope(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w800,
+                                                                  fontSize: 15,
+                                                                  letterSpacing:
+                                                                      -0.2,
+                                                                  color:
+                                                                      textPri,
+                                                                ),
                                                           ),
                                                         ],
                                                       ),
                                                     ),
                                                     const SizedBox(width: 8),
                                                     Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                        horizontal: 14,
-                                                        vertical: 9,
-                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 14,
+                                                            vertical: 9,
+                                                          ),
                                                       decoration: BoxDecoration(
                                                         color: waCtaBg,
                                                         borderRadius:
-                                                            BorderRadius
-                                                                .circular(12),
+                                                            BorderRadius.circular(
+                                                              12,
+                                                            ),
                                                       ),
                                                       child: Row(
                                                         mainAxisSize:
@@ -824,14 +843,13 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                           ),
                                                           Text(
                                                             'Chat',
-                                                            style: HomeThemeTokens
-                                                                .manrope(
+                                                            style: HomeThemeTokens.manrope(
                                                               color: isDark
                                                                   ? const Color(
                                                                       0xFF04201C,
                                                                     )
                                                                   : Colors
-                                                                      .white,
+                                                                        .white,
                                                               fontSize: 13,
                                                               fontWeight:
                                                                   FontWeight
@@ -889,8 +907,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                             context,
                                             _caretakerPhone,
                                           ),
-                                          borderRadius:
-                                              BorderRadius.circular(19),
+                                          borderRadius: BorderRadius.circular(
+                                            19,
+                                          ),
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 16,
@@ -902,19 +921,22 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                   width: 40,
                                                   height: 40,
                                                   decoration: BoxDecoration(
-                                                    color: HomeThemeTokens
-                                                        .warningBg(context),
+                                                    color:
+                                                        HomeThemeTokens.warningBg(
+                                                          context,
+                                                        ),
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                      12,
-                                                    ),
+                                                          12,
+                                                        ),
                                                   ),
                                                   child: Icon(
-                                                    Icons.verified_user_outlined,
+                                                    Icons
+                                                        .verified_user_outlined,
                                                     color:
                                                         HomeThemeTokens.warning(
-                                                      context,
-                                                    ),
+                                                          context,
+                                                        ),
                                                     size: 20,
                                                   ),
                                                 ),
@@ -930,13 +952,14 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                         maxLines: 1,
                                                         overflow: TextOverflow
                                                             .ellipsis,
-                                                        style: HomeThemeTokens
-                                                            .manrope(
-                                                          fontWeight:
-                                                              FontWeight.w700,
-                                                          fontSize: 14.5,
-                                                          color: textPri,
-                                                        ),
+                                                        style:
+                                                            HomeThemeTokens.manrope(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w700,
+                                                              fontSize: 14.5,
+                                                              color: textPri,
+                                                            ),
                                                       ),
                                                       const SizedBox(height: 2),
                                                       Text(
@@ -944,13 +967,14 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                         maxLines: 2,
                                                         overflow: TextOverflow
                                                             .ellipsis,
-                                                        style: HomeThemeTokens
-                                                            .manrope(
-                                                          fontSize: 12.5,
-                                                          fontWeight:
-                                                              FontWeight.w500,
-                                                          color: textSec,
-                                                        ),
+                                                        style:
+                                                            HomeThemeTokens.manrope(
+                                                              fontSize: 12.5,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w500,
+                                                              color: textSec,
+                                                            ),
                                                       ),
                                                     ],
                                                   ),
@@ -966,9 +990,9 @@ class _CallManagementScreenState extends State<CallManagementScreen>
                                                   child: IconButton(
                                                     onPressed: () =>
                                                         _makePhoneCall(
-                                                      context,
-                                                      _caretakerPhone,
-                                                    ),
+                                                          context,
+                                                          _caretakerPhone,
+                                                        ),
                                                     icon: Icon(
                                                       Icons.phone_outlined,
                                                       color: tealCol,
@@ -1060,10 +1084,7 @@ class _InteractivePress extends StatefulWidget {
   final VoidCallback? onTap;
   final Widget child;
 
-  const _InteractivePress({
-    this.onTap,
-    required this.child,
-  });
+  const _InteractivePress({this.onTap, required this.child});
 
   @override
   State<_InteractivePress> createState() => _InteractivePressState();

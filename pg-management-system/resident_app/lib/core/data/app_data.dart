@@ -1,17 +1,23 @@
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppData {
   // Central list to hold self-registered residents awaiting approval
   static List<Map<String, dynamic>> pendingResidents = [
-    {'name': 'Rohan Mehta', 'phone': '9876543290', 'status': 'Pending Approval'},
+    {
+      'name': 'Rohan Mehta',
+      'phone': '9876543290',
+      'status': 'Pending Approval',
+    },
   ];
 
   // Central complaints list
   static List<Map<String, dynamic>> complaints = [
     {
       'id': 'TKT-105',
-      'issue': 'Air conditioner remote not responding and making rattling sound',
+      'issue':
+          'Air conditioner remote not responding and making rattling sound',
       'category': 'Appliance',
       'priority': 'High',
       'status': 'In Progress',
@@ -32,7 +38,8 @@ class AppData {
     {
       'id': 'notif_1',
       'title': 'New Resident Registration',
-      'message': 'Rohan Mehta has self-registered and is waiting for room assignment.',
+      'message':
+          'Rohan Mehta has self-registered and is waiting for room assignment.',
       'time': '10 mins ago',
       'resident_phone': '9876543290',
       'resident_name': 'Rohan Mehta',
@@ -62,8 +69,10 @@ class AppData {
       'address': 'Flat 402, Sunrise Towers, HSR Layout, Bengaluru',
       'pincode': '560102',
       'document_type': 'Passport',
-      'document_image_url': 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400',
-      'selfie_url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      'document_image_url':
+          'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=400',
+      'selfie_url':
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
     },
     {
       'name': 'Priya Sharma',
@@ -83,8 +92,10 @@ class AppData {
       'address': '#14, 2nd Cross, Indira Nagar, Bengaluru',
       'pincode': '560038',
       'document_type': 'Aadhaar',
-      'document_image_url': 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=400',
-      'selfie_url': 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+      'document_image_url':
+          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=400',
+      'selfie_url':
+          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
     },
     {
       'name': 'Siddarth Mishra',
@@ -104,8 +115,10 @@ class AppData {
       'address': 'B-302, Green Glen Layout, Bellandur, Bengaluru',
       'pincode': '560103',
       'document_type': 'Aadhaar',
-      'document_image_url': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-      'selfie_url': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      'document_image_url':
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
+      'selfie_url':
+          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
     },
     {
       'name': 'Pradeep Kumar',
@@ -125,8 +138,10 @@ class AppData {
       'address': 'Flat 101, Lakeview Apts, HSR Layout, Bengaluru',
       'pincode': '560102',
       'document_type': 'PAN',
-      'document_image_url': 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
-      'selfie_url': 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400',
+      'document_image_url':
+          'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400',
+      'selfie_url':
+          'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=400',
     },
     {
       'name': 'David Joseph',
@@ -146,8 +161,10 @@ class AppData {
       'address': '12/A, Koramangala 4th Block, Bengaluru',
       'pincode': '560034',
       'document_type': 'Passport',
-      'document_image_url': 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
-      'selfie_url': 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400',
+      'document_image_url':
+          'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400',
+      'selfie_url':
+          'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=400',
     },
     {
       'name': 'Anna Ben',
@@ -167,8 +184,10 @@ class AppData {
       'address': 'House 88, BTM 2nd Stage, Bengaluru',
       'pincode': '560076',
       'document_type': 'Aadhaar',
-      'document_image_url': 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
-      'selfie_url': 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
+      'document_image_url':
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
+      'selfie_url':
+          'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400',
     },
   ];
 
@@ -176,22 +195,57 @@ class AppData {
   static Map<String, dynamic> currentResident = residents[1];
 
   // Weekly Food Menu (Monday to Sunday)
-  static List<Map<String, dynamic>> notices = [];
+  static List<Map<String, dynamic>> notices = [];
   static List<Map<String, dynamic>> foodMenu = [
-    {'day': 'Monday', 'breakfast': 'Poha & Tea', 'lunch': 'Dal, Rice, Roti, Sabzi', 'dinner': 'Paneer, Roti, Rice'},
-    {'day': 'Tuesday', 'breakfast': 'Idli & Sambar', 'lunch': 'Rajma, Rice, Roti', 'dinner': 'Mix Veg, Roti, Rice'},
-    {'day': 'Wednesday', 'breakfast': 'Aloo Paratha & Curd', 'lunch': 'Kadhi Pakoda, Rice, Roti', 'dinner': 'Aloo Gobi, Dal, Rice'},
-    {'day': 'Thursday', 'breakfast': 'Upma & Chutney', 'lunch': 'Chole, Rice, Bhature/Roti', 'dinner': 'Egg Curry / Kofta, Rice'},
-    {'day': 'Friday', 'breakfast': 'Puri Bhaji', 'lunch': 'Sambhar, Rice, Papad, Curd', 'dinner': 'Veg Biryani & Raita'},
-    {'day': 'Saturday', 'breakfast': 'Dosa & Sambar', 'lunch': 'Dal Tadka, Jeera Rice, Roti', 'dinner': 'Special Thali / Paneer Butter Masala'},
-    {'day': 'Sunday', 'breakfast': 'Chole Kulche / Halwa', 'lunch': 'Dum Biryani, Salan, Raita', 'dinner': 'Khichdi / Light Meal & Dessert'},
+    {
+      'day': 'Monday',
+      'breakfast': 'Poha & Tea',
+      'lunch': 'Dal, Rice, Roti, Sabzi',
+      'dinner': 'Paneer, Roti, Rice',
+    },
+    {
+      'day': 'Tuesday',
+      'breakfast': 'Idli & Sambar',
+      'lunch': 'Rajma, Rice, Roti',
+      'dinner': 'Mix Veg, Roti, Rice',
+    },
+    {
+      'day': 'Wednesday',
+      'breakfast': 'Aloo Paratha & Curd',
+      'lunch': 'Kadhi Pakoda, Rice, Roti',
+      'dinner': 'Aloo Gobi, Dal, Rice',
+    },
+    {
+      'day': 'Thursday',
+      'breakfast': 'Upma & Chutney',
+      'lunch': 'Chole, Rice, Bhature/Roti',
+      'dinner': 'Egg Curry / Kofta, Rice',
+    },
+    {
+      'day': 'Friday',
+      'breakfast': 'Puri Bhaji',
+      'lunch': 'Sambhar, Rice, Papad, Curd',
+      'dinner': 'Veg Biryani & Raita',
+    },
+    {
+      'day': 'Saturday',
+      'breakfast': 'Dosa & Sambar',
+      'lunch': 'Dal Tadka, Jeera Rice, Roti',
+      'dinner': 'Special Thali / Paneer Butter Masala',
+    },
+    {
+      'day': 'Sunday',
+      'breakfast': 'Chole Kulche / Halwa',
+      'lunch': 'Dum Biryani, Salan, Raita',
+      'dinner': 'Khichdi / Light Meal & Dessert',
+    },
   ];
 
   // Load data from browser memory with automatic sanitization and healing
   static Future<void> loadResidentsFromStorage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       // Load food menu
       String? storedFood = prefs.getString('demo_food_menu');
       if (storedFood != null) {
@@ -205,7 +259,9 @@ class AppData {
       String? storedNotifs = prefs.getString('demo_admin_notifications');
       if (storedNotifs != null) {
         List<dynamic> notifList = jsonDecode(storedNotifs);
-        adminNotifications = notifList.map((e) => Map<String, dynamic>.from(e)).toList();
+        adminNotifications = notifList
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
       }
 
       String? storedData = prefs.getString('demo_residents');
@@ -216,7 +272,7 @@ class AppData {
           for (var item in decoded) {
             final map = Map<String, dynamic>.from(item);
             final name = map['name']?.toString() ?? '';
-            
+
             // Clean up any old demo resident named Rahul who has no bed in rooms & beds
             if (name.toLowerCase().contains('rahul')) {
               continue;
@@ -254,7 +310,9 @@ class AppData {
   }
 
   // Register a brand new resident (Self-registration flow)
-  static Future<void> registerResident(Map<String, dynamic> residentData) async {
+  static Future<void> registerResident(
+    Map<String, dynamic> residentData,
+  ) async {
     // Ensure status is Pending and room_number is null
     final newResident = {
       ...residentData,
@@ -276,7 +334,8 @@ class AppData {
     final notification = {
       'id': 'notif_${DateTime.now().millisecondsSinceEpoch}',
       'title': 'New Resident Registration',
-      'message': '${newResident['name']} has self-registered and is waiting for room assignment.',
+      'message':
+          '${newResident['name']} has self-registered and is waiting for room assignment.',
       'time': 'Just now',
       'resident_phone': newResident['phone'],
       'resident_name': newResident['name'],
@@ -294,7 +353,10 @@ class AppData {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('demo_residents', jsonEncode(residents));
-      await prefs.setString('demo_admin_notifications', jsonEncode(adminNotifications));
+      await prefs.setString(
+        'demo_admin_notifications',
+        jsonEncode(adminNotifications),
+      );
     } catch (_) {}
   }
 
@@ -341,7 +403,8 @@ class AppData {
       'city': 'Bengaluru',
       'pincode': '560102',
       'address': 'HSR Layout Sector 2, 14th Main',
-      'full_address': 'Sector 2, 14th Main, HSR Layout, Bengaluru, Karnataka - 560102',
+      'full_address':
+          'Sector 2, 14th Main, HSR Layout, Bengaluru, Karnataka - 560102',
       'propertyType': 'PG',
       'type': 'Girls',
       'occupancyType': 'Girls',
@@ -365,7 +428,8 @@ class AppData {
       'city': 'Bengaluru',
       'pincode': '560102',
       'address': 'Sector 2, 27th Main Rd, HSR Layout',
-      'full_address': 'Sector 2, 27th Main Rd, HSR Layout, Bengaluru, Karnataka - 560102',
+      'full_address':
+          'Sector 2, 27th Main Rd, HSR Layout, Bengaluru, Karnataka - 560102',
       'propertyType': 'PG',
       'type': 'Boys',
       'occupancyType': 'Boys',
@@ -388,8 +452,9 @@ class AppData {
   static Map<String, dynamic> getPropertyByName(String? name) {
     if (name == null || name.isEmpty) return properties.first;
     return properties.firstWhere(
-      (p) => p['name'].toString().toLowerCase().contains(name.toLowerCase()) ||
-             name.toLowerCase().contains(p['name'].toString().toLowerCase()),
+      (p) =>
+          p['name'].toString().toLowerCase().contains(name.toLowerCase()) ||
+          name.toLowerCase().contains(p['name'].toString().toLowerCase()),
       orElse: () => properties.first,
     );
   }

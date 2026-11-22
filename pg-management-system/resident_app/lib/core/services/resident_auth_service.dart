@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+
 import '../network/api_client.dart';
 import '../network/token_storage.dart';
 
@@ -8,17 +9,39 @@ class ResidentAuthService {
     try {
       final response = await ApiClient.get('/auth/resident/properties');
       if (response is List) {
-        return response.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        return response
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
       }
     } catch (_) {
       // Fallback to active system properties if network error
     }
     return [
-      {'id': '5671f4ea-4099-433a-8810-fc201d952f61', 'name': 'Origin Grand PG - Koramangala', 'city': 'Bangalore'},
-      {'id': 'f31f71e7-ebcb-49df-a1aa-10472a5af933', 'name': 'Origin Luxury PG - HSR Layout', 'city': 'Bangalore'},
-      {'id': 'ec839615-4ab1-4ba6-9bcf-f105c6d8794a', 'name': 'Origin Elite PG - Indiranagar', 'city': 'Bangalore'},
-      {'id': '4afbec7c-ff1e-423a-a561-221552e5f42e', 'name': 'Origin Comfort PG - Electronic City', 'city': 'Bangalore'},
-      {'id': 'ce2132a9-7c4c-467c-998f-a86b1ebf6bf1', 'name': 'Origin Prime PG - Bellandur', 'city': 'Bangalore'},
+      {
+        'id': '5671f4ea-4099-433a-8810-fc201d952f61',
+        'name': 'Origin Grand PG - Koramangala',
+        'city': 'Bangalore',
+      },
+      {
+        'id': 'f31f71e7-ebcb-49df-a1aa-10472a5af933',
+        'name': 'Origin Luxury PG - HSR Layout',
+        'city': 'Bangalore',
+      },
+      {
+        'id': 'ec839615-4ab1-4ba6-9bcf-f105c6d8794a',
+        'name': 'Origin Elite PG - Indiranagar',
+        'city': 'Bangalore',
+      },
+      {
+        'id': '4afbec7c-ff1e-423a-a561-221552e5f42e',
+        'name': 'Origin Comfort PG - Electronic City',
+        'city': 'Bangalore',
+      },
+      {
+        'id': 'ce2132a9-7c4c-467c-998f-a86b1ebf6bf1',
+        'name': 'Origin Prime PG - Bellandur',
+        'city': 'Bangalore',
+      },
     ];
   }
 
@@ -79,10 +102,7 @@ class ResidentAuthService {
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
     final response = await ApiClient.post(
       '/auth/resident/register/otp/verify',
-      body: {
-        'phone': cleanPhone,
-        'otp': otp.trim(),
-      },
+      body: {'phone': cleanPhone, 'otp': otp.trim()},
     );
     return response is Map<String, dynamic> ? response : <String, dynamic>{};
   }
@@ -105,10 +125,7 @@ class ResidentAuthService {
     final cleanPhone = phone.replaceAll(RegExp(r'[^0-9]'), '');
     final response = await ApiClient.post(
       '/auth/resident/login/otp/verify',
-      body: {
-        'phone': cleanPhone,
-        'otp': otp.trim(),
-      },
+      body: {'phone': cleanPhone, 'otp': otp.trim()},
     );
 
     if (response is Map<String, dynamic>) {

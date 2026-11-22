@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -20,10 +21,14 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
   void initState() {
     super.initState();
     final resident = AppData.currentResident;
-    _rent = (resident['rent'] != null && (int.tryParse(resident['rent'].toString()) ?? 0) > 0)
+    _rent =
+        (resident['rent'] != null &&
+            (int.tryParse(resident['rent'].toString()) ?? 0) > 0)
         ? int.parse(resident['rent'].toString())
         : 8000;
-    _deposit = (resident['deposit'] != null && (int.tryParse(resident['deposit'].toString()) ?? 0) > 0)
+    _deposit =
+        (resident['deposit'] != null &&
+            (int.tryParse(resident['deposit'].toString()) ?? 0) > 0)
         ? int.parse(resident['deposit'].toString())
         : 16000;
     _loadRentDepositDetails();
@@ -40,15 +45,20 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
 
         setState(() {
           if (r != null) {
-            _rent = (r is num) ? r.toInt() : (int.tryParse(r.toString()) ?? _rent);
+            _rent = (r is num)
+                ? r.toInt()
+                : (int.tryParse(r.toString()) ?? _rent);
           }
           if (d != null) {
-            _deposit = (d is num) ? d.toInt() : (int.tryParse(d.toString()) ?? _deposit);
+            _deposit = (d is num)
+                ? d.toInt()
+                : (int.tryParse(d.toString()) ?? _deposit);
           }
           if (checkIn != null && checkIn.isNotEmpty) {
             final dt = DateTime.tryParse(checkIn);
             if (dt != null) {
-              _datePaid = '${dt.day.toString().padLeft(2, '0')} ${_monthName(dt.month)} ${dt.year} (At Check-in)';
+              _datePaid =
+                  '${dt.day.toString().padLeft(2, '0')} ${_monthName(dt.month)} ${dt.year} (At Check-in)';
             } else {
               _datePaid = '$checkIn (At Check-in)';
             }
@@ -62,8 +72,18 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
 
   static String _monthName(int month) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     if (month >= 1 && month <= 12) return months[month - 1];
     return '';
@@ -76,7 +96,9 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
     final textPri = isDark ? Colors.white : AppTheme.textDark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppTheme.darkBackground : AppTheme.backgroundWhite,
+      backgroundColor: isDark
+          ? AppTheme.darkBackground
+          : AppTheme.backgroundWhite,
       appBar: AppBar(
         title: Text(
           'Rent & Deposit Details',
@@ -103,168 +125,196 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        MotionEntrance(
-                          child: Text(
-                            'Security Deposit',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: textPri,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        MotionEntrance(
-                          delay: const Duration(milliseconds: 75),
-                          child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(24),
-                          decoration: BoxDecoration(
-                            gradient: isDark
-                                ? const LinearGradient(
-                                    colors: [Color(0xFF0F2B26), Color(0xFF134E4A)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  )
-                                : const LinearGradient(
-                                    colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF115E59) : const Color(0xFFBBF7D0),
-                              width: 1.5,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0F059669),
-                                blurRadius: 16,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'TOTAL DEPOSIT',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.2,
-                                      color: isDark ? const Color(0xFF5EEAD4) : const Color(0xFF047857),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? const Color(0xFF064E3B) : const Color(0xFF16A34A),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.shield_rounded, size: 14, color: Colors.white),
-                                        SizedBox(width: 5),
-                                        Text(
-                                          'Active & Secure',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 11.5,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                '₹ $_deposit',
-                                style: TextStyle(
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.5,
-                                  color: isDark ? Colors.white : const Color(0xFF065F46),
-                                ),
-                              ),
-                              const SizedBox(height: 18),
-                              Divider(
-                                height: 1,
-                                color: isDark ? const Color(0xFF115E59) : const Color(0xFF86EFAC),
-                              ),
-                              const SizedBox(height: 18),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Fixed Rent',
-                                          style: TextStyle(
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? const Color(0xFF99F6E4) : const Color(0xFF047857),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '₹ $_rent / month',
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark ? Colors.white : const Color(0xFF065F46),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Date Paid',
-                                          style: TextStyle(
-                                            fontSize: 12.5,
-                                            fontWeight: FontWeight.w600,
-                                            color: isDark ? const Color(0xFF99F6E4) : const Color(0xFF047857),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          _datePaid,
-                                          style: TextStyle(
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark ? Colors.white : const Color(0xFF065F46),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 24.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  MotionEntrance(
+                    child: Text(
+                      'Security Deposit',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: textPri,
                       ),
-                      ],
                     ),
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  MotionEntrance(
+                    delay: const Duration(milliseconds: 75),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        gradient: isDark
+                            ? const LinearGradient(
+                                colors: [Color(0xFF0F2B26), Color(0xFF134E4A)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : const LinearGradient(
+                                colors: [Color(0xFFF0FDF4), Color(0xFFDCFCE7)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF115E59)
+                              : const Color(0xFFBBF7D0),
+                          width: 1.5,
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0F059669),
+                            blurRadius: 16,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'TOTAL DEPOSIT',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.2,
+                                  color: isDark
+                                      ? const Color(0xFF5EEAD4)
+                                      : const Color(0xFF047857),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF064E3B)
+                                      : const Color(0xFF16A34A),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.shield_rounded,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(width: 5),
+                                    Text(
+                                      'Active & Secure',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            '₹ $_deposit',
+                            style: TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                              color: isDark
+                                  ? Colors.white
+                                  : const Color(0xFF065F46),
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                          Divider(
+                            height: 1,
+                            color: isDark
+                                ? const Color(0xFF115E59)
+                                : const Color(0xFF86EFAC),
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Fixed Rent',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? const Color(0xFF99F6E4)
+                                            : const Color(0xFF047857),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '₹ $_rent / month',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF065F46),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Date Paid',
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? const Color(0xFF99F6E4)
+                                            : const Color(0xFF047857),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _datePaid,
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? Colors.white
+                                            : const Color(0xFF065F46),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
+          ),
+        ),
       ),
     );
   }

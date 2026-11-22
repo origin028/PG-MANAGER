@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -121,7 +122,8 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
     setState(() => _isSubmitting = true);
 
     final newComplaint = {
-      'id': 'TKT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
+      'id':
+          'TKT-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
       'category': _selectedCategory,
       'issue': _descriptionController.text.trim(),
       'photo': _uploadedFileName,
@@ -238,8 +240,9 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
   Widget build(BuildContext context) {
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
@@ -371,8 +374,9 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                             width: 42,
                                             height: 42,
                                             decoration: BoxDecoration(
-                                              color: Colors.white
-                                                  .withValues(alpha: 0.12),
+                                              color: Colors.white.withValues(
+                                                alpha: 0.12,
+                                              ),
                                               borderRadius:
                                                   BorderRadius.circular(12),
                                             ),
@@ -395,24 +399,26 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                                       TextOverflow.ellipsis,
                                                   style:
                                                       HomeThemeTokens.manrope(
-                                                    fontSize: 14.5,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: Colors.white,
-                                                    height: 1.25,
-                                                  ),
+                                                        fontSize: 14.5,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: Colors.white,
+                                                        height: 1.25,
+                                                      ),
                                                 ),
                                                 const SizedBox(height: 3),
                                                 Text(
                                                   'Complaints are dispatched directly to the on-site property staff for rapid turnaround.',
                                                   style:
                                                       HomeThemeTokens.manrope(
-                                                    fontSize: 12.5,
-                                                    fontWeight: FontWeight.w500,
-                                                    color: const Color(
-                                                      0xFFB7C6D2,
-                                                    ),
-                                                    height: 1.38,
-                                                  ),
+                                                        fontSize: 12.5,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                        color: const Color(
+                                                          0xFFB7C6D2,
+                                                        ),
+                                                        height: 1.38,
+                                                      ),
                                                 ),
                                               ],
                                             ),
@@ -468,18 +474,20 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                       fillColor: inputBg,
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 13,
-                                      ),
+                                            horizontal: 14,
+                                            vertical: 13,
+                                          ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(14),
-                                        borderSide:
-                                            BorderSide(color: inputBorderCol),
+                                        borderSide: BorderSide(
+                                          color: inputBorderCol,
+                                        ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(14),
-                                        borderSide:
-                                            BorderSide(color: inputBorderCol),
+                                        borderSide: BorderSide(
+                                          color: inputBorderCol,
+                                        ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(14),
@@ -544,8 +552,7 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                       height: 1.45,
                                     ),
                                     decoration: InputDecoration(
-                                      hintText:
-                                          'e.g. Tap leaking in attached bathroom, geyser not heating properly...',
+                                      hintText: 'e.g. Tap leaking in attached bathroom, geyser not heating properly...',
                                       hintStyle: HomeThemeTokens.manrope(
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w500,
@@ -556,13 +563,15 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                       contentPadding: const EdgeInsets.all(14),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(14),
-                                        borderSide:
-                                            BorderSide(color: inputBorderCol),
+                                        borderSide: BorderSide(
+                                          color: inputBorderCol,
+                                        ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(14),
-                                        borderSide:
-                                            BorderSide(color: inputBorderCol),
+                                        borderSide: BorderSide(
+                                          color: inputBorderCol,
+                                        ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(14),
@@ -633,11 +642,11 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                                     _uploadedFileName!,
                                                     style:
                                                         HomeThemeTokens.manrope(
-                                                      fontSize: 13,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: successCol,
-                                                    ),
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: successCol,
+                                                        ),
                                                     maxLines: 1,
                                                     overflow:
                                                         TextOverflow.ellipsis,
@@ -645,9 +654,8 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                                 ),
                                                 IconButton(
                                                   onPressed: () => setState(
-                                                    () =>
-                                                        _uploadedFileName =
-                                                            null,
+                                                    () => _uploadedFileName =
+                                                        null,
                                                   ),
                                                   icon: Icon(
                                                     Icons.close_rounded,
@@ -699,9 +707,11 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                                             height: 16,
                                                             child:
                                                                 CircularProgressIndicator(
-                                                              strokeWidth: 2,
-                                                              color: tealCol,
-                                                            ),
+                                                                  strokeWidth:
+                                                                      2,
+                                                                  color:
+                                                                      tealCol,
+                                                                ),
                                                           )
                                                         else
                                                           Icon(
@@ -720,14 +730,15 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                                             overflow:
                                                                 TextOverflow
                                                                     .ellipsis,
-                                                            style: HomeThemeTokens
-                                                                .manrope(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w700,
-                                                              fontSize: 14,
-                                                              color: tealCol,
-                                                            ),
+                                                            style:
+                                                                HomeThemeTokens.manrope(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w700,
+                                                                  fontSize: 14,
+                                                                  color:
+                                                                      tealCol,
+                                                                ),
                                                           ),
                                                         ),
                                                       ],
@@ -751,16 +762,19 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                         foregroundColor: isDark
                                             ? const Color(0xFF04201C)
                                             : Colors.white,
-                                        disabledBackgroundColor:
-                                            tealCol.withValues(alpha: 0.65),
+                                        disabledBackgroundColor: tealCol
+                                            .withValues(alpha: 0.65),
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 14,
                                         ),
-                                        minimumSize:
-                                            const Size(double.infinity, 52),
+                                        minimumSize: const Size(
+                                          double.infinity,
+                                          52,
+                                        ),
                                         shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(15),
+                                          borderRadius: BorderRadius.circular(
+                                            15,
+                                          ),
                                         ),
                                         elevation: 0,
                                       ),
@@ -791,17 +805,17 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                                                     maxLines: 1,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style: HomeThemeTokens
-                                                        .manrope(
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      fontSize: 15,
-                                                      color: isDark
-                                                          ? const Color(
-                                                              0xFF04201C,
-                                                            )
-                                                          : Colors.white,
-                                                    ),
+                                                    style:
+                                                        HomeThemeTokens.manrope(
+                                                          fontWeight:
+                                                              FontWeight.w800,
+                                                          fontSize: 15,
+                                                          color: isDark
+                                                              ? const Color(
+                                                                  0xFF04201C,
+                                                                )
+                                                              : Colors.white,
+                                                        ),
                                                   ),
                                                 ),
                                               ],
@@ -920,8 +934,9 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
     required Color textSec,
     required bool isDark,
   }) {
-    final inactiveCircleBg =
-        isDark ? const Color(0xFF323F49) : const Color(0xFFEEF2F1);
+    final inactiveCircleBg = isDark
+        ? const Color(0xFF323F49)
+        : const Color(0xFFEEF2F1);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -946,8 +961,7 @@ class _RaiseComplaintScreenState extends State<RaiseComplaintScreen>
                     ? Icon(
                         Icons.check_rounded,
                         size: 15,
-                        color:
-                            isDark ? const Color(0xFF04201C) : Colors.white,
+                        color: isDark ? const Color(0xFF04201C) : Colors.white,
                       )
                     : Text(
                         stepText ?? '',
@@ -1056,11 +1070,7 @@ class _InteractivePress extends StatefulWidget {
   final VoidCallback? onTap;
   final Widget child;
 
-  const _InteractivePress({
-    super.key,
-    this.onTap,
-    required this.child,
-  });
+  const _InteractivePress({super.key, this.onTap, required this.child});
 
   @override
   State<_InteractivePress> createState() => _InteractivePressState();

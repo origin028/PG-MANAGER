@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/theme/app_theme.dart';
 import '../../core/widgets/empty_state_widget.dart';
 import '../../core/widgets/motion_wrappers.dart';
@@ -35,7 +36,8 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
       'category': 'Wi-Fi/Internet',
       'date': '15 Oct 2026',
       'status': 'Resolved',
-      'resolutionNote': 'Secondary repeater configured and mesh channel updated.',
+      'resolutionNote':
+          'Secondary repeater configured and mesh channel updated.',
     },
     {
       'id': 'CMP-104',
@@ -55,7 +57,9 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
         backgroundColor: isDark ? AppTheme.darkCard : Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: BorderSide(color: isDark ? AppTheme.darkBorder : Colors.transparent),
+          side: BorderSide(
+            color: isDark ? AppTheme.darkBorder : Colors.transparent,
+          ),
         ),
         title: Text(
           'Clear Complaint History',
@@ -98,10 +102,15 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFEF4444),
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               elevation: 0,
             ),
-            child: const Text('Clear All', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Clear All',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -164,7 +173,8 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
             child: _complaints.isEmpty
                 ? EmptyStateWidget(
                     title: 'No complaints found',
-                    subtitle: 'You have no past or resolved complaints at this time.',
+                    subtitle:
+                        'You have no past or resolved complaints at this time.',
                     actionLabel: 'Refresh History',
                     onAction: () {
                       setState(() {
@@ -182,7 +192,10 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
                     },
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 20,
+                    ),
                     itemCount: _complaints.length,
                     itemBuilder: (context, index) {
                       final item = _complaints[index];
@@ -191,129 +204,165 @@ class _AllComplaintsScreenState extends State<AllComplaintsScreen> {
                           milliseconds: (index * 55).clamp(0, 220),
                         ),
                         child: Container(
-                        margin: const EdgeInsets.only(bottom: 14),
-                        padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: cardBg,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: borderCol),
-                          boxShadow: [
-                            BoxShadow(
-                              color: isDark ? const Color(0x1F000000) : const Color(0x05000000),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Top Row: Category + Resolved badge & Date
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        item['category'] ?? 'Complaint',
-                                        style: TextStyle(
-                                          color: textSec,
-                                          fontSize: 11.5,
-                                          fontWeight: FontWeight.bold,
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: cardBg,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: borderCol),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isDark
+                                    ? const Color(0x1F000000)
+                                    : const Color(0x05000000),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Top Row: Category + Resolved badge & Date
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF1E293B)
+                                              : const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          item['category'] ?? 'Complaint',
+                                          style: TextStyle(
+                                            color: textSec,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
-                                      decoration: BoxDecoration(
-                                        color: isDark ? const Color(0xFF064E3B) : const Color(0xFFDCFCE7),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            Icons.check_circle_rounded,
-                                            size: 13,
-                                            color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF15803D),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 9,
+                                          vertical: 3.5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: isDark
+                                              ? const Color(0xFF064E3B)
+                                              : const Color(0xFFDCFCE7),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
                                           ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Resolved',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: isDark ? const Color(0xFFA7F3D0) : const Color(0xFF15803D),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.check_circle_rounded,
+                                              size: 13,
+                                              color: isDark
+                                                  ? const Color(0xFFA7F3D0)
+                                                  : const Color(0xFF15803D),
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Resolved',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: isDark
+                                                    ? const Color(0xFFA7F3D0)
+                                                    : const Color(0xFF15803D),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  item['date'] ?? '',
-                                  style: TextStyle(fontSize: 12, color: textSec, fontWeight: FontWeight.w500),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-
-                            // Issue Title
-                            Text(
-                              item['title'] ?? '',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: textPri,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-
-                            // Admin's resolution note
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF0F2B26) : const Color(0xFFF0FDF4),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isDark ? const Color(0xFF115E59) : const Color(0xFFBBF7D0),
-                                ),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(
-                                    Icons.admin_panel_settings_outlined,
-                                    size: 16,
-                                    color: isDark ? const Color(0xFF5EEAD4) : const Color(0xFF047857),
+                                    ],
                                   ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Admin Note: ${item['resolutionNote'] ?? 'Resolved by property administration.'}',
-                                      style: TextStyle(
-                                        fontSize: 12.5,
-                                        color: isDark ? const Color(0xFFCCFBF1) : const Color(0xFF065F46),
-                                        height: 1.35,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+                                  Text(
+                                    item['date'] ?? '',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: textSec,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+
+                              // Issue Title
+                              Text(
+                                item['title'] ?? '',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: textPri,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+
+                              // Admin's resolution note
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF0F2B26)
+                                      : const Color(0xFFF0FDF4),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? const Color(0xFF115E59)
+                                        : const Color(0xFFBBF7D0),
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.admin_panel_settings_outlined,
+                                      size: 16,
+                                      color: isDark
+                                          ? const Color(0xFF5EEAD4)
+                                          : const Color(0xFF047857),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        'Admin Note: ${item['resolutionNote'] ?? 'Resolved by property administration.'}',
+                                        style: TextStyle(
+                                          fontSize: 12.5,
+                                          color: isDark
+                                              ? const Color(0xFFCCFBF1)
+                                              : const Color(0xFF065F46),
+                                          height: 1.35,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
                       );
                     },
                   ),

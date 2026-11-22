@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'dart:ui';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
+
 import '../../core/network/api_exception.dart';
 import '../../core/services/resident_auth_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -193,21 +195,21 @@ class _RegisterScreenState extends State<RegisterScreen>
     if (_selectedGender.isNotEmpty) completed++;
     if (_occupationController.text.trim().length > 1) completed++;
 
-    final phoneDigits =
-        _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final phoneDigits = _phoneController.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (phoneDigits.length >= 10) completed++;
 
     final emailText = _emailController.text.trim();
     if (emailText.contains('@') && emailText.contains('.')) completed++;
 
-    final emergencyDigits =
-        _emergencyController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final emergencyDigits = _emergencyController.text.replaceAll(
+      RegExp(r'[^0-9]'),
+      '',
+    );
     if (emergencyDigits.length >= 10) completed++;
 
     if (_addressController.text.trim().isNotEmpty) completed++;
 
-    final pinDigits =
-        _pincodeController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final pinDigits = _pincodeController.text.replaceAll(RegExp(r'[^0-9]'), '');
     if (pinDigits.length == 6) completed++;
 
     if (isPassport) {
@@ -253,8 +255,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       setState(() => _isLoadingProperties = false);
     }
   }
-
-
 
   Future<void> _selectDateOfBirth() async {
     final palette = _RegisterPalette.of(context);
@@ -322,8 +322,9 @@ class _RegisterScreenState extends State<RegisterScreen>
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content:
-                  Text('File exceeds 5MB size limit. Please choose a smaller file.'),
+              content: Text(
+                'File exceeds 5MB size limit. Please choose a smaller file.',
+              ),
               backgroundColor: Colors.red,
             ),
           );
@@ -553,34 +554,44 @@ class _RegisterScreenState extends State<RegisterScreen>
     final isPassport = _selectedDocType == 'Passport';
     final files = <http.MultipartFile>[];
     if (!isPassport) {
-      files.add(http.MultipartFile.fromBytes(
-        'aadhaar_front_file',
-        _aadhaarFrontFile!.bytes!,
-        filename: _aadhaarFrontFile!.name,
-      ));
-      files.add(http.MultipartFile.fromBytes(
-        'aadhaar_back_file',
-        _aadhaarBackFile!.bytes!,
-        filename: _aadhaarBackFile!.name,
-      ));
-      files.add(http.MultipartFile.fromBytes(
-        'pan_card_file',
-        _panCardFile!.bytes!,
-        filename: _panCardFile!.name,
-      ));
+      files.add(
+        http.MultipartFile.fromBytes(
+          'aadhaar_front_file',
+          _aadhaarFrontFile!.bytes!,
+          filename: _aadhaarFrontFile!.name,
+        ),
+      );
+      files.add(
+        http.MultipartFile.fromBytes(
+          'aadhaar_back_file',
+          _aadhaarBackFile!.bytes!,
+          filename: _aadhaarBackFile!.name,
+        ),
+      );
+      files.add(
+        http.MultipartFile.fromBytes(
+          'pan_card_file',
+          _panCardFile!.bytes!,
+          filename: _panCardFile!.name,
+        ),
+      );
     } else {
-      files.add(http.MultipartFile.fromBytes(
-        'passport_file',
-        _passportFile!.bytes!,
-        filename: _passportFile!.name,
-      ));
+      files.add(
+        http.MultipartFile.fromBytes(
+          'passport_file',
+          _passportFile!.bytes!,
+          filename: _passportFile!.name,
+        ),
+      );
     }
 
-    files.add(http.MultipartFile.fromBytes(
-      'resident_selfie_file',
-      _selfieFile!.bytes!,
-      filename: _selfieFile!.name,
-    ));
+    files.add(
+      http.MultipartFile.fromBytes(
+        'resident_selfie_file',
+        _selfieFile!.bytes!,
+        filename: _selfieFile!.name,
+      ),
+    );
 
     final addr = _parseAddressFields();
     final dobFormatted = _formatDobForBackend();
@@ -617,18 +628,18 @@ class _RegisterScreenState extends State<RegisterScreen>
           destinationMasked: emailMasked,
           destinationChannel: 'registered email',
           initialCooldownSeconds: cooldownSeconds,
-          onVerifyOtp: (otp) => ResidentAuthService.verifyRegistrationOtp(
-            phone: phone,
-            otp: otp,
-          ),
+          onVerifyOtp: (otp) =>
+              ResidentAuthService.verifyRegistrationOtp(phone: phone, otp: otp),
           onResendOtp: _sendRegistrationOtpRequest,
           onVerified: (otpContext, result) {
             Navigator.of(otpContext).pop();
             if (!mounted) return;
             _showRegistrationSuccessDialog(
-              residentName: result['full_name']?.toString() ??
+              residentName:
+                  result['full_name']?.toString() ??
                   _nameController.text.trim(),
-              propertyName: result['property_name']?.toString() ??
+              propertyName:
+                  result['property_name']?.toString() ??
                   _selectedPropertyName ??
                   'PG Property',
             );
@@ -696,8 +707,10 @@ class _RegisterScreenState extends State<RegisterScreen>
             const SizedBox(height: 10),
             Center(
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: palette.softWarning,
                   borderRadius: BorderRadius.circular(99),
@@ -867,7 +880,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                                   p['id']?.toString() ?? '';
                                               final name =
                                                   p['name']?.toString() ??
-                                                      'PG Property';
+                                                  'PG Property';
                                               final city =
                                                   p['city']?.toString() ?? '';
                                               return DropdownMenuItem<String>(
@@ -878,10 +891,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                                                       : name,
                                                   style:
                                                       HomeThemeTokens.manrope(
-                                                    fontSize: 15,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: palette.ink,
-                                                  ),
+                                                        fontSize: 15,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: palette.ink,
+                                                      ),
                                                   overflow:
                                                       TextOverflow.ellipsis,
                                                 ),
@@ -891,24 +905,25 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               if (val != null) {
                                                 setState(() {
                                                   _selectedPropertyId = val;
-                                                  final matched =
-                                                      _properties.firstWhere(
-                                                    (p) =>
-                                                        p['id']?.toString() ==
-                                                        val,
-                                                    orElse: () => {},
-                                                  );
+                                                  final matched = _properties
+                                                      .firstWhere(
+                                                        (p) =>
+                                                            p['id']
+                                                                ?.toString() ==
+                                                            val,
+                                                        orElse: () => {},
+                                                      );
                                                   _selectedPropertyName =
                                                       matched['name']
-                                                              ?.toString() ??
-                                                          '';
+                                                          ?.toString() ??
+                                                      '';
                                                 });
                                               }
                                             },
                                             validator: (val) =>
                                                 (val == null || val.isEmpty)
-                                                    ? 'Please select a PG property'
-                                                    : null,
+                                                ? 'Please select a PG property'
+                                                : null,
                                           ),
                                         ),
                                 ],
@@ -932,8 +947,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     prefixIcon: Icons.badge_outlined,
                                     validator: (val) =>
                                         (val == null || val.trim().isEmpty)
-                                            ? 'Enter your full name'
-                                            : null,
+                                        ? 'Enter your full name'
+                                        : null,
                                   ),
                                   const SizedBox(height: 16),
                                   Row(
@@ -944,8 +959,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         flex: 5,
                                         child: InkWell(
                                           onTap: _selectDateOfBirth,
-                                          borderRadius:
-                                              BorderRadius.circular(14),
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
                                           child: IgnorePointer(
                                             child: _buildInputField(
                                               palette: palette,
@@ -954,7 +970,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               hintText: 'DD/MM/YYYY',
                                               prefixIcon:
                                                   Icons.calendar_today_rounded,
-                                              validator: (val) => (val == null ||
+                                              validator: (val) =>
+                                                  (val == null ||
                                                       val.trim().isEmpty)
                                                   ? 'Select DOB'
                                                   : null,
@@ -972,8 +989,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                             _buildFieldLabel(palette, 'Gender'),
                                             _FocusGlowField(
                                               palette: palette,
-                                              child: DropdownButtonFormField<
-                                                  String>(
+                                              child: DropdownButtonFormField<String>(
                                                 key: ValueKey(
                                                   'gender_$_selectedGender',
                                                 ),
@@ -993,27 +1009,33 @@ class _RegisterScreenState extends State<RegisterScreen>
                                                 ),
                                                 decoration:
                                                     _buildInputDecoration(
-                                                  palette: palette,
-                                                  horizontalPadding: 12,
-                                                ),
-                                                items: ['Male', 'Female', 'Other']
-                                                    .map((g) {
-                                                  return DropdownMenuItem(
-                                                    value: g,
-                                                    child: Text(
-                                                      g,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: HomeThemeTokens
-                                                          .manrope(
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: palette.ink,
-                                                      ),
+                                                      palette: palette,
+                                                      horizontalPadding: 12,
                                                     ),
-                                                  );
-                                                }).toList(),
+                                                items:
+                                                    [
+                                                      'Male',
+                                                      'Female',
+                                                      'Other',
+                                                    ].map((g) {
+                                                      return DropdownMenuItem(
+                                                        value: g,
+                                                        child: Text(
+                                                          g,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                          style:
+                                                              HomeThemeTokens.manrope(
+                                                                fontSize: 15,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w600,
+                                                                color:
+                                                                    palette.ink,
+                                                              ),
+                                                        ),
+                                                      );
+                                                    }).toList(),
                                                 onChanged: (val) => setState(
                                                   () => _selectedGender = val!,
                                                 ),
@@ -1033,8 +1055,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     prefixIcon: Icons.work_outline_rounded,
                                     validator: (val) =>
                                         (val == null || val.trim().isEmpty)
-                                            ? 'Enter occupation'
-                                            : null,
+                                        ? 'Enter occupation'
+                                        : null,
                                   ),
                                 ],
                               ),
@@ -1130,14 +1152,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     palette: palette,
                                     controller: _addressController,
                                     label: 'Address details',
-                                    hintText:
-                                        'House/Flat no, street, landmark, city, state',
+                                    hintText: 'House/Flat no, street, landmark, city, state',
                                     prefixIcon: Icons.home_outlined,
                                     maxLines: 3,
                                     validator: (val) =>
                                         (val == null || val.trim().isEmpty)
-                                            ? 'Enter permanent address'
-                                            : null,
+                                        ? 'Enter permanent address'
+                                        : null,
                                   ),
                                   const SizedBox(height: 16),
                                   _buildInputField(
@@ -1205,9 +1226,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               palette: palette,
                                               disableAnim: disableAnim,
                                               title: 'Passport document',
-                                              subtitle:
-                                                  'Photo bio & address page (PDF, PNG or JPG)',
-                                              icon: Icons.flight_takeoff_rounded,
+                                              subtitle: 'Photo bio & address page (PDF, PNG or JPG)',
+                                              icon:
+                                                  Icons.flight_takeoff_rounded,
                                               isUploaded: _passportFile != null,
                                               fileName: _passportFile != null
                                                   ? '${_passportFile!.name} (${(_passportFile!.size / 1024).toStringAsFixed(1)} KB)'
@@ -1226,13 +1247,12 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               palette: palette,
                                               disableAnim: disableAnim,
                                               title: 'Aadhaar card (front)',
-                                              subtitle:
-                                                  'Front side showing photo and Aadhaar number',
+                                              subtitle: 'Front side showing photo and Aadhaar number',
                                               icon: Icons.badge_outlined,
                                               isUploaded:
                                                   _aadhaarFrontFile != null,
-                                              fileName: _aadhaarFrontFile !=
-                                                      null
+                                              fileName:
+                                                  _aadhaarFrontFile != null
                                                   ? '${_aadhaarFrontFile!.name} (${(_aadhaarFrontFile!.size / 1024).toStringAsFixed(1)} KB)'
                                                   : '',
                                               onTap: () => _pickFile(
@@ -1249,8 +1269,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               palette: palette,
                                               disableAnim: disableAnim,
                                               title: 'Aadhaar card (back)',
-                                              subtitle:
-                                                  'Back side showing address details',
+                                              subtitle: 'Back side showing address details',
                                               icon: Icons.badge_outlined,
                                               isUploaded:
                                                   _aadhaarBackFile != null,
@@ -1271,8 +1290,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                               palette: palette,
                                               disableAnim: disableAnim,
                                               title: 'PAN card',
-                                              subtitle:
-                                                  'Front view showing PAN number and photo',
+                                              subtitle: 'Front view showing PAN number and photo',
                                               icon: Icons.credit_card_outlined,
                                               isUploaded: _panCardFile != null,
                                               fileName: _panCardFile != null
@@ -1293,8 +1311,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                             palette: palette,
                                             disableAnim: disableAnim,
                                             title: 'Resident selfie',
-                                            subtitle:
-                                                'Clear front-facing portrait for your resident ID',
+                                            subtitle: 'Clear front-facing portrait for your resident ID',
                                             icon: Icons.camera_alt_outlined,
                                             isUploaded: _selfieFile != null,
                                             fileName: _selfieFile != null
@@ -1415,9 +1432,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(9),
-            gradient: LinearGradient(
-              colors: palette.progressColors,
-            ),
+            gradient: LinearGradient(colors: palette.progressColors),
           ),
         ),
       ),
@@ -1448,10 +1463,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
-                    colors: [
-                      Color(0x4742C8B4),
-                      Color(0x0042C8B4),
-                    ],
+                    colors: [Color(0x4742C8B4), Color(0x0042C8B4)],
                     stops: [0.0, 0.7],
                   ),
                 ),
@@ -1862,8 +1874,9 @@ class _RegisterScreenState extends State<RegisterScreen>
     required VoidCallback onTap,
     required VoidCallback onRemove,
   }) {
-    final animDuration =
-        disableAnim ? Duration.zero : const Duration(milliseconds: 240);
+    final animDuration = disableAnim
+        ? Duration.zero
+        : const Duration(milliseconds: 240);
 
     return TactilePress(
       scaleDown: 0.985,
@@ -1939,8 +1952,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                         overflow: TextOverflow.ellipsis,
                         style: HomeThemeTokens.manrope(
                           fontSize: 12,
-                          fontWeight:
-                              isUploaded ? FontWeight.w600 : FontWeight.w500,
+                          fontWeight: isUploaded
+                              ? FontWeight.w600
+                              : FontWeight.w500,
                           color: isUploaded ? palette.teal : palette.mute,
                         ),
                       ),
@@ -2012,10 +2026,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           stops: const [0.0, 0.32],
-          colors: [
-            palette.bg.withValues(alpha: 0.0),
-            palette.bg,
-          ],
+          colors: [palette.bg.withValues(alpha: 0.0), palette.bg],
         ),
       ),
       child: Column(
@@ -2050,8 +2061,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                   elevation: 0,
                 ),
                 child: AnimatedSwitcher(
-                  duration: (MediaQuery.maybeDisableAnimationsOf(context) ??
-                          false)
+                  duration:
+                      (MediaQuery.maybeDisableAnimationsOf(context) ?? false)
                       ? Duration.zero
                       : const Duration(milliseconds: 180),
                   child: _isSubmitting
@@ -2132,10 +2143,7 @@ class _FocusGlowField extends StatefulWidget {
   final _RegisterPalette palette;
   final Widget child;
 
-  const _FocusGlowField({
-    required this.palette,
-    required this.child,
-  });
+  const _FocusGlowField({required this.palette, required this.child});
 
   @override
   State<_FocusGlowField> createState() => _FocusGlowFieldState();
@@ -2154,8 +2162,9 @@ class _FocusGlowFieldState extends State<_FocusGlowField> {
         }
       },
       child: AnimatedContainer(
-        duration:
-            disableAnim ? Duration.zero : const Duration(milliseconds: 200),
+        duration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
         decoration: BoxDecoration(
           color: _hasFocus ? widget.palette.card : widget.palette.field,

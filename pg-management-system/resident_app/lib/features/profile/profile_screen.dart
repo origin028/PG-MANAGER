@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../core/data/app_data.dart';
 import '../../core/network/token_storage.dart';
 import '../../core/services/resident_api_service.dart';
@@ -70,13 +71,14 @@ class _ProfileScreenState extends State<ProfileScreen>
     final kycDetails =
         (resident['kyc_details'] as Map?)?.cast<String, dynamic>() ??
         const <String, dynamic>{};
-    final rawKyc = (kycDetails['kyc_status'] ??
-            resident['kyc'] ??
-            resident['kyc_status'] ??
-            '')
-        .toString()
-        .trim()
-        .toLowerCase();
+    final rawKyc =
+        (kycDetails['kyc_status'] ??
+                resident['kyc'] ??
+                resident['kyc_status'] ??
+                '')
+            .toString()
+            .trim()
+            .toLowerCase();
     return rawKyc == 'verified' || rawKyc == 'approved';
   }
 
@@ -96,10 +98,8 @@ class _ProfileScreenState extends State<ProfileScreen>
 
         final resolvedName =
             residentInfo['full_name'] ?? p['full_name'] ?? p['name'];
-        final resolvedPhone =
-            residentInfo['phone'] ?? p['phone'];
-        final resolvedEmail =
-            residentInfo['email'] ?? p['email'];
+        final resolvedPhone = residentInfo['phone'] ?? p['phone'];
+        final resolvedEmail = residentInfo['email'] ?? p['email'];
         final resolvedRoom =
             stayDetails['room_number'] ?? p['room_number'] ?? p['room'];
         final resolvedBed =
@@ -336,11 +336,16 @@ class _ProfileScreenState extends State<ProfileScreen>
         const <String, dynamic>{};
 
     final rawName =
-        residentInfo['full_name'] ?? res['full_name'] ?? res['name'] ?? 'Resident';
-    final name =
-        rawName.toString().trim().isNotEmpty ? rawName.toString().trim() : 'Resident';
+        residentInfo['full_name'] ??
+        res['full_name'] ??
+        res['name'] ??
+        'Resident';
+    final name = rawName.toString().trim().isNotEmpty
+        ? rawName.toString().trim()
+        : 'Resident';
 
-    final rawRoom = stayDetails['room_number'] ?? res['room_number'] ?? res['room'];
+    final rawRoom =
+        stayDetails['room_number'] ?? res['room_number'] ?? res['room'];
     final room = (rawRoom != null && rawRoom.toString().trim().isNotEmpty)
         ? rawRoom.toString().trim()
         : '101';
@@ -350,9 +355,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         ? rawBed.toString().trim()
         : 'Bed B';
 
-    final rawPhone =
-        (residentInfo['phone'] ?? res['phone'] ?? '9876543210').toString().trim();
-    final formattedPhone = rawPhone.startsWith('+') ? rawPhone : '+91 $rawPhone';
+    final rawPhone = (residentInfo['phone'] ?? res['phone'] ?? '9876543210')
+        .toString()
+        .trim();
+    final formattedPhone = rawPhone.startsWith('+')
+        ? rawPhone
+        : '+91 $rawPhone';
 
     final rawEmail = (residentInfo['email'] ?? res['email'])?.toString().trim();
     final email = (rawEmail != null && rawEmail.isNotEmpty)
@@ -363,23 +371,25 @@ class _ProfileScreenState extends State<ProfileScreen>
         stayDetails['property_name'] ?? res['property_name'] ?? res['property'];
     final propertyName =
         (rawProperty != null && rawProperty.toString().trim().isNotEmpty)
-            ? rawProperty.toString().trim()
-            : 'BNR Luxury PG';
+        ? rawProperty.toString().trim()
+        : 'BNR Luxury PG';
 
     final rawPropertyAddress =
         stayDetails['property_address'] ?? res['property_address'];
-    final propertyDisplay = (rawPropertyAddress != null &&
+    final propertyDisplay =
+        (rawPropertyAddress != null &&
             rawPropertyAddress.toString().trim().isNotEmpty)
         ? rawPropertyAddress.toString().trim()
         : (rawProperty != null && rawProperty.toString().trim().isNotEmpty)
-            ? rawProperty.toString().trim()
-            : 'BNR Luxury PG, Koramangala';
+        ? rawProperty.toString().trim()
+        : 'BNR Luxury PG, Koramangala';
 
-    final rawSince = (stayDetails['living_since'] ??
-            stayDetails['check_in_date'] ??
-            res['living_since'] ??
-            res['check_in_date'])
-        ?.toString();
+    final rawSince =
+        (stayDetails['living_since'] ??
+                stayDetails['check_in_date'] ??
+                res['living_since'] ??
+                res['check_in_date'])
+            ?.toString();
     final sinceLabel = _formatSinceLabel(rawSince);
     final compactBed = _formatBedMetric(bed);
 
@@ -390,25 +400,28 @@ class _ProfileScreenState extends State<ProfileScreen>
 
     final isDark = HomeThemeTokens.isDark(context);
     final pageBg = HomeThemeTokens.bg(context);
-    final cardBg =
-        isDark ? HomeThemeTokens.darkCardSurface : HomeThemeTokens.lightCard;
+    final cardBg = isDark
+        ? HomeThemeTokens.darkCardSurface
+        : HomeThemeTokens.lightCard;
     final borderCol = HomeThemeTokens.border(context);
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
-    final dividerCol =
-        isDark ? HomeThemeTokens.darkBorder : const Color(0xFFF0F4F3);
+    final dividerCol = isDark
+        ? HomeThemeTokens.darkBorder
+        : const Color(0xFFF0F4F3);
     final disableAnim = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
 
-    final avatarScale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.88, end: 1.03), weight: 62),
-      TweenSequenceItem(tween: Tween(begin: 1.03, end: 1.0), weight: 38),
-    ]).animate(
-      CurvedAnimation(
-        parent: _entranceController,
-        curve: const Interval(0.08, 0.56, curve: Curves.easeOutCubic),
-      ),
-    );
+    final avatarScale =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0.88, end: 1.03), weight: 62),
+          TweenSequenceItem(tween: Tween(begin: 1.03, end: 1.0), weight: 38),
+        ]).animate(
+          CurvedAnimation(
+            parent: _entranceController,
+            curve: const Interval(0.08, 0.56, curve: Curves.easeOutCubic),
+          ),
+        );
 
     final heroShadow = <BoxShadow>[
       BoxShadow(
@@ -502,7 +515,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                         child: Column(
                           children: [
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(20, 22, 20, 18),
+                              padding: const EdgeInsets.fromLTRB(
+                                20,
+                                22,
+                                20,
+                                18,
+                              ),
                               child: Column(
                                 children: [
                                   // Avatar Ring + Camera Button
@@ -510,7 +528,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                     animation: avatarScale,
                                     builder: (context, child) {
                                       return Transform.scale(
-                                        scale: disableAnim ? 1.0 : avatarScale.value,
+                                        scale: disableAnim
+                                            ? 1.0
+                                            : avatarScale.value,
                                         child: child,
                                       );
                                     },
@@ -553,12 +573,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                                               child: Center(
                                                 child: Text(
                                                   _getInitials(name),
-                                                  style: HomeThemeTokens.manrope(
-                                                    fontSize: 28,
-                                                    fontWeight: FontWeight.w800,
-                                                    letterSpacing: -0.4,
-                                                    color: Colors.white,
-                                                  ),
+                                                  style:
+                                                      HomeThemeTokens.manrope(
+                                                        fontSize: 28,
+                                                        fontWeight:
+                                                            FontWeight.w800,
+                                                        letterSpacing: -0.4,
+                                                        color: Colors.white,
+                                                      ),
                                                 ),
                                               ),
                                             ),
@@ -651,7 +673,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                                           size: 13.5,
                                           color: isVerified
                                               ? HomeThemeTokens.success(context)
-                                              : HomeThemeTokens.warning(context),
+                                              : HomeThemeTokens.warning(
+                                                  context,
+                                                ),
                                         ),
                                         const SizedBox(width: 5),
                                         Flexible(
@@ -665,8 +689,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                                               fontSize: 11.5,
                                               fontWeight: FontWeight.w700,
                                               color: isVerified
-                                                  ? HomeThemeTokens.success(context)
-                                                  : HomeThemeTokens.warning(context),
+                                                  ? HomeThemeTokens.success(
+                                                      context,
+                                                    )
+                                                  : HomeThemeTokens.warning(
+                                                      context,
+                                                    ),
                                             ),
                                           ),
                                         ),
@@ -788,7 +816,8 @@ class _ProfileScreenState extends State<ProfileScreen>
                           title: 'Aadhaar card',
                           isVerified: isVerified,
                           isUploaded: _isAadhaarUploaded,
-                          maskedId: maskedIdType.toLowerCase().contains('aadhaar')
+                          maskedId:
+                              maskedIdType.toLowerCase().contains('aadhaar')
                               ? maskedIdNumber
                               : null,
                           onUpload: () => _pickAndUploadDocument('Aadhaar'),
@@ -927,8 +956,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     final textPri = HomeThemeTokens.textPrimary(context);
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
-    final iconTileBg =
-        isDark ? HomeThemeTokens.darkSurface : const Color(0xFFF1F5F4);
+    final iconTileBg = isDark
+        ? HomeThemeTokens.darkSurface
+        : const Color(0xFFF1F5F4);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
@@ -941,11 +971,7 @@ class _ProfileScreenState extends State<ProfileScreen>
               color: iconTileBg,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: tealCol,
-              size: 19,
-            ),
+            child: Icon(icon, color: tealCol, size: 19),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1063,8 +1089,9 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(width: 10),
           AnimatedSwitcher(
-            duration:
-                disableAnim ? Duration.zero : const Duration(milliseconds: 220),
+            duration: disableAnim
+                ? Duration.zero
+                : const Duration(milliseconds: 220),
             child: isUploaded
                 ? Container(
                     key: ValueKey('uploaded_$title'),
@@ -1169,8 +1196,9 @@ class _InteractivePressState extends State<_InteractivePress> {
       onTap: widget.onTap,
       child: AnimatedScale(
         scale: (_pressed && !disableAnim) ? 0.96 : 1.0,
-        duration:
-            disableAnim ? Duration.zero : const Duration(milliseconds: 110),
+        duration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 110),
         curve: Curves.easeOutCubic,
         child: widget.child,
       ),
