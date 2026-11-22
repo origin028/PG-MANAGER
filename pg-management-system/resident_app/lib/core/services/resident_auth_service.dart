@@ -8,9 +8,16 @@ class ResidentAuthService {
   static Future<List<Map<String, dynamic>>> getAvailableProperties() async {
     try {
       final response = await ApiClient.get('/auth/resident/properties');
+      List? rawList;
       if (response is List) {
-        final list = response
+        rawList = response;
+      } else if (response is Map<String, dynamic> && response['data'] is List) {
+        rawList = response['data'] as List;
+      }
+      if (rawList != null && rawList.isNotEmpty) {
+        final list = rawList
             .map((e) => Map<String, dynamic>.from(e as Map))
+            .where((p) => p['id'] != null && p['id'].toString().isNotEmpty)
             .toList();
         if (list.isNotEmpty) return list;
       }
@@ -19,13 +26,8 @@ class ResidentAuthService {
     }
     return [
       {
-        'id': '24917794-b488-4f93-9f8a-5d7389623b32',
-        'name': 'Origin Grand PG - Koramangala',
-        'city': 'Bengaluru',
-      },
-      {
-        'id': '94abf8b8-88f7-42a0-9603-69ff7049fb9d',
-        'name': 'Origin Luxury PG - HSR Layout',
+        'id': '8d7f97b3-e1a0-46eb-9097-00cdeaddac49',
+        'name': 'Origin Comfort PG - Electronic City',
         'city': 'Bengaluru',
       },
       {
@@ -34,8 +36,13 @@ class ResidentAuthService {
         'city': 'Bengaluru',
       },
       {
-        'id': '8d7f97b3-e1a0-46eb-9097-00cdeaddac49',
-        'name': 'Origin Comfort PG - Electronic City',
+        'id': '24917794-b488-4f93-9f8a-5d7389623b32',
+        'name': 'Origin Grand PG - Koramangala',
+        'city': 'Bengaluru',
+      },
+      {
+        'id': '94abf8b8-88f7-42a0-9603-69ff7049fb9d',
+        'name': 'Origin Luxury PG - HSR Layout',
         'city': 'Bengaluru',
       },
       {

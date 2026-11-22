@@ -972,8 +972,17 @@ class _RegisterScreenState extends State<RegisterScreen>
                                     _FocusGlowField(
                                       palette: palette,
                                       child: DropdownButtonFormField<String>(
-                                        key: ValueKey('prop_'),
-                                        initialValue: _selectedPropertyId,
+                                        key: ValueKey(
+                                          'prop_dropdown_${_selectedPropertyId ?? "none"}_${_properties.length}',
+                                        ),
+                                        initialValue:
+                                            (_properties.any(
+                                              (p) =>
+                                                  p['id']?.toString() ==
+                                                  _selectedPropertyId,
+                                            ))
+                                            ? _selectedPropertyId
+                                            : null,
                                         isExpanded: true,
                                         hint: Text(
                                           'Select a PG property',
@@ -999,15 +1008,19 @@ class _RegisterScreenState extends State<RegisterScreen>
                                         ),
                                         items: _properties.map((p) {
                                           final id = p['id']?.toString() ?? '';
+                                          final rawName = p['name']
+                                              ?.toString()
+                                              .trim();
                                           final name =
-                                              p['name']?.toString() ??
-                                              'PG Property';
-                                          final city =
-                                              p['city']?.toString() ?? '';
+                                              (rawName != null &&
+                                                  rawName.isNotEmpty)
+                                              ? rawName
+                                              : (p['title']?.toString() ??
+                                                    'PG Property');
                                           return DropdownMenuItem<String>(
                                             value: id,
                                             child: Text(
-                                              city.isNotEmpty ? ' ()' : name,
+                                              name,
                                               style: HomeThemeTokens.manrope(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.w600,

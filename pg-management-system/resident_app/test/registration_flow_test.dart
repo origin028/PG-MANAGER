@@ -208,15 +208,71 @@ void main() {
       },
     );
 
-    test('ResidentAuthService getAvailableProperties returns active properties list', () async {
+    test('ResidentAuthService getAvailableProperties returns active properties matching Admin App', () async {
       final properties = await ResidentAuthService.getAvailableProperties();
       expect(properties, isNotEmpty);
-      expect(properties.first.containsKey('id'), isTrue);
-      expect(properties.first.containsKey('name'), isTrue);
-      expect(
-        properties.any((p) => p['name'].toString().contains('Origin Grand PG')),
-        isTrue,
-      );
+      expect(properties.length, greaterThanOrEqualTo(5));
+
+      final propertyNames = properties
+          .map((p) => p['name']?.toString())
+          .toList();
+      expect(propertyNames, contains('Origin Comfort PG - Electronic City'));
+      expect(propertyNames, contains('Origin Elite PG - Indiranagar'));
+      expect(propertyNames, contains('Origin Grand PG - Koramangala'));
+      expect(propertyNames, contains('Origin Luxury PG - HSR Layout'));
+      expect(propertyNames, contains('Origin Prime PG - Bellandur'));
+
+      for (final prop in properties) {
+        expect(prop['id'], isNotNull);
+        expect(prop['id'].toString(), isNotEmpty);
+        expect(prop['name'], isNotNull);
+        expect(prop['name'].toString(), isNotEmpty);
+        expect(prop['name'].toString(), isNot(equals(' ()')));
+      }
     });
+
+    testWidgets(
+      'RegisterScreen property dropdown renders exact property names from backend and binds valid property ID',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(800, 1400);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() => tester.view.resetPhysicalSize());
+
+        await tester.pumpWidget(
+          MaterialApp(theme: AppTheme.lightTheme, home: const RegisterScreen()),
+        );
+        await tester.pumpAndSettle();
+
+        // Find the Property DropdownButton (first dropdown on screen before gender)
+        final propertyDropdownFinder = find
+            .byType(DropdownButton<String>)
+            .first;
+        expect(propertyDropdownFinder, findsOneWidget);
+
+        final dropdown = tester.widget<DropdownButton<String>>(
+          propertyDropdownFinder,
+        );
+        expect(dropdown.items, isNotNull);
+        expect(dropdown.items!.length, greaterThanOrEqualTo(5));
+
+        // Verify each item's value is a valid non-empty ID and child text is the real property name
+        final itemTexts = <String>[];
+        for (final item in dropdown.items!) {
+          expect(item.value, isNotNull);
+          expect(item.value!.isNotEmpty, isTrue);
+          final textWidget = item.child as Text;
+          expect(textWidget.data, isNotNull);
+          expect(textWidget.data!.isNotEmpty, isTrue);
+          expect(textWidget.data, isNot(equals(' ()')));
+          itemTexts.add(textWidget.data!);
+        }
+
+        expect(itemTexts, contains('Origin Comfort PG - Electronic City'));
+        expect(itemTexts, contains('Origin Elite PG - Indiranagar'));
+        expect(itemTexts, contains('Origin Grand PG - Koramangala'));
+        expect(itemTexts, contains('Origin Luxury PG - HSR Layout'));
+        expect(itemTexts, contains('Origin Prime PG - Bellandur'));
+      },
+    );
   });
 }
