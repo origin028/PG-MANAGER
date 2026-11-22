@@ -1,6 +1,6 @@
-
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": false,
   "services": {
     "frontend": {
       "root": "pg-management-system/frontend",
@@ -34,24 +34,52 @@
       }
     },
     {
-      "source": "/admin",
+      "source": "/admin/(assets/.*|icons/.*|canvaskit/.*|main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js|version\\.json|manifest\\.json|favicon\\.png)",
+      "destination": {
+        "service": "frontend",
+        "path": "/admin/$1"
+      }
+    },
+    {
+      "source": "/admin/?$",
       "destination": {
         "service": "frontend",
         "path": "/admin/index.html"
       }
     },
     {
-      "source": "/admin/:path*",
+      "source": "/admin/((?!assets/|icons/|canvaskit/|.*\\.[a-zA-Z0-9]+$).*)",
       "destination": {
         "service": "frontend",
-        "path": "/admin/:path*"
+        "path": "/admin/index.html"
       }
     },
     {
-      "source": "/:path*",
+      "source": "/(dashboard|properties|rooms|residents|payments|complaints|expenses|staff|leads|reports|food-menu|settings|login|register|splash)(/.*)?",
       "destination": {
         "service": "frontend",
-        "path": "/:path*"
+        "path": "/admin/index.html"
+      }
+    },
+    {
+      "source": "/pay(/.*)?",
+      "destination": {
+        "service": "frontend",
+        "path": "/index.html"
+      }
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": {
+        "service": "frontend",
+        "path": "/assets/$1"
+      }
+    },
+    {
+      "source": "/((?!api/|docs|openapi\\.json|admin/|assets/|.*\\.[a-zA-Z0-9]+$).*)",
+      "destination": {
+        "service": "frontend",
+        "path": "/index.html"
       }
     }
   ],
@@ -75,7 +103,7 @@
       ]
     },
     {
-      "source": "/admin/(main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js)",
+      "source": "/admin/(main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js)",
       "headers": [
         {
           "key": "Cache-Control",

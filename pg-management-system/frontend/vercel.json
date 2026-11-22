@@ -1,0 +1,64 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": false,
+  "rewrites": [
+    {
+      "source": "/admin/(assets/.*|icons/.*|canvaskit/.*|main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js|version\\.json|manifest\\.json|favicon\\.png)",
+      "destination": "/admin/$1"
+    },
+    {
+      "source": "/admin/?$",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/admin/((?!assets/|icons/|canvaskit/|.*\\.[a-zA-Z0-9]+$).*)",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/(dashboard|properties|rooms|residents|payments|complaints|expenses|staff|leads|reports|food-menu|settings|login|register|splash)(/.*)?",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/pay(/.*)?",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
+    },
+    {
+      "source": "/((?!admin/|assets/|.*\\.[a-zA-Z0-9]+$).*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/admin/(assets|canvaskit|icons)/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/admin/(main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}
+

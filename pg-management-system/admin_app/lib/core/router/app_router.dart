@@ -516,7 +516,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
 // ==========================================
 final GoRouter appRouter = GoRouter(
   initialLocation: '/splash',
+  errorBuilder: (context, state) => TokenStorage.isAuthenticated
+      ? const AdminLayout(child: DashboardScreen())
+      : const LoginScreen(),
   routes: [
+    GoRoute(
+      path: '/',
+      redirect: (context, state) =>
+          TokenStorage.isAuthenticated ? '/dashboard' : '/login',
+    ),
+    GoRoute(
+      path: '/admin',
+      redirect: (context, state) =>
+          TokenStorage.isAuthenticated ? '/dashboard' : '/login',
+    ),
+    GoRoute(
+      path: '/admin/:subpath',
+      redirect: (context, state) {
+        final sub = state.pathParameters['subpath'];
+        return sub != null ? '/$sub' : '/dashboard';
+      },
+    ),
     GoRoute(
       path: '/splash',
       builder: (context, state) => const SplashScreen(),

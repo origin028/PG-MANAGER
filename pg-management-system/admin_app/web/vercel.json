@@ -1,9 +1,18 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "cleanUrls": true,
+  "cleanUrls": false,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/(assets/.*|icons/.*|canvaskit/.*|main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js|version\\.json|manifest\\.json|favicon\\.png)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/admin/(assets/.*|icons/.*|canvaskit/.*|main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js|version\\.json|manifest\\.json|favicon\\.png)",
+      "destination": "/$1"
+    },
+    {
+      "source": "/((?!assets/|icons/|canvaskit/|.*\\.[a-zA-Z0-9]+$).*)",
       "destination": "/index.html"
     }
   ],
@@ -18,7 +27,7 @@
       ]
     },
     {
-      "source": "/(assets/.*|icons/.*|flutter.js|flutter_bootstrap.js|main.dart.js|canvaskit/.*)",
+      "source": "/(assets/.*|icons/.*|canvaskit/.*|main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -28,4 +37,3 @@
     }
   ]
 }
-
