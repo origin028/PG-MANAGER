@@ -51,11 +51,16 @@ class ApiException implements Exception {
   }
 
   factory ApiException.networkError(dynamic error) {
+    final errStr = error?.toString() ?? '';
+    final isTimeout = errStr.contains('TimeoutException') || errStr.toLowerCase().contains('timed out');
+    final message = isTimeout
+        ? 'Backend server took too long to respond (cold start). Please wait a few seconds and try again.'
+        : 'Unable to connect to the backend server. Please check your network connection or verify the server is running.';
     return ApiException(
       statusCode: 0,
-      code: 'NETWORK_ERROR',
-      message: 'Unable to connect to the backend server. Please check your network connection or API URL.',
-      details: error?.toString(),
+      code: isTimeout ? 'TIMEOUT_ERROR' : 'NETWORK_ERROR',
+      message: message,
+      details: errStr,
     );
   }
 }

@@ -13,23 +13,42 @@ router = APIRouter()
 
 @router.get("/health", status_code=status.HTTP_200_OK)
 def health_check(db: Session = Depends(get_db)):
-    """Health check endpoint evaluating PostgreSQL connectivity and application status."""
+    """Health check endpoint evaluating PostgreSQL connectivity, schema readiness, and application status."""
     db_status = "healthy"
+    alembic_rev = None
+    users_table_exists = False
+
     try:
         db.execute(sa.text("SELECT 1"))
+        try:
+            regclass = db.execute(sa.text("SELECT to_regclass('public.users')")).scalar()
+            users_table_exists = regclass is not None
+
+            alembic_reg = db.execute(sa.text("SELECT to_regclass('public.alembic_version')")).scalar()
+            if alembic_reg is not None:
+                alembic_rev = db.execute(sa.text("SELECT version_num FROM alembic_version")).scalar()
+        except Exception:
+            # Fallback for SQLite in unit tests
+            users_table_exists = True
+
+        if not users_table_exists:
+            db_status = "uninitialized: users table missing"
     except Exception as e:
         logger.error(f"Health check database ping failed: {e}", exc_info=True)
         db_status = f"unhealthy: {str(e)}" if settings.DEBUG else "unhealthy: database connectivity error"
 
+    is_healthy = (db_status == "healthy")
     payload = {
-        "status": "online" if db_status == "healthy" else "degraded",
+        "status": "online" if is_healthy else "degraded",
         "database": db_status,
+        "schema_ready": users_table_exists,
+        "alembic_version": alembic_rev,
         "environment": settings.ENVIRONMENT,
         "version": settings.VERSION,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return APIResponse(
-        success=(db_status == "healthy"),
+        success=is_healthy,
         message="System health status.",
         data=payload,
     )

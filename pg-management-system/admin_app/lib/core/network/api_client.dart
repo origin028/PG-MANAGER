@@ -26,7 +26,7 @@ class ApiClient {
     return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
-  static const Duration timeout = Duration(seconds: 15);
+  static const Duration timeout = Duration(seconds: 60);
 
   static Map<String, String> _buildHeaders([Map<String, String>? extraHeaders]) {
     final headers = <String, String>{
@@ -44,7 +44,10 @@ class ApiClient {
   }
 
   static Uri _buildUri(String path, [Map<String, dynamic>? queryParameters]) {
-    final cleanPath = path.startsWith('/') ? path : '/$path';
+    var cleanPath = path.startsWith('/') ? path : '/$path';
+    if (cleanPath.startsWith('/api/v1/')) {
+      cleanPath = cleanPath.substring(7);
+    }
     final fullUrl = '$baseUrl$cleanPath';
     final uri = Uri.parse(fullUrl);
     if (queryParameters != null && queryParameters.isNotEmpty) {

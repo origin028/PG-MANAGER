@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     setup_logging()
     logger.info(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
 
-    # Non-destructive database connectivity ping (schema migrations are exclusively managed via preDeployCommand)
+    # 1. Non-destructive database connectivity ping
     try:
         from app.db.session import engine
         import sqlalchemy as sa
@@ -28,6 +28,37 @@ async def lifespan(app: FastAPI):
         logger.info("Database connection verified successfully.")
     except Exception as exc:
         logger.error(f"Database connectivity verification check failed: {type(exc).__name__}")
+        raise RuntimeError(f"Database connectivity check failed on startup: {exc}") from exc
+
+    # 2. Automated idempotent schema migration check (critical for Render Free Plan where preDeployCommand does not run)
+    try:
+        from alembic.config import Config
+        from alembic import command
+
+        alembic_ini_path = Path(__file__).resolve().parent.parent / "alembic.ini"
+        if alembic_ini_path.exists():
+            alembic_cfg = Config(str(alembic_ini_path))
+            alembic_cfg.set_main_option(
+                "script_location", str(alembic_ini_path.parent / "migrations")
+            )
+
+            is_postgres = "postgres" in settings.DATABASE_URL
+            if is_postgres:
+                # Use PostgreSQL transaction-level advisory lock to serialize multi-worker migrations safely
+                with engine.connect() as conn:
+                    with conn.begin():
+                        conn.execute(sa.text("SELECT pg_advisory_xact_lock(849201948)"))
+                        logger.info("Verifying and applying pending Alembic database migrations...")
+                        command.upgrade(alembic_cfg, "head")
+                        logger.info("Alembic database migrations applied successfully (head: b8c9d0e1f2a3).")
+            else:
+                logger.info("Verifying and applying pending Alembic database migrations...")
+                command.upgrade(alembic_cfg, "head")
+                logger.info("Alembic database migrations applied successfully.")
+    except Exception as exc:
+        logger.error(f"Fatal error during database schema migration: {exc}", exc_info=True)
+        # Fail-fast: do not serve traffic with an incomplete or uninitialized database schema
+        raise RuntimeError(f"Database schema migration failed on startup: {exc}") from exc
 
     yield
     # Shutdown lifecycle

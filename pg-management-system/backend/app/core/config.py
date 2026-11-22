@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     # Common Super Key for PG Owner Administrator Registration (shared by Origin Company)
-    ADMIN_REGISTRATION_SUPER_KEY: str = ""
-    ADMIN_REGISTRATION_SUPER_KEY_HASH: str = ""
+    ADMIN_REGISTRATION_SUPER_KEY: str = "ORG-240-X7K9-PQ82"
+    ADMIN_REGISTRATION_SUPER_KEY_HASH: str = "4a9cf98caf4de59247a8cad40229adaf500b9ef1aaedca7cad460b002fef649f"
 
     # PostgreSQL Connection String (Psycopg 3 driver)
     DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/pg_management"
