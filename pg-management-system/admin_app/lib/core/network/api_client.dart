@@ -6,19 +6,24 @@ import 'token_storage.dart';
 
 class ApiClient {
   static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL');
+  static const String _defaultProdBaseUrl = 'https://pg-management-api-sw09.onrender.com/api/v1';
 
   static String get baseUrl {
-    if (_envBaseUrl.isNotEmpty) return _envBaseUrl;
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000/api/v1';
-    }
-    if (kIsWeb) {
+    String url;
+    if (_envBaseUrl.isNotEmpty) {
+      url = _envBaseUrl;
+    } else if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      url = 'http://10.0.2.2:8000/api/v1';
+    } else if (kIsWeb) {
       if (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1') {
-        return 'http://localhost:8000/api/v1';
+        url = 'http://localhost:8000/api/v1';
+      } else {
+        url = _defaultProdBaseUrl;
       }
-      return 'https://pg-management-api-sw09.onrender.com/api/v1';
+    } else {
+      url = 'http://localhost:8000/api/v1';
     }
-    return 'http://localhost:8000/api/v1';
+    return url.endsWith('/') ? url.substring(0, url.length - 1) : url;
   }
 
   static const Duration timeout = Duration(seconds: 15);

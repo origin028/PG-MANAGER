@@ -3,6 +3,10 @@
   "cleanUrls": false,
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "https://pg-management-api-sw09.onrender.com/api/$1"
+    },
+    {
       "source": "/admin/(assets/.*|icons/.*|canvaskit/.*|main\\.dart\\.js|flutter\\.js|flutter_bootstrap\\.js|flutter_service_worker\\.js|version\\.json|manifest\\.json|favicon\\.png)",
       "destination": "/admin/$1"
     },
