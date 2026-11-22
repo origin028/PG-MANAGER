@@ -146,35 +146,41 @@ class TestOTPFlow:
         phone = "9876543299"
         raw_otp = "852963"
 
-        # 1. In development/demo, OTP is logged with phone masked (never full phone)
-        monkeypatch.setattr(settings, "ENVIRONMENT", "development")
-        with caplog.at_level(logging.INFO):
-            caplog.clear()
-            provider.send_otp(phone, raw_otp, "test message")
-            assert raw_otp in caplog.text
-            assert phone not in caplog.text  # Full 10-digit number must never be logged
-            assert phone[-4:] in caplog.text
+        pg_logger = logging.getLogger("pg_management")
+        pg_logger.disabled = False
+        pg_logger.addHandler(caplog.handler)
+        try:
+            # 1. In development/demo, OTP is logged with phone masked (never full phone)
+            monkeypatch.setattr(settings, "ENVIRONMENT", "development")
+            with caplog.at_level(logging.INFO, logger="pg_management"):
+                caplog.clear()
+                provider.send_otp(phone, raw_otp, "test message")
+                assert raw_otp in caplog.text
+                assert phone not in caplog.text  # Full 10-digit number must never be logged
+                assert phone[-4:] in caplog.text
 
-        # 2. In production, fail-closed: OTP must NEVER appear in logs
-        monkeypatch.setattr(settings, "ENVIRONMENT", "production")
-        with caplog.at_level(logging.INFO):
-            caplog.clear()
-            provider.send_otp(phone, raw_otp, "test message")
-            assert raw_otp not in caplog.text
-            assert phone not in caplog.text
+            # 2. In production, fail-closed: OTP must NEVER appear in logs
+            monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+            with caplog.at_level(logging.INFO, logger="pg_management"):
+                caplog.clear()
+                provider.send_otp(phone, raw_otp, "test message")
+                assert raw_otp not in caplog.text
+                assert phone not in caplog.text
 
-        # 3. In unknown/missing environment, fail-closed: OTP must NEVER appear in logs
-        monkeypatch.setattr(settings, "ENVIRONMENT", "unknown_env")
-        with caplog.at_level(logging.INFO):
-            caplog.clear()
-            provider.send_otp(phone, raw_otp, "test message")
-            assert raw_otp not in caplog.text
+            # 3. In unknown/missing environment, fail-closed: OTP must NEVER appear in logs
+            monkeypatch.setattr(settings, "ENVIRONMENT", "unknown_env")
+            with caplog.at_level(logging.INFO, logger="pg_management"):
+                caplog.clear()
+                provider.send_otp(phone, raw_otp, "test message")
+                assert raw_otp not in caplog.text
 
-        monkeypatch.setattr(settings, "ENVIRONMENT", "")
-        with caplog.at_level(logging.INFO):
-            caplog.clear()
-            provider.send_otp(phone, raw_otp, "test message")
-            assert raw_otp not in caplog.text
+            monkeypatch.setattr(settings, "ENVIRONMENT", "")
+            with caplog.at_level(logging.INFO, logger="pg_management"):
+                caplog.clear()
+                provider.send_otp(phone, raw_otp, "test message")
+                assert raw_otp not in caplog.text
+        finally:
+            pg_logger.removeHandler(caplog.handler)
 
     def test_production_provider_never_falls_back_to_mock(self, monkeypatch):
         # Even with missing SMS_GATEWAY_API_KEY, production environment must return ProductionSMSProvider

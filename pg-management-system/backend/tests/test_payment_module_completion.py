@@ -22,6 +22,7 @@ class TestPaymentModuleCompletion:
 
     def test_01_upi_initiation_success_and_payload(self, client, upi_test_context, monkeypatch):
         """Validates that UPI initiation generates all required intent parameters and NPCI URI."""
+        monkeypatch.setattr(settings, "UPI_MERCHANT_VPA", "")
         monkeypatch.setattr(settings, "UPI_PAYEE_VPA", "originpg@icici")
         monkeypatch.setattr(settings, "UPI_PAYEE_NAME", "Origin Grand PG")
         headers = make_token_header(upi_test_context["res1_user_id"], "RESIDENT", upi_test_context["company_id"])

@@ -248,7 +248,7 @@ async def handle_razorpay_webhook(
             try:
                 from app.services.receipt_delivery_service import ReceiptDeliveryService
                 delivery_service = ReceiptDeliveryService(db)
-                delivery_service.deliver_receipt(str(receipt.id))
+                delivery_service.deliver_receipt(receipt.id)
             except Exception:
                 pass  # Delivery failures never roll back settled payments
 

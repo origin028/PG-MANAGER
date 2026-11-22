@@ -1111,19 +1111,45 @@ def admin_register_verify(
     db: Session = Depends(get_db),
 ):
     """
-    Backward-compatible verification endpoint. If already verified via common Super Key,
-    issues tokens directly.
+    Backward-compatible verification endpoint. Validates common Super Key and issues tokens directly.
     """
+    import hashlib
+    from app.core.config import settings
+    from app.core.exceptions import PGException
+
     ip_address = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
 
-    user = db.scalar(sa.select(User).where(User.email == payload.email))
+    # 1. Validate server configuration for Common Super Key
+    configured_key = settings.ADMIN_REGISTRATION_SUPER_KEY
+    configured_hash = getattr(settings, "ADMIN_REGISTRATION_SUPER_KEY_HASH", "")
+    if (not configured_key or not configured_key.strip()) and (not configured_hash or not configured_hash.strip()):
+        raise PGException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            code="CONFIGURATION_ERROR",
+            message="Admin registration Super Key is not configured on the server. Please contact system administrator.",
+        )
+
+    # 2. Constant-time comparison of submitted Super Key against configured hash / key
+    submitted_key = payload.super_key.strip().upper()
+    submitted_hash = hashlib.sha256(submitted_key.encode("utf-8")).hexdigest()
+
+    key_matches = False
+    if configured_hash and configured_hash.strip():
+        key_matches = secrets.compare_digest(submitted_hash, configured_hash.strip().lower())
+    if not key_matches and configured_key and configured_key.strip():
+        key_matches = secrets.compare_digest(submitted_key, configured_key.strip().upper())
+
+    if not key_matches:
+        raise BadRequestError("Invalid registration Super Key. Please verify the common key provided by Origin Company.")
+
+    # 3. Verify administrator user exists
+    email_norm = payload.email.strip().lower()
+    user = db.scalar(sa.select(User).where(sa.func.lower(User.email) == email_norm))
     if not user:
         raise NotFoundError("Administrator account not found.")
 
     if not user.is_verified:
-        otp_service = OTPService(db)
-        otp_service.verify_admin_registration_super_key(payload.email, payload.super_key)
         user.is_verified = True
         user.approval_status = "APPROVED"
         db.commit()
@@ -1223,12 +1249,36 @@ def admin_login_verify(
     db: Session = Depends(get_db),
 ):
     """
-    Backward-compatible 2FA verification endpoint. Directs to immediate token issuance.
+    Backward-compatible 2FA verification endpoint. Verifies Super Key or login OTP and issues tokens.
     """
+    import hashlib
+    from app.core.config import settings
+
     ip_address = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
 
-    user = db.scalar(sa.select(User).where(User.email == payload.email))
+    submitted_key = payload.super_key.strip().upper()
+    configured_key = (settings.ADMIN_REGISTRATION_SUPER_KEY or "").strip().upper()
+    configured_hash = (getattr(settings, "ADMIN_REGISTRATION_SUPER_KEY_HASH", "") or "").strip().lower()
+    submitted_hash = hashlib.sha256(submitted_key.encode("utf-8")).hexdigest()
+
+    key_matches = False
+    if configured_hash and secrets.compare_digest(submitted_hash, configured_hash):
+        key_matches = True
+    elif configured_key and secrets.compare_digest(submitted_key, configured_key):
+        key_matches = True
+    else:
+        try:
+            otp_service = OTPService(db)
+            otp_service.verify_admin_login_super_key(payload.email, payload.super_key)
+            key_matches = True
+        except Exception:
+            pass
+
+    if not key_matches:
+        raise BadRequestError("Invalid Super Key or 2FA verification code.")
+
+    user = db.scalar(sa.select(User).where(sa.func.lower(User.email) == payload.email.strip().lower()))
     if not user:
         raise NotFoundError("Administrator account not found.")
 

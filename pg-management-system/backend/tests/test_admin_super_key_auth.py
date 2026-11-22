@@ -265,3 +265,165 @@ def test_admin_registration_to_login_case_insensitive_super_key_and_dashboard_ac
     assert cap_resp.status_code == 200
     assert cap_resp.json()["data"]["total_capacity"] == 240
     assert cap_resp.json()["data"]["used_beds"] == 0
+
+
+def test_admin_register_verify_correct_super_key(client: TestClient):
+    """Verify endpoint successfully activates and returns tokens with valid Common Super Key."""
+    unique = secrets.token_hex(4)
+    email = f"verify_valid_{unique}@originpg.com"
+    password = "AdminPass@2026!"
+    super_key = "ORG-240-X7K9-PQ82"
+
+    # Register admin
+    reg_resp = client.post(
+        "/api/v1/auth/admin/register",
+        json={
+            "business_name": f"Verify PG {unique}",
+            "email": email,
+            "password": password,
+            "confirm_password": password,
+            "super_key": super_key,
+        },
+    )
+    assert reg_resp.status_code == 201
+
+    # Verify endpoint
+    verify_resp = client.post(
+        "/api/v1/auth/admin/register/verify",
+        json={
+            "email": email,
+            "super_key": super_key,
+        },
+    )
+    assert verify_resp.status_code == 200
+    data = verify_resp.json()["data"]
+    assert "access_token" in data
+    assert "refresh_token" in data
+    assert data["token_type"] == "bearer"
+    assert data["user"]["email"] == email
+
+
+def test_admin_register_verify_incorrect_super_key(client: TestClient):
+    """Verify endpoint rejects incorrect Super Key with HTTP 400 Bad Request."""
+    unique = secrets.token_hex(4)
+    email = f"verify_badkey_{unique}@originpg.com"
+    password = "AdminPass@2026!"
+    super_key = "ORG-240-X7K9-PQ82"
+
+    # Register admin
+    client.post(
+        "/api/v1/auth/admin/register",
+        json={
+            "business_name": f"BadKey PG {unique}",
+            "email": email,
+            "password": password,
+            "confirm_password": password,
+            "super_key": super_key,
+        },
+    )
+
+    # Attempt verify with incorrect super key
+    verify_resp = client.post(
+        "/api/v1/auth/admin/register/verify",
+        json={
+            "email": email,
+            "super_key": "WRONG-KEY-9999",
+        },
+    )
+    assert verify_resp.status_code == 400
+    msg = _get_error_message(verify_resp).lower()
+    assert "invalid" in msg or "super key" in msg
+
+
+def test_admin_register_verify_missing_super_key(client: TestClient):
+    """Verify endpoint rejects missing super_key with HTTP 422 Unprocessable Entity."""
+    unique = secrets.token_hex(4)
+    email = f"verify_missingkey_{unique}@originpg.com"
+
+    verify_resp = client.post(
+        "/api/v1/auth/admin/register/verify",
+        json={
+            "email": email,
+        },
+    )
+    assert verify_resp.status_code == 422
+
+
+def test_admin_register_verify_missing_env_config(client: TestClient):
+    """Verify endpoint returns 500 CONFIGURATION_ERROR if server has no Super Key configured."""
+    unique = secrets.token_hex(4)
+    email = f"verify_unconfigured_{unique}@originpg.com"
+
+    orig_key = settings.ADMIN_REGISTRATION_SUPER_KEY
+    orig_hash = getattr(settings, "ADMIN_REGISTRATION_SUPER_KEY_HASH", "")
+    try:
+        settings.ADMIN_REGISTRATION_SUPER_KEY = ""
+        settings.ADMIN_REGISTRATION_SUPER_KEY_HASH = ""
+
+        verify_resp = client.post(
+            "/api/v1/auth/admin/register/verify",
+            json={
+                "email": email,
+                "super_key": "ORG-240-X7K9-PQ82",
+            },
+        )
+        assert verify_resp.status_code == 500
+        data = verify_resp.json()
+        assert data.get("error", {}).get("code") == "CONFIGURATION_ERROR" or "not configured" in str(data)
+    finally:
+        settings.ADMIN_REGISTRATION_SUPER_KEY = orig_key
+        settings.ADMIN_REGISTRATION_SUPER_KEY_HASH = orig_hash
+
+
+def test_admin_register_verify_incorrect_email(client: TestClient):
+    """Verify endpoint returns 404 Not Found when email does not exist."""
+    unique = secrets.token_hex(4)
+    non_existent_email = f"nonexistent_{unique}@originpg.com"
+
+    verify_resp = client.post(
+        "/api/v1/auth/admin/register/verify",
+        json={
+            "email": non_existent_email,
+            "super_key": "ORG-240-X7K9-PQ82",
+        },
+    )
+    assert verify_resp.status_code == 404
+    msg = _get_error_message(verify_resp).lower()
+    assert "not found" in msg or "administrator" in msg
+
+
+def test_admin_register_verify_already_verified_returns_tokens(client: TestClient):
+    """An already-verified account calling verify endpoint with valid Super Key receives valid tokens."""
+    unique = secrets.token_hex(4)
+    email = f"already_verified_{unique}@originpg.com"
+    password = "AdminPass@2026!"
+    super_key = "ORG-240-X7K9-PQ82"
+
+    # Register admin (creates verified user)
+    reg_resp = client.post(
+        "/api/v1/auth/admin/register",
+        json={
+            "business_name": f"Already Verified PG {unique}",
+            "email": email,
+            "password": password,
+            "confirm_password": password,
+            "super_key": super_key,
+        },
+    )
+    assert reg_resp.status_code == 201
+
+    # Call verify first time
+    v1 = client.post(
+        "/api/v1/auth/admin/register/verify",
+        json={"email": email, "super_key": super_key},
+    )
+    assert v1.status_code == 200
+
+    # Call verify second time (already verified)
+    v2 = client.post(
+        "/api/v1/auth/admin/register/verify",
+        json={"email": email, "super_key": super_key},
+    )
+    assert v2.status_code == 200
+    assert "access_token" in v2.json()["data"]
+

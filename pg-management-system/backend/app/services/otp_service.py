@@ -460,8 +460,22 @@ class OTPService:
         }
 
     def verify_admin_registration_super_key(self, email: str, super_key: str, consume: bool = True) -> bool:
-        """Validates admin registration Super Key against stored hash."""
-        return self._verify_email_otp(email=email, otp=super_key, purpose="ADMIN_REGISTRATION", consume=consume)
+        """Validates admin registration Super Key against configured common Super Key or stored OTP."""
+        submitted_key = (super_key or "").strip().upper()
+        configured_key = (settings.ADMIN_REGISTRATION_SUPER_KEY or "").strip().upper()
+        configured_hash = (getattr(settings, "ADMIN_REGISTRATION_SUPER_KEY_HASH", "") or "").strip().lower()
+        submitted_hash = hashlib.sha256(submitted_key.encode("utf-8")).hexdigest()
+
+        if configured_hash and secrets.compare_digest(submitted_hash, configured_hash):
+            return True
+        if configured_key and secrets.compare_digest(submitted_key, configured_key):
+            return True
+
+        # Fallback to OTPVerification table if exists
+        try:
+            return self._verify_email_otp(email=email, otp=super_key, purpose="ADMIN_REGISTRATION", consume=consume)
+        except Exception:
+            raise BadRequestError("Invalid registration Super Key. Please verify the common key provided by Origin Company.")
 
     def request_admin_login_super_key(self, user: User) -> Dict[str, any]:
         """Dispatches login 2FA Super Key to admin registered email with cooldown and secure hashing."""

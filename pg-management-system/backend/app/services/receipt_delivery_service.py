@@ -1,5 +1,6 @@
 import logging
 import math
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 
@@ -71,6 +72,11 @@ class ReceiptDeliveryService:
         """Attempts delivery for a single receipt using row-level locking."""
         if isinstance(receipt_id, Receipt):
             receipt_uuid = receipt_id.id
+        elif isinstance(receipt_id, str):
+            try:
+                receipt_uuid = uuid.UUID(receipt_id)
+            except (ValueError, AttributeError):
+                receipt_uuid = receipt_id
         else:
             receipt_uuid = receipt_id
 

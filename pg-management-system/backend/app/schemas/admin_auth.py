@@ -42,14 +42,14 @@ class AdminRegisterRequest(BaseModel):
 
 class AdminRegisterVerifyRequest(BaseModel):
     email: EmailStr = Field(..., description="Administrator email address")
-    super_key: str = Field(..., min_length=6, max_length=6, description="6-digit Super Key verification code")
+    super_key: str = Field(..., min_length=1, max_length=128, description="Common Registration Super Key")
 
     @field_validator("super_key")
     @classmethod
     def validate_code(cls, v: str) -> str:
-        clean = v.strip()
-        if not clean.isdigit() or len(clean) != 6:
-            raise ValueError("Super Key must be a 6-digit numeric code.")
+        clean = v.strip().upper()
+        if not clean:
+            raise ValueError("Super Key is required.")
         return clean
 
     @field_validator("email")
@@ -88,14 +88,14 @@ class AdminLogin2FARequiredResponse(BaseModel):
 
 class AdminLoginVerifyRequest(BaseModel):
     email: EmailStr = Field(..., description="Registered administrator email address")
-    super_key: str = Field(..., min_length=6, max_length=6, description="6-digit Super Key verification code")
+    super_key: str = Field(..., min_length=1, max_length=128, description="Super Key or verification code")
 
     @field_validator("super_key")
     @classmethod
     def validate_code(cls, v: str) -> str:
-        clean = v.strip()
-        if not clean.isdigit() or len(clean) != 6:
-            raise ValueError("Super Key must be a 6-digit numeric code.")
+        clean = v.strip().upper()
+        if not clean:
+            raise ValueError("Super Key is required.")
         return clean
 
     @field_validator("email")
