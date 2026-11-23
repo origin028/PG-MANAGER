@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+/* Origin Living design tokens. One accent (forest), neutral zinc base, light + dark. */
+:root {
+  --bg: #fafaf9;
+  --surface: #ffffff;
+  --surface-2: #f2f2ef;
+  --ink: #17181a;
+  --ink-2: #55585e;
+  --ink-3: #8a8d93;
+  --line: #e6e6e2;
+  --accent: #1f5c46;
+  --accent-ink: #f4f7f5;
+  --accent-soft: #e3ede8;
+  --shadow: 0 1px 2px rgb(23 24 26 / 0.04), 0 12px 32px -12px rgb(31 92 70 / 0.18);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1112;
+    --surface: #16191a;
+    --surface-2: #1c2021;
+    --ink: #eceeed;
+    --ink-2: #a9aeac;
+    --ink-3: #747a78;
+    --line: #262b2c;
+    --accent: #5fb48f;
+    --accent-ink: #0c1a14;
+    --accent-soft: #17281f;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 16px 40px -16px rgb(0 0 0 / 0.6);
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --shadow-soft: var(--shadow);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-card: 20px;
+}
+
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body { background: var(--bg); color: var(--ink); }
+::selection { background: var(--accent); color: var(--accent-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+
+/* Scroll reveal: only hidden when motion is allowed; reduced-motion users see content immediately. */
+@media (prefers-reduced-motion: no-preference) {
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0s), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0s); }
+  .reveal[data-in] { opacity: 1; transform: none; }
+}

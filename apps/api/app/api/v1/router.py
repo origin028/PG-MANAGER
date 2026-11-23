@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.v1.endpoints import (
     attendance,
     deposits,
+    public,
     announcements,
     audit_logs,
     auth,
@@ -31,6 +32,7 @@ from app.api.v1.endpoints import (
 v1_router = APIRouter()
 
 v1_router.include_router(health.router, tags=["Health"])
+v1_router.include_router(public.router, prefix="/public", tags=["Public website"])
 v1_router.include_router(company.router, prefix="/company", tags=["Company & Bed Capacity"])
 v1_router.include_router(auth.router, prefix="/auth", tags=["Authentication & Session"])
 v1_router.include_router(resident_mobile.router, prefix="/resident", tags=["Resident Mobile App"])
