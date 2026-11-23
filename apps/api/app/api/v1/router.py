@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    attendance,
     announcements,
     audit_logs,
     auth,
@@ -51,4 +52,5 @@ v1_router.include_router(notices.router, prefix="/notices", tags=["Notices & Bro
 v1_router.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 v1_router.include_router(reports.router, prefix="/reports", tags=["Reports & Analytics"])
 v1_router.include_router(settings.router, prefix="/settings", tags=["Settings & Enterprise"])
+v1_router.include_router(attendance.router, prefix="/attendance", tags=["Attendance (Fingerprint)"])
 v1_router.include_router(audit_logs.router, prefix="/audit-logs", tags=["Audit & Security"])

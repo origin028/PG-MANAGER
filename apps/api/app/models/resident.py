@@ -55,6 +55,9 @@ class Resident(Base, UUIDMixin, TimestampMixin):
     state: Mapped[Optional[str]] = mapped_column(sa.String(100), nullable=True)
     pincode: Mapped[Optional[str]] = mapped_column(sa.String(20), nullable=True)
 
+    # Fingerprint machine user id (as enrolled on the device); unique within a property
+    biometric_id: Mapped[Optional[str]] = mapped_column(sa.String(64), nullable=True)
+
     # KYC & Identity Verification Files
     verification_method: Mapped[Optional[str]] = mapped_column(sa.String(50), nullable=True)
     aadhaar_front_path: Mapped[Optional[str]] = mapped_column(sa.String(512), nullable=True)

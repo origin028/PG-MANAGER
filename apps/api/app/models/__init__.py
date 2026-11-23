@@ -25,6 +25,7 @@ from app.models.food_menu import FoodMenu
 from app.models.resident_preference import ResidentPreference
 from app.models.announcement import Announcement
 from app.models.deposit_ledger import DepositLedgerEntry
+from app.models.attendance import AttendanceLog
 
 __all__ = [
     "Base",

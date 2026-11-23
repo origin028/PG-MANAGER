@@ -96,6 +96,8 @@ class Settings(BaseSettings):
 
     # ---- Business rules ----------------------------------------------------
     DEPOSIT_REFUND_PERCENT: int = 50
+    ATTENDANCE_DEVICE_KEY: str = ""  # shared secret the fingerprint bridge sends as X-Device-Key
+    RENT_DUE_DAY: int = 5  # rent is due on this day of the billing month
 
     LOG_LEVEL: str = "INFO"
 
