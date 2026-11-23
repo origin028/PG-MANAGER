@@ -5,6 +5,7 @@ deposit they paid, regardless of how long they stayed. Unpaid dues and damage ch
 deducted from the refundable portion. All arithmetic is Decimal, rounded half-up to paise.
 """
 import uuid
+from datetime import datetime, timezone
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from typing import List, Optional
@@ -75,6 +76,8 @@ class DepositService:
             amount=money(amount),
             note=note,
             created_by_id=user_id,
+            # Explicit per-entry time: entries in one transaction share now(), which would make order ambiguous.
+            created_at=datetime.now(timezone.utc),
         )
         self.db.add(entry)
         return entry

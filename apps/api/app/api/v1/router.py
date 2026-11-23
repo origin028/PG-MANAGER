@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
     attendance,
+    deposits,
     announcements,
     audit_logs,
     auth,
@@ -38,6 +39,7 @@ v1_router.include_router(users.router, prefix="/users", tags=["Users & Staff Acc
 v1_router.include_router(rooms.router, prefix="/rooms", tags=["Rooms"])
 v1_router.include_router(beds.router, prefix="/beds", tags=["Beds & Allocations"])
 v1_router.include_router(residents.router, prefix="/residents", tags=["Residents & KYC"])
+v1_router.include_router(deposits.router, prefix="/residents", tags=["Security Deposit"])
 v1_router.include_router(invoices.router, prefix="/invoices", tags=["Invoices & Billing"])
 v1_router.include_router(payments.router, prefix="/payments", tags=["Payments & Ledger"])
 v1_router.include_router(receipts.router, prefix="/receipts", tags=["Receipts & Invoicing"])
