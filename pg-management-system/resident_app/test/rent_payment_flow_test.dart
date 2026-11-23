@@ -219,9 +219,7 @@ void main() {
         // Modal should be open showing Payment Options
         expect(find.text('Payment Options'), findsOneWidget);
         expect(
-          find.textContaining(
-            'Choose from Google Pay, PhonePe, PayPal, or Credit Card',
-          ),
+          find.textContaining('Select your payment method'),
           findsOneWidget,
         );
         expect(find.text('Google Pay (G Pay)'), findsNWidgets(2));
@@ -283,7 +281,30 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
 
-        await tester.pumpWidget(const MaterialApp(home: NoticesScreen()));
+        await tester.pumpWidget(const MaterialApp(
+          home: NoticesScreen(
+            initialNotices: [
+              {
+                'id': 'NOTIF-1',
+                'title': 'Water supply maintenance',
+                'description': 'Water will be off tomorrow from 10:00 AM to 2:00 PM for solar pipeline servicing.',
+                'category': 'Facility',
+                'date': 'Today, 10:00 AM',
+                'icon': Icons.water_drop_rounded,
+                'isImportant': true,
+              },
+              {
+                'id': 'NOTIF-3',
+                'title': 'High-Speed Wi-Fi Upgrade',
+                'description': 'Mesh router bandwidth upgraded to 300 Mbps.',
+                'category': 'Internet',
+                'date': '24 Oct 2026',
+                'icon': Icons.wifi_rounded,
+                'isImportant': false,
+              },
+            ],
+          ),
+        ));
         await tester.pump();
 
         expect(find.text('Notices & Circulars'), findsOneWidget);
@@ -321,11 +342,10 @@ void main() {
         expect(find.text('INV-2026-010'), findsOneWidget);
         expect(find.text('Google Pay'), findsOneWidget);
         expect(find.text('Refresh Status'), findsOneWidget);
-        expect(find.text('Simulate Cancelled'), findsOneWidget);
-        expect(find.text('Simulate Failed'), findsOneWidget);
+        expect(find.text('Cancel Payment Attempt'), findsOneWidget);
 
-        // Tap Simulate Cancelled
-        await tester.tap(find.text('Simulate Cancelled'));
+        // Tap Cancel Payment Attempt
+        await tester.tap(find.text('Cancel Payment Attempt'));
         await tester.pump();
 
         expect(find.text('Payment Cancelled'), findsOneWidget);

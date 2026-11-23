@@ -6,7 +6,9 @@ import '../../core/services/resident_api_service.dart';
 import '../../core/theme/app_theme.dart';
 
 class NoticesScreen extends StatefulWidget {
-  const NoticesScreen({super.key});
+  final List<Map<String, dynamic>>? initialNotices;
+
+  const NoticesScreen({super.key, this.initialNotices});
 
   @override
   State<NoticesScreen> createState() => _NoticesScreenState();
@@ -14,10 +16,11 @@ class NoticesScreen extends StatefulWidget {
 
 class _NoticesScreenState extends State<NoticesScreen>
     with TickerProviderStateMixin {
-  late final List<Map<String, dynamic>> _notices;
+  final List<Map<String, dynamic>> _notices = [];
   late final AnimationController _entranceController;
   late final AnimationController _dotController;
   bool _animationStarted = false;
+  bool _isLoading = true;
   bool _isRefreshing = false;
   String? _apiErrorMessage;
 
@@ -48,45 +51,12 @@ class _NoticesScreenState extends State<NoticesScreen>
       duration: const Duration(milliseconds: 800),
     );
 
-    _notices = [
-      {
-        'id': 'NOTIF-1',
-        'title': 'Water supply maintenance',
-        'description': 'Water will be off tomorrow from 10:00 AM to 2:00 PM for solar pipeline servicing.',
-        'category': 'Facility',
-        'date': 'Today, 10:00 AM',
-        'icon': Icons.water_drop_rounded,
-        'isImportant': true,
-      },
-      {
-        'id': 'NOTIF-3',
-        'title': 'High-Speed Wi-Fi Upgrade',
-        'description': 'Mesh router firmware across Floor 1 and Floor 2 has been upgraded to 300 Mbps bandwidth.',
-        'category': 'Internet',
-        'date': '24 Oct 2026',
-        'icon': Icons.wifi_rounded,
-        'isImportant': false,
-      },
-      {
-        'id': 'NOTIF-4',
-        'title': 'Visitor Timing Reminder',
-        'description': 'Visitors and guests are allowed in the common lounge area until 9:00 PM daily.',
-        'category': 'Rules',
-        'date': '20 Oct 2026',
-        'icon': Icons.schedule_rounded,
-        'isImportant': false,
-      },
-      {
-        'id': 'NOTIF-5',
-        'title': 'Scheduled Pest Control Drive',
-        'description': 'Bi-monthly pest control and deep cleaning will be conducted this Sunday from 11:00 AM.',
-        'category': 'Maintenance',
-        'date': '18 Oct 2026',
-        'icon': Icons.cleaning_services_rounded,
-        'isImportant': false,
-      },
-    ];
-    _loadNoticesFromApi();
+    if (widget.initialNotices != null && widget.initialNotices!.isNotEmpty) {
+      _notices.addAll(widget.initialNotices!);
+      _isLoading = false;
+    } else {
+      _loadNoticesFromApi();
+    }
   }
 
   @override
@@ -118,16 +88,24 @@ class _NoticesScreenState extends State<NoticesScreen>
         _isRefreshing = true;
         _apiErrorMessage = null;
       });
+    } else if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _apiErrorMessage = null;
+      });
     }
     try {
       final list = await ResidentApiService.getNotices();
-      if (list.isNotEmpty && mounted) {
+      if (mounted) {
         setState(() {
           _notices.clear();
           _apiErrorMessage = null;
           for (final n in list) {
-            final rawCategory = (n['category'] ?? 'Notice').toString().trim();
+            final rawTitle = (n['title'] ?? 'Notice').toString().trim();
+            final rawDescription = (n['content'] ?? n['description'] ?? n['message'] ?? '').toString().trim();
             final rawCreatedAt = n['created_at']?.toString() ?? '';
+            final propId = n['property_id'];
+            final String rawCategory = propId == null ? 'All Properties' : (n['category'] ?? 'Property Notice').toString().trim();
             final bool isImportant =
                 n['priority'] == 'HIGH' ||
                 n['priority'] == 'URGENT' ||
@@ -135,13 +113,13 @@ class _NoticesScreenState extends State<NoticesScreen>
 
             _notices.add({
               'id': n['id']?.toString() ?? '',
-              'title': (n['title'] ?? 'Notice').toString(),
-              'description': (n['message'] ?? n['content'] ?? '').toString(),
+              'title': rawTitle,
+              'description': rawDescription,
               'category': rawCategory.isNotEmpty ? rawCategory : 'Notice',
               'date': _formatNoticeDate(rawCreatedAt),
               'icon': _resolveNoticeIcon(
                 rawCategory,
-                (n['title'] ?? '').toString(),
+                rawTitle,
               ),
               'isImportant': isImportant,
             });
@@ -150,14 +128,17 @@ class _NoticesScreenState extends State<NoticesScreen>
       }
     } catch (e) {
       debugPrint('API getNotices error: $e');
-      if (userInitiated && mounted) {
+      if (mounted) {
         setState(() {
-          _apiErrorMessage = 'Could not refresh notices right now.';
+          _apiErrorMessage = 'Could not load property announcements right now.';
         });
       }
     } finally {
-      if (mounted && _isRefreshing) {
-        setState(() => _isRefreshing = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isRefreshing = false;
+        });
       }
     }
   }
@@ -272,31 +253,6 @@ class _NoticesScreenState extends State<NoticesScreen>
     );
   }
 
-  void _restoreSampleNotices() {
-    setState(() {
-      _notices.addAll([
-        {
-          'id': 'NOTIF-1',
-          'title': 'Water supply maintenance',
-          'description': 'Water will be off tomorrow from 10:00 AM to 2:00 PM.',
-          'category': 'Facility',
-          'date': 'Today, 10:00 AM',
-          'icon': Icons.water_drop_rounded,
-          'isImportant': true,
-        },
-        {
-          'id': 'NOTIF-3',
-          'title': 'High-Speed Wi-Fi Upgrade',
-          'description': 'Mesh router bandwidth upgraded to 300 Mbps.',
-          'category': 'Internet',
-          'date': '24 Oct 2026',
-          'icon': Icons.wifi_rounded,
-          'isImportant': false,
-        },
-      ]);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = HomeThemeTokens.isDark(context);
@@ -386,47 +342,36 @@ class _NoticesScreenState extends State<NoticesScreen>
                           ),
                         ),
                         const SizedBox(width: 12),
-                        if (_notices.isNotEmpty)
-                          Tooltip(
-                            message: 'Clear for Empty State Preview',
-                            child: _ScalePress(
-                              onTap: () {
-                                setState(() => _notices.clear());
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                      'Notices cleared to preview Empty State with Lottie animation',
-                                    ),
+                        Tooltip(
+                          message: 'Refresh Announcements',
+                          child: _ScalePress(
+                            onTap: () =>
+                                _loadNoticesFromApi(userInitiated: true),
+                            child: Semantics(
+                              button: true,
+                              label: 'Refresh Announcements',
+                              child: Container(
+                                width: 42,
+                                height: 42,
+                                decoration: BoxDecoration(
+                                  color: cardBg,
+                                  borderRadius: BorderRadius.circular(13),
+                                  border: Border.all(
+                                    color: isDark
+                                        ? borderCol
+                                        : const Color(0xFFE8EDEC),
+                                    width: 1,
                                   ),
-                                );
-                              },
-                              child: Semantics(
-                                button: true,
-                                label: 'Clear for Empty State Preview',
-                                child: Container(
-                                  width: 42,
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: cardBg,
-                                    borderRadius: BorderRadius.circular(13),
-                                    border: Border.all(
-                                      color: isDark
-                                          ? borderCol
-                                          : const Color(0xFFE8EDEC),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    Icons.delete_sweep_outlined,
-                                    size: 19,
-                                    color: textSec,
-                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.refresh_rounded,
+                                  size: 19,
+                                  color: textPri,
                                 ),
                               ),
                             ),
-                          )
-                        else
-                          const SizedBox(width: 42),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -440,14 +385,35 @@ class _NoticesScreenState extends State<NoticesScreen>
                   ),
 
                 // --------------------------------------------------------------
-                // B. BODY (EMPTY STATE OR GROUPED NOTICES LIST)
+                // B. BODY (LOADING, EMPTY STATE OR GROUPED NOTICES LIST)
                 // --------------------------------------------------------------
                 Expanded(
-                  child: RefreshIndicator(
-                    color: tealCol,
-                    backgroundColor: cardBg,
-                    onRefresh: () => _loadNoticesFromApi(userInitiated: true),
-                    child: _notices.isEmpty
+                  child: _isLoading
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: tealCol,
+                              ),
+                              const SizedBox(height: 14),
+                              Text(
+                                'Loading announcements...',
+                                style: HomeThemeTokens.manrope(
+                                  fontSize: 13,
+                                  color: textSec,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          color: tealCol,
+                          backgroundColor: cardBg,
+                          onRefresh: () =>
+                              _loadNoticesFromApi(userInitiated: true),
+                          child: _notices.isEmpty
                         ? LayoutBuilder(
                             builder: (context, constraints) {
                               return SingleChildScrollView(
@@ -978,7 +944,7 @@ class _NoticesScreenState extends State<NoticesScreen>
           ),
           const SizedBox(height: 16),
           Text(
-            'Nothing Here Yet',
+            'No Announcements Yet',
             textAlign: TextAlign.center,
             style: HomeThemeTokens.manrope(
               fontSize: 17,
@@ -989,7 +955,7 @@ class _NoticesScreenState extends State<NoticesScreen>
           ),
           const SizedBox(height: 6),
           Text(
-            'No data found for your request.',
+            'No notices or announcements have been published for your property.',
             textAlign: TextAlign.center,
             style: HomeThemeTokens.manrope(
               fontSize: 13,
@@ -1000,10 +966,10 @@ class _NoticesScreenState extends State<NoticesScreen>
           ),
           const SizedBox(height: 20),
           _ScalePress(
-            onTap: _restoreSampleNotices,
+            onTap: () => _loadNoticesFromApi(userInitiated: true),
             child: Semantics(
               button: true,
-              label: 'Refresh Notices',
+              label: 'Refresh Announcements',
               child: Container(
                 constraints: const BoxConstraints(minHeight: 42),
                 padding: const EdgeInsets.symmetric(
@@ -1024,7 +990,7 @@ class _NoticesScreenState extends State<NoticesScreen>
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      'Refresh Notices',
+                      'Refresh',
                       style: HomeThemeTokens.manrope(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,

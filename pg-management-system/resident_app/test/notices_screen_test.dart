@@ -4,6 +4,45 @@ import 'package:go_router/go_router.dart';
 import 'package:resident_app/core/theme/app_theme.dart';
 import 'package:resident_app/features/notices/notices_screen.dart';
 
+const _sampleNotices = [
+  {
+    'id': 'NOTIF-1',
+    'title': 'Water supply maintenance',
+    'description': 'Water will be off tomorrow from 10:00 AM to 2:00 PM for solar pipeline servicing.',
+    'category': 'Facility',
+    'date': 'Today, 10:00 AM',
+    'icon': Icons.water_drop_rounded,
+    'isImportant': true,
+  },
+  {
+    'id': 'NOTIF-3',
+    'title': 'High-Speed Wi-Fi Upgrade',
+    'description': 'Mesh router firmware across Floor 1 and Floor 2 has been upgraded to 300 Mbps bandwidth.',
+    'category': 'Internet',
+    'date': '24 Oct 2026',
+    'icon': Icons.wifi_rounded,
+    'isImportant': false,
+  },
+  {
+    'id': 'NOTIF-4',
+    'title': 'Visitor Timing Reminder',
+    'description': 'Visitors and guests are allowed in the common lounge area until 9:00 PM daily.',
+    'category': 'Rules',
+    'date': '20 Oct 2026',
+    'icon': Icons.schedule_rounded,
+    'isImportant': false,
+  },
+  {
+    'id': 'NOTIF-5',
+    'title': 'Scheduled Pest Control Drive',
+    'description': 'Bi-monthly pest control and deep cleaning will be conducted this Sunday from 11:00 AM.',
+    'category': 'Maintenance',
+    'date': '18 Oct 2026',
+    'icon': Icons.cleaning_services_rounded,
+    'isImportant': false,
+  },
+];
+
 void main() {
   testWidgets(
     'NoticesScreen renders Light & Dark themes across narrow and mobile viewports without overflow and without payment UI',
@@ -18,7 +57,7 @@ void main() {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: ThemeMode.light,
-            home: const NoticesScreen(),
+            home: const NoticesScreen(initialNotices: _sampleNotices),
           ),
         );
         await tester.pumpAndSettle();
@@ -49,7 +88,7 @@ void main() {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: ThemeMode.dark,
-            home: const NoticesScreen(),
+            home: const NoticesScreen(initialNotices: _sampleNotices),
           ),
         );
         await tester.pumpAndSettle();
@@ -66,7 +105,7 @@ void main() {
   );
 
   testWidgets(
-    'NoticesScreen supports Clear to Empty State and Refresh Notices recovery',
+    'NoticesScreen supports Empty State and Refresh Announcements recovery',
     (WidgetTester tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
@@ -77,19 +116,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.delete_sweep_outlined));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Nothing Here Yet'), findsOneWidget);
-      expect(find.text('No data found for your request.'), findsOneWidget);
-      expect(find.text('Refresh Notices'), findsOneWidget);
+      expect(find.text('No Announcements Yet'), findsOneWidget);
+      expect(
+        find.text(
+          'No notices or announcements have been published for your property.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Refresh'), findsOneWidget);
       expect(find.text('Water supply maintenance'), findsNothing);
-
-      await tester.tap(find.text('Refresh Notices'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Water supply maintenance'), findsOneWidget);
-      expect(find.text('High-Speed Wi-Fi Upgrade'), findsOneWidget);
     },
   );
 
@@ -110,7 +145,8 @@ void main() {
           ),
           GoRoute(
             path: '/notices',
-            builder: (context, state) => const NoticesScreen(),
+            builder: (context, state) =>
+                const NoticesScreen(initialNotices: _sampleNotices),
           ),
         ],
       );
@@ -135,7 +171,7 @@ void main() {
         theme: AppTheme.lightTheme,
         home: const MediaQuery(
           data: MediaQueryData(disableAnimations: true),
-          child: NoticesScreen(),
+          child: NoticesScreen(initialNotices: _sampleNotices),
         ),
       ),
     );

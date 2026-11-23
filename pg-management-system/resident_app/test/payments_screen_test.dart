@@ -39,7 +39,7 @@ void main() {
         );
         expect(lightScaffold.backgroundColor, const Color(0xFFFFFFFF));
 
-        expect(find.text('BNR Luxury PG · Room 101'), findsOneWidget);
+        expect(find.text('BNR Luxury PG · Room 101'), findsNothing);
         expect(find.text('Rent & Payments'), findsOneWidget);
         expect(find.text('CURRENT CYCLE'), findsOneWidget);
         expect(find.text('8,000'), findsOneWidget);
@@ -99,7 +99,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Sunrise Residency · Room 204'), findsOneWidget);
+      expect(find.text('Sunrise Residency · Room 204'), findsNothing);
       expect(find.text('0'), findsOneWidget);
       expect(find.text('All dues cleared for this month'), findsOneWidget);
       expect(find.text('View latest receipt'), findsOneWidget);

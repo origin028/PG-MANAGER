@@ -12,9 +12,23 @@ class ResidentApiService {
   }
 
   static Future<List<Map<String, dynamic>>> getNotices() async {
-    final res = await ApiClient.get('/notices');
-    if (res is List) {
-      return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    try {
+      final res = await ApiClient.get('/announcements/resident');
+      if (res is List) {
+        return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+    } catch (_) {
+      try {
+        final res = await ApiClient.get('/residents/announcements');
+        if (res is List) {
+          return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      } catch (_) {
+        final res = await ApiClient.get('/notices');
+        if (res is List) {
+          return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        }
+      }
     }
     return [];
   }

@@ -121,14 +121,12 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
         ],
       ),
       body: SafeArea(
-        child: Center(
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 600),
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 24.0,
-              ),
+              padding: const EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 28.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -181,21 +179,26 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                'TOTAL DEPOSIT',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.2,
-                                  color: isDark
-                                      ? const Color(0xFF5EEAD4)
-                                      : const Color(0xFF047857),
+                              Expanded(
+                                child: Text(
+                                  'TOTAL DEPOSIT',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.2,
+                                    color: isDark
+                                        ? const Color(0xFF5EEAD4)
+                                        : const Color(0xFF047857),
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 5,
+                                  horizontal: 10,
+                                  vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
                                   color: isDark
@@ -208,7 +211,7 @@ class _RentDepositScreenState extends State<RentDepositScreen> {
                                   children: [
                                     Icon(
                                       Icons.shield_rounded,
-                                      size: 14,
+                                      size: 13,
                                       color: Colors.white,
                                     ),
                                     SizedBox(width: 5),

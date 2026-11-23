@@ -485,241 +485,268 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
                   ),
                 ),
 
-                // Scrollable Body (keyboard safe)
+                // Scrollable Body (keyboard safe & centered)
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // B. OTP Hero Section with Shield & Pulse Rings
-                        MotionEntrance(
-                          slideOffset: const Offset(0, 0.03),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildAnimatedShield(palette, disableAnim),
-                              const SizedBox(height: 26),
-                              Text(
-                                "Verify it's you",
-                                style: HomeThemeTokens.manrope(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.8,
-                                  height: 1.15,
-                                  color: palette.ink,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'We’ve sent a ${widget.otpLength}-digit verification code to your ${widget.destinationChannel}',
-                                style: HomeThemeTokens.manrope(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: palette.mute,
-                                  height: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                widget.destinationMasked,
-                                style: HomeThemeTokens.manrope(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: palette.ink,
-                                ),
-                              ),
-                            ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight - 36,
                           ),
-                        ),
-                        const SizedBox(height: 28),
+                          child: IntrinsicHeight(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const Spacer(flex: 1),
 
-                        // C. Individual 6-Cell OTP Input
-                        MotionEntrance(
-                          delay: const Duration(milliseconds: 80),
-                          slideOffset: const Offset(0, 0.03),
-                          child: AnimatedBuilder(
-                            animation: _shakeController,
-                            builder: (context, child) {
-                              final t = _shakeController.value;
-                              final dx = t == 0
-                                  ? 0.0
-                                  : math.sin(t * math.pi * 4) * (1 - t) * 6.0;
-                              return Transform.translate(
-                                offset: Offset(dx, 0),
-                                child: child,
-                              );
-                            },
-                            child: Row(
-                              children: List.generate(widget.otpLength, (i) {
-                                return Expanded(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                      right: i < widget.otpLength - 1 ? 8.0 : 0,
-                                    ),
-                                    child: _buildOtpCell(
-                                      index: i,
-                                      palette: palette,
-                                      disableAnim: disableAnim,
+                                // B. OTP Hero Section with Shield & Pulse Rings (Centered)
+                                MotionEntrance(
+                                  slideOffset: const Offset(0, 0.03),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      _buildAnimatedShield(palette, disableAnim),
+                                      const SizedBox(height: 22),
+                                      Text(
+                                        "Verify it's you",
+                                        textAlign: TextAlign.center,
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.8,
+                                          height: 1.15,
+                                          color: palette.ink,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        'We’ve sent a ${widget.otpLength}-digit verification code to your ${widget.destinationChannel}',
+                                        textAlign: TextAlign.center,
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w500,
+                                          color: palette.mute,
+                                          height: 1.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        widget.destinationMasked,
+                                        textAlign: TextAlign.center,
+                                        style: HomeThemeTokens.manrope(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: palette.ink,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 26),
+
+                                // C. Individual 6-Cell OTP Input (Centered with max width)
+                                MotionEntrance(
+                                  delay: const Duration(milliseconds: 80),
+                                  slideOffset: const Offset(0, 0.03),
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 420),
+                                    child: AnimatedBuilder(
+                                      animation: _shakeController,
+                                      builder: (context, child) {
+                                        final t = _shakeController.value;
+                                        final dx = t == 0
+                                            ? 0.0
+                                            : math.sin(t * math.pi * 4) * (1 - t) * 6.0;
+                                        return Transform.translate(
+                                          offset: Offset(dx, 0),
+                                          child: child,
+                                        );
+                                      },
+                                      child: Row(
+                                        children: List.generate(widget.otpLength, (i) {
+                                          return Expanded(
+                                            child: Padding(
+                                              padding: EdgeInsets.only(
+                                                right: i < widget.otpLength - 1 ? 8.0 : 0,
+                                              ),
+                                              child: _buildOtpCell(
+                                                index: i,
+                                                palette: palette,
+                                                disableAnim: disableAnim,
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                      ),
                                     ),
                                   ),
-                                );
-                              }),
-                            ),
-                          ),
-                        ),
+                                ),
 
-                        // Error Banner
-                        AnimatedSize(
-                          duration: disableAnim
-                              ? Duration.zero
-                              : const Duration(milliseconds: 200),
-                          curve: Curves.easeOutCubic,
-                          child: _errorMessage != null
-                              ? Padding(
-                                  padding: const EdgeInsets.only(top: 12),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 12,
-                                      vertical: 10,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: palette.softError,
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(
-                                        color: palette.error.withValues(
-                                          alpha: 0.3,
+                                // Error Banner
+                                ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 420),
+                                  child: AnimatedSize(
+                                    duration: disableAnim
+                                        ? Duration.zero
+                                        : const Duration(milliseconds: 200),
+                                    curve: Curves.easeOutCubic,
+                                    child: _errorMessage != null
+                                        ? Padding(
+                                            padding: const EdgeInsets.only(top: 12),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: palette.softError,
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(
+                                                  color: palette.error.withValues(
+                                                    alpha: 0.3,
+                                                  ),
+                                                ),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.error_outline_rounded,
+                                                    size: 16,
+                                                    color: palette.error,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      _errorMessage!,
+                                                      style: HomeThemeTokens.manrope(
+                                                        fontSize: 12.5,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: palette.error,
+                                                        height: 1.35,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ),
+
+                                // D. Resend OTP Countdown / Trigger (Centered)
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(0, 16, 0, 22),
+                                  child: _buildResendSection(palette, disableAnim),
+                                ),
+
+                                // E. Verify Button (Centered with max width)
+                                MotionEntrance(
+                                  delay: const Duration(milliseconds: 140),
+                                  slideOffset: const Offset(0, 0.03),
+                                  child: ConstrainedBox(
+                                    constraints: const BoxConstraints(maxWidth: 420),
+                                    child: TactilePress(
+                                      scaleDown: 0.98,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(16),
+                                          boxShadow: (!isCodeComplete || _isVerifying)
+                                              ? null
+                                              : [
+                                                  BoxShadow(
+                                                    color: palette.teal.withValues(
+                                                      alpha: 0.35,
+                                                    ),
+                                                    blurRadius: 20,
+                                                    offset: const Offset(0, 10),
+                                                  ),
+                                                ],
+                                        ),
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              (!isCodeComplete ||
+                                                  _isVerifying ||
+                                                  _isVerified)
+                                              ? null
+                                              : _handleVerify,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: _isVerified
+                                                ? palette.success
+                                                : palette.teal,
+                                            disabledBackgroundColor: _isVerified
+                                                ? palette.success
+                                                : palette.teal.withValues(alpha: 0.55),
+                                            foregroundColor: Colors.white,
+                                            disabledForegroundColor: Colors.white
+                                                .withValues(alpha: 0.9),
+                                            minimumSize: const Size(double.infinity, 54),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(16),
+                                            ),
+                                            elevation: 0,
+                                          ),
+                                          child: AnimatedSwitcher(
+                                            duration: disableAnim
+                                                ? Duration.zero
+                                                : const Duration(milliseconds: 180),
+                                            child: _isVerifying
+                                                ? const SizedBox(
+                                                    key: ValueKey('otp_loading'),
+                                                    width: 22,
+                                                    height: 22,
+                                                    child: CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2.5,
+                                                    ),
+                                                  )
+                                                : _isVerified
+                                                ? Row(
+                                                    key: const ValueKey('otp_done'),
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment.center,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons
+                                                            .check_circle_outline_rounded,
+                                                        size: 20,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        'Verified',
+                                                        style: HomeThemeTokens.manrope(
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w800,
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  )
+                                                : Text(
+                                                    'Verify OTP',
+                                                    key: const ValueKey('otp_idle'),
+                                                    style: HomeThemeTokens.manrope(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w800,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.error_outline_rounded,
-                                          size: 16,
-                                          color: palette.error,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _errorMessage!,
-                                            style: HomeThemeTokens.manrope(
-                                              fontSize: 12.5,
-                                              fontWeight: FontWeight.w600,
-                                              color: palette.error,
-                                              height: 1.35,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                   ),
-                                )
-                              : const SizedBox.shrink(),
-                        ),
-
-                        // D. Resend OTP Countdown / Trigger
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(0, 18, 0, 26),
-                          child: _buildResendSection(palette, disableAnim),
-                        ),
-
-                        // E. Verify Button
-                        MotionEntrance(
-                          delay: const Duration(milliseconds: 140),
-                          slideOffset: const Offset(0, 0.03),
-                          child: TactilePress(
-                            scaleDown: 0.98,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: (!isCodeComplete || _isVerifying)
-                                    ? null
-                                    : [
-                                        BoxShadow(
-                                          color: palette.teal.withValues(
-                                            alpha: 0.35,
-                                          ),
-                                          blurRadius: 20,
-                                          offset: const Offset(0, 10),
-                                        ),
-                                      ],
-                              ),
-                              child: ElevatedButton(
-                                onPressed:
-                                    (!isCodeComplete ||
-                                        _isVerifying ||
-                                        _isVerified)
-                                    ? null
-                                    : _handleVerify,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _isVerified
-                                      ? palette.success
-                                      : palette.teal,
-                                  disabledBackgroundColor: _isVerified
-                                      ? palette.success
-                                      : palette.teal.withValues(alpha: 0.55),
-                                  foregroundColor: Colors.white,
-                                  disabledForegroundColor: Colors.white
-                                      .withValues(alpha: 0.9),
-                                  minimumSize: const Size(double.infinity, 54),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  elevation: 0,
                                 ),
-                                child: AnimatedSwitcher(
-                                  duration: disableAnim
-                                      ? Duration.zero
-                                      : const Duration(milliseconds: 180),
-                                  child: _isVerifying
-                                      ? const SizedBox(
-                                          key: ValueKey('otp_loading'),
-                                          width: 22,
-                                          height: 22,
-                                          child: CircularProgressIndicator(
-                                            color: Colors.white,
-                                            strokeWidth: 2.5,
-                                          ),
-                                        )
-                                      : _isVerified
-                                      ? Row(
-                                          key: const ValueKey('otp_done'),
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(
-                                              Icons
-                                                  .check_circle_outline_rounded,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Text(
-                                              'Verified',
-                                              style: HomeThemeTokens.manrope(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.white,
-                                              ),
-                                            ),
-                                          ],
-                                        )
-                                      : Text(
-                                          'Verify OTP',
-                                          key: const ValueKey('otp_idle'),
-                                          style: HomeThemeTokens.manrope(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w800,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                ),
-                              ),
+
+                                const Spacer(flex: 2),
+                              ],
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -946,7 +973,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
           : _secondsRemaining > 0
           ? Align(
               key: const ValueKey('countdown'),
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: Text.rich(
                 TextSpan(
                   text: 'Resend code in ',
@@ -971,8 +998,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen>
             )
           : Align(
               key: const ValueKey('resend_ready'),
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: Wrap(
+                alignment: WrapAlignment.center,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(

@@ -152,53 +152,55 @@ void main() {
         expect(find.byType(Lottie), findsNothing);
 
         // Failed state: NO success Lottie
-        await tester.ensureVisible(find.text('Simulate Failed'));
-        await tester.tap(find.text('Simulate Failed'));
-        await tester.pump(const Duration(milliseconds: 1300));
+        await tester.pumpWidget(
+          const MaterialApp(
+            home: PaymentStatusScreen(
+              key: ValueKey('failed-status'),
+              paymentData: {
+                'invoiceId': 'INV-2026-010',
+                'amount': 8000,
+                'paymentApp': 'Google Pay',
+                'initialState': 'failed',
+              },
+            ),
+          ),
+        );
         await tester.pumpAndSettle();
         expect(find.text('Payment Failed'), findsOneWidget);
         expect(find.byType(Lottie), findsNothing);
 
-        // Reset to Pending and verify Cancelled state has NO success Lottie
+        // Cancelled state: NO success Lottie
         await tester.pumpWidget(
           const MaterialApp(
-            key: ValueKey('fresh-status'),
             home: PaymentStatusScreen(
+              key: ValueKey('cancelled-status'),
               paymentData: {
                 'invoiceId': 'INV-2026-011',
                 'amount': 8000,
                 'paymentApp': 'Google Pay',
-                'txnRef': 'UPI-20261029-654321',
-                'autoPoll': false,
+                'initialState': 'cancelled',
               },
             ),
           ),
         );
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.ensureVisible(find.text('Simulate Cancelled'));
-        await tester.tap(find.text('Simulate Cancelled'));
         await tester.pumpAndSettle();
         expect(find.text('Payment Cancelled'), findsOneWidget);
         expect(find.byType(Lottie), findsNothing);
 
-        // Reset to Pending and confirm via Simulate Settlement -> Lottie appears and settles
+        // Successful state: Lottie appears and settles
         await tester.pumpWidget(
           const MaterialApp(
-            key: ValueKey('settled-status'),
             home: PaymentStatusScreen(
+              key: ValueKey('successful-status'),
               paymentData: {
                 'invoiceId': 'INV-2026-012',
                 'amount': 8000,
                 'paymentApp': 'Google Pay',
-                'txnRef': 'UPI-20261029-999000',
-                'autoPoll': false,
+                'initialState': 'successful',
               },
             ),
           ),
         );
-        await tester.pump(const Duration(milliseconds: 300));
-        await tester.ensureVisible(find.text('Simulate Settlement'));
-        await tester.tap(find.text('Simulate Settlement'));
         await tester.pumpAndSettle();
 
         expect(find.text('Payment Successful!'), findsOneWidget);
@@ -246,17 +248,37 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
         addTearDown(() => tester.view.resetPhysicalSize());
 
+        // With notices: NO empty Lottie
         await tester.pumpWidget(
-          MaterialApp(theme: AppTheme.lightTheme, home: const NoticesScreen()),
+          const MaterialApp(
+            themeMode: ThemeMode.light,
+            home: NoticesScreen(
+              initialNotices: [
+                {
+                  'id': '1',
+                  'title': 'Maintenance notice',
+                  'description': 'Elevator servicing',
+                  'category': 'Facility',
+                  'date': 'Today',
+                },
+              ],
+            ),
+          ),
         );
         await tester.pumpAndSettle();
 
         expect(find.byType(Lottie), findsNothing);
 
-        await tester.tap(find.byIcon(Icons.delete_sweep_outlined));
+        // Without notices (empty state): Lottie appears
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.lightTheme,
+            home: const NoticesScreen(key: ValueKey('empty-notices-screen')),
+          ),
+        );
         await tester.pumpAndSettle();
 
-        expect(find.text('Nothing Here Yet'), findsOneWidget);
+        expect(find.text('No Announcements Yet'), findsOneWidget);
         expect(find.byType(Lottie), findsOneWidget);
       },
     );

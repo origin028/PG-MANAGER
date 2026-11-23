@@ -55,7 +55,7 @@
       }
     },
     {
-      "source": "/(dashboard|properties|rooms|residents|payments|complaints|expenses|staff|leads|reports|food-menu|settings|login|register|splash)(/.*)?",
+      "source": "/(dashboard|properties|rooms|residents|payments|complaints|expenses|announcements|staff|leads|reports|food-menu|settings|login|register|splash)(/.*)?",
       "destination": {
         "service": "frontend",
         "path": "/admin/index.html"

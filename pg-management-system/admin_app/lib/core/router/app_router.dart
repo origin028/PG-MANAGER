@@ -14,6 +14,7 @@ import '../../features/residents/residents_screen.dart';
 import '../../features/payments/payments_screen.dart';
 import '../../features/complaints/complaints_screen.dart';
 import '../../features/expenses/expenses_screen.dart';
+import '../../features/announcements/announcements_screen.dart';
 import '../../features/staff/staff_screen.dart';
 import '../../features/leads/leads_screen.dart';
 import '../../features/reports/reports_screen.dart';
@@ -579,6 +580,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: '/expenses',
       builder: (context, state) => const AdminLayout(child: ExpensesScreen()),
+    ),
+    GoRoute(
+      path: '/announcements',
+      builder: (context, state) => const AdminLayout(child: AnnouncementsScreen()),
     ),
     GoRoute(
       path: '/staff',

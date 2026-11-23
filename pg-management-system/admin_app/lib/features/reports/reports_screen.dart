@@ -81,7 +81,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final grossCollections = _grossCollections.toInt();
     final operationalExpenses = _operationalExpenses.toInt();
     final netProfit = grossCollections - operationalExpenses;
-    final profitMargin = grossCollections > 0 ? ((netProfit / grossCollections) * 100).toStringAsFixed(1) : '0.0';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -114,22 +113,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Expanded(
-                      child: Row(
-                        children: [
-                          Icon(Icons.query_stats, color: AppTheme.primaryBlue, size: 22),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Financial Performance & Profitability',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.textDark,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
+                      child: Text(
+                        'Financial Performance & Profitability',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -213,23 +204,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         Text(
                           _formatCurrency(netProfit),
                           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF059669)),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFECFDF5),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFA7F3D0)),
-                          ),
-                          child: Text(
-                            'Profit Margin: $profitMargin%',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF059669),
-                            ),
-                          ),
                         ),
                       ],
                     );

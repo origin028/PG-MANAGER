@@ -114,56 +114,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     }
   }
 
-  Future<void> _simulateSettlementState() async {
-    _pollingTimer?.cancel();
-    final invoiceId =
-        widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
-    final txnRef = widget.paymentData['txnRef']?.toString() ?? 'TXN-998877';
-    final paymentApp =
-        widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
-    final amount = (widget.paymentData['amount'] as num?)?.toInt() ?? 8000;
-
-    final res = await PaymentVerificationService.simulateBankSettlement(
-      invoiceId: invoiceId,
-      txnRef: txnRef,
-      paymentApp: paymentApp,
-      amount: amount,
-    );
-
-    if (mounted) {
-      setState(() {
-        _verificationResult = res;
-        _currentState = PaymentVerificationState.successful;
-      });
-    }
-  }
-
-  Future<void> _simulateFailedState() async {
-    _pollingTimer?.cancel();
-    final invoiceId =
-        widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
-    final txnRef = widget.paymentData['txnRef']?.toString() ?? 'TXN-998877';
-    final paymentApp =
-        widget.paymentData['paymentApp']?.toString() ?? 'Google Pay';
-    final num amount = (widget.paymentData['amount'] as num?) ?? 8000;
-
-    final res = await PaymentVerificationService.verifyWithBackend(
-      invoiceId: invoiceId,
-      txnRef: txnRef,
-      paymentApp: paymentApp,
-      amount: amount,
-      forceFail: true,
-    );
-
-    if (mounted) {
-      setState(() {
-        _verificationResult = res;
-        _currentState = PaymentVerificationState.failed;
-      });
-    }
-  }
-
-  Future<void> _simulateCancelledState() async {
+  Future<void> _cancelPaymentAttempt() async {
     _pollingTimer?.cancel();
     final invoiceId =
         widget.paymentData['invoiceId']?.toString() ?? 'INV-2026-010';
@@ -418,7 +369,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           child: SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () => _simulateCancelledState(),
+              onPressed: () => _cancelPaymentAttempt(),
               icon: const Icon(
                 Icons.close_rounded,
                 size: 16,
@@ -437,39 +388,6 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
               ),
             ),
           ),
-        ),
-        const SizedBox(height: 14),
-
-        // Testing Simulation Options
-        Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 2,
-          children: [
-            TextButton(
-              onPressed: _simulateSettlementState,
-              child: const Text(
-                'Simulate Settlement',
-                style: TextStyle(fontSize: 12, color: Color(0xFF16A34A)),
-              ),
-            ),
-            const Text('•', style: TextStyle(color: Color(0xFFCBD5E1))),
-            TextButton(
-              onPressed: _simulateCancelledState,
-              child: const Text(
-                'Simulate Cancelled',
-                style: TextStyle(fontSize: 12, color: Color(0xFFD97706)),
-              ),
-            ),
-            const Text('•', style: TextStyle(color: Color(0xFFCBD5E1))),
-            TextButton(
-              onPressed: _simulateFailedState,
-              child: const Text(
-                'Simulate Failed',
-                style: TextStyle(fontSize: 12, color: Color(0xFFEF4444)),
-              ),
-            ),
-          ],
         ),
       ],
     );
@@ -589,6 +507,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             invoiceId: invoiceId,
             txnRef: txnRef,
             amount: amount,
+            showAmount: false,
             paymentApp: paymentApp,
             payeeName: PaymentVerificationService.verifiedPayeeName,
             payeeUpiId: PaymentVerificationService.verifiedPayeeUpiId,
@@ -841,6 +760,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     required String statusText,
     required Color statusColor,
     String? approvalCode,
+    bool showAmount = true,
   }) {
     final isDark = AppTheme.isDark(context);
     final cardBg = AppTheme.cardBg(context);
@@ -871,8 +791,10 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           _buildDetailRow('Payment App', paymentApp),
           Divider(height: 18, color: borderCol),
           _buildDetailRow('Transaction Ref', txnRef),
-          Divider(height: 18, color: borderCol),
-          _buildDetailRow('Amount', '₹ ${_formatAmount(amount)}', isBold: true),
+          if (showAmount) ...[
+            Divider(height: 18, color: borderCol),
+            _buildDetailRow('Amount', '₹ ${_formatAmount(amount)}', isBold: true),
+          ],
           if (approvalCode != null) ...[
             Divider(height: 18, color: borderCol),
             _buildDetailRow('Bank Approval', approvalCode),

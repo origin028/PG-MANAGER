@@ -854,6 +854,7 @@ class _AdminLayoutState extends State<AdminLayout> {
                 _buildMenuItem(Icons.groups_rounded, 'Residents', '/residents', context),
                 _buildMenuItem(Icons.credit_card_rounded, 'Payments', '/payments', context),
                 _buildMenuItem(Icons.receipt_long_rounded, 'Expenses', '/expenses', context),
+                _buildMenuItem(Icons.campaign_rounded, 'Announcements', '/announcements', context),
                 _buildMenuItem(Icons.badge_rounded, 'Staff', '/staff', context),
                 _buildMenuItem(Icons.restaurant_menu_rounded, 'Food Menu', '/food-menu', context),
                 _buildMenuItem(Icons.warning_amber_rounded, 'Complaints', '/complaints', context),

@@ -1920,68 +1920,6 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Amount',
-                              style: TextStyle(fontSize: 12, color: textSec),
-                            ),
-                            Text(
-                              '₹ $formattedAmt',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.successGreen,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Clear Instructions for scanning
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFBFDBFE)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Row(
-                          children: [
-                            Icon(
-                              Icons.qr_code_scanner_rounded,
-                              size: 16,
-                              color: Color(0xFF1D4ED8),
-                            ),
-                            SizedBox(width: 6),
-                            Text(
-                              'How to scan this QR Code:',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF1E40AF),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          '• Scan using camera scanner in Google Pay, PhonePe, Paytm, or BHIM.\n'
-                          '• NPCI Rule: UPI apps restrict gallery-uploaded QR screenshots to ₹2,000. For rent amounts above ₹2,000, scan directly via camera or copy the Merchant UPI ID below to pay directly in your app.',
-                          style: TextStyle(
-                            fontSize: 11.5,
-                            color: Color(0xFF1E3A8A),
-                            height: 1.4,
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -2108,38 +2046,6 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                         backgroundColor: AppTheme.primaryBlue,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Button: Simulate Instant Success (Test Mode)
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(sheetCtx);
-                        _handlePaymentMethodSelection('Demo Pay', 'demo');
-                      },
-                      icon: const Icon(
-                        Icons.science_rounded,
-                        size: 18,
-                        color: Color(0xFF10B981),
-                      ),
-                      label: const Text(
-                        'Simulate Instant Success (Test Mode)',
-                        style: TextStyle(
-                          color: Color(0xFF10B981),
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13.5,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFF10B981)),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -2345,301 +2251,195 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
   void _showPaymentInterfaceModal() {
     final originalAmount = RentPaymentScreen.calculatePayableAmount(_invoice);
     final month = _invoice['month'] ?? 'November 2026';
-    double activeAmount = originalAmount;
-    bool isTestOneRupee = false;
+    final activeAmount = originalAmount;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
-        return StatefulBuilder(
-          builder: (sheetCtx, setModalState) {
-            final isDark = AppTheme.isDark(sheetCtx);
-            final cardBg = AppTheme.cardBg(sheetCtx);
-            final textPri = AppTheme.textPrimary(sheetCtx);
-            final textSec = AppTheme.textSecondary(sheetCtx);
+        final isDark = AppTheme.isDark(bottomSheetContext);
+        final cardBg = AppTheme.cardBg(bottomSheetContext);
+        final textPri = AppTheme.textPrimary(bottomSheetContext);
+        final textSec = AppTheme.textSecondary(bottomSheetContext);
 
-            return Container(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-              decoration: BoxDecoration(
-                color: cardBg,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: isDark ? const Color(0x33000000) : Colors.black12,
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
-                  ),
-                ],
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(28),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: isDark ? const Color(0x33000000) : Colors.black12,
+                blurRadius: 20,
+                offset: const Offset(0, -4),
               ),
-              child: SafeArea(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Drag Handle
-                      Center(
-                        child: Container(
-                          width: 44,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppTheme.darkBorder
-                                : const Color(0xFFE2E8F0),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
+            ],
+          ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Drag Handle
+                  Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.darkBorder
+                            : const Color(0xFFE2E8F0),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      const SizedBox(height: 18),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
 
-                      // Amount & Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Payment Options',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: textPri,
-                                  ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'Choose from Google Pay, PhonePe, PayPal, or Credit Card • $month',
-                                  style: TextStyle(
-                                    fontSize: 12.5,
-                                    color: textSec,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? const Color(0xFF1E3A8A)
-                                  : const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: isDark
-                                    ? const Color(0xFF3B82F6)
-                                    : const Color(0xFFDBEAFE),
-                              ),
-                            ),
-                            child: Text(
-                              '₹ ${_formatAmount(activeAmount)}',
+                  // Amount & Header - Amount displayed only once
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Payment Options',
                               style: TextStyle(
                                 fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: isDark
-                                    ? const Color(0xFF93C5FD)
-                                    : AppTheme.primaryBlue,
+                                fontWeight: FontWeight.bold,
+                                color: textPri,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Quick Amount Mode Switcher (Full Rent vs Test ₹1.00)
-                      Row(
-                        children: [
-                          InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () {
-                              setModalState(() {
-                                isTestOneRupee = false;
-                                activeAmount = originalAmount;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: !isTestOneRupee
-                                    ? AppTheme.primaryBlue.withValues(
-                                        alpha: 0.15,
-                                      )
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: !isTestOneRupee
-                                      ? AppTheme.primaryBlue
-                                      : (isDark
-                                            ? Colors.white24
-                                            : Colors.black12),
-                                ),
-                              ),
-                              child: Text(
-                                'Full Rent (₹ ${_formatAmount(originalAmount)})',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: !isTestOneRupee
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: !isTestOneRupee
-                                      ? AppTheme.primaryBlue
-                                      : textSec,
-                                ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Select your payment method • $month',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: textSec,
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          InkWell(
-                            borderRadius: BorderRadius.circular(20),
-                            onTap: () {
-                              setModalState(() {
-                                isTestOneRupee = true;
-                                activeAmount = 1.0;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isTestOneRupee
-                                    ? const Color(0xFF10B981)
-                                          .withValues(alpha: 0.15)
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isTestOneRupee
-                                      ? const Color(0xFF10B981)
-                                      : (isDark
-                                            ? Colors.white24
-                                            : Colors.black12),
-                                ),
-                              ),
-                              child: Text(
-                                'Test Intent (₹ 1.00)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isTestOneRupee
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  color: isTestOneRupee
-                                      ? const Color(0xFF10B981)
-                                      : textSec,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Direct UPI Intent transfers funds to $_ownerUpiId ($defaultPayeeName).',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: textSec,
-                          height: 1.3,
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 16),
-
-                      // Option 1: Google Pay (G Pay)
-                      _buildModalPaymentOption(
-                        title: 'Google Pay (G Pay)',
-                        subtitle:
-                            'Direct transfer of ₹ ${_formatAmount(activeAmount)} via Google Pay',
-                        brandColor: const Color(0xFF4285F4),
-                        iconData: Icons.g_mobiledata_rounded,
-                        isIconLetter: true,
-                        context: bottomSheetContext,
-                        onTap: () {
-                          Navigator.pop(bottomSheetContext);
-                          _showGooglePayModal(amount: activeAmount);
-                        },
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? const Color(0xFF1E3A8A)
+                              : const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark
+                                ? const Color(0xFF3B82F6)
+                                : const Color(0xFFDBEAFE),
+                          ),
+                        ),
+                        child: Text(
+                          '₹ ${_formatAmount(activeAmount)}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: isDark
+                                ? const Color(0xFF93C5FD)
+                                : AppTheme.primaryBlue,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 10),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
 
-                      // Option 2: PhonePe
-                      _buildModalPaymentOption(
-                        title: 'PhonePe',
-                        subtitle:
-                            'Fast UPI payment of ₹ ${_formatAmount(activeAmount)} via PhonePe',
-                        brandColor: const Color(0xFF5F259F),
-                        iconData: Icons.payments_rounded,
-                        isIconLetter: false,
-                        context: bottomSheetContext,
-                        onTap: () {
-                          Navigator.pop(bottomSheetContext);
-                          _showPhonePeModal(amount: activeAmount);
-                        },
-                      ),
-                      const SizedBox(height: 10),
+                  // Option 1: Google Pay (G Pay)
+                  _buildModalPaymentOption(
+                    title: 'Google Pay (G Pay)',
+                    subtitle: 'Instant UPI transfer via Google Pay',
+                    brandColor: const Color(0xFF4285F4),
+                    iconData: Icons.g_mobiledata_rounded,
+                    isIconLetter: true,
+                    context: bottomSheetContext,
+                    onTap: () {
+                      Navigator.pop(bottomSheetContext);
+                      _showGooglePayModal(amount: activeAmount);
+                    },
+                  ),
+                  const SizedBox(height: 10),
 
-                      // Option 3: Dynamic UPI QR Code
-                      _buildModalPaymentOption(
-                        title: 'Dynamic UPI QR Code',
-                        subtitle:
-                            'Scan with camera on PhonePe, Google Pay, or Paytm',
-                        brandColor: const Color(0xFF0B6B63),
-                        iconData: Icons.qr_code_rounded,
-                        isIconLetter: false,
-                        context: bottomSheetContext,
-                        onTap: () {
-                          Navigator.pop(bottomSheetContext);
-                          _showDynamicQrDialog(
-                            invoiceId:
-                                _invoice['id']?.toString() ?? 'INV-2026-010',
-                            amount: activeAmount,
-                            txnRef:
-                                PaymentVerificationService.generateTxnReference(
-                                  _invoice['id']?.toString() ?? 'INV-2026-010',
-                                ),
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 10),
+                  // Option 2: PhonePe
+                  _buildModalPaymentOption(
+                    title: 'PhonePe',
+                    subtitle: 'Instant UPI transfer via PhonePe',
+                    brandColor: const Color(0xFF5F259F),
+                    iconData: Icons.payments_rounded,
+                    isIconLetter: false,
+                    context: bottomSheetContext,
+                    onTap: () {
+                      Navigator.pop(bottomSheetContext);
+                      _showPhonePeModal(amount: activeAmount);
+                    },
+                  ),
+                  const SizedBox(height: 10),
 
-                      // Option 3: PayPal
-                      _buildModalPaymentOption(
-                        title: 'PayPal',
-                        subtitle: 'International & balance checkout via PayPal',
-                        brandColor: const Color(0xFF003087),
-                        iconData: Icons.payment_rounded,
-                        isIconLetter: false,
-                        context: bottomSheetContext,
-                        onTap: () {
-                          Navigator.pop(bottomSheetContext);
-                          _showPayPalModal();
-                        },
-                      ),
-                      const SizedBox(height: 10),
+                  // Option 3: Dynamic UPI QR Code
+                  _buildModalPaymentOption(
+                    title: 'Dynamic UPI QR Code',
+                    subtitle: 'Scan with camera on any UPI app',
+                    brandColor: const Color(0xFF0B6B63),
+                    iconData: Icons.qr_code_rounded,
+                    isIconLetter: false,
+                    context: bottomSheetContext,
+                    onTap: () {
+                      Navigator.pop(bottomSheetContext);
+                      _showDynamicQrDialog(
+                        invoiceId:
+                            _invoice['id']?.toString() ?? 'INV-2026-010',
+                        amount: activeAmount,
+                        txnRef:
+                            PaymentVerificationService.generateTxnReference(
+                              _invoice['id']?.toString() ?? 'INV-2026-010',
+                            ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
 
-                      // Option 4: Credit Card
-                      _buildModalPaymentOption(
-                        title: 'Credit Card / Debit Card',
-                        subtitle: 'Visa, MasterCard, RuPay, American Express',
-                        brandColor: const Color(0xFF0D9488),
-                        iconData: Icons.credit_card_rounded,
-                        isIconLetter: false,
-                        context: bottomSheetContext,
-                        onTap: () {
-                          Navigator.pop(bottomSheetContext);
-                          _showCreditCardModal();
-                        },
-                      ),
-                      const SizedBox(height: 18),
+                  // Option 4: PayPal
+                  _buildModalPaymentOption(
+                    title: 'PayPal',
+                    subtitle: 'International & balance checkout',
+                    brandColor: const Color(0xFF003087),
+                    iconData: Icons.payment_rounded,
+                    isIconLetter: false,
+                    context: bottomSheetContext,
+                    onTap: () {
+                      Navigator.pop(bottomSheetContext);
+                      _showPayPalModal();
+                    },
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Option 5: Credit Card
+                  _buildModalPaymentOption(
+                    title: 'Credit Card / Debit Card',
+                    subtitle: 'Visa, MasterCard, RuPay, Maestro',
+                    brandColor: const Color(0xFF0D9488),
+                    iconData: Icons.credit_card_rounded,
+                    isIconLetter: false,
+                    context: bottomSheetContext,
+                    onTap: () {
+                      Navigator.pop(bottomSheetContext);
+                      _showCreditCardModal();
+                    },
+                  ),
+                  const SizedBox(height: 18),
 
                       // Security Note
                       Container(
@@ -2708,9 +2508,138 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                 ),
               ),
             );
-          },
-        );
       },
+    );
+  }
+
+  Widget _buildBrandLogoWidget(String brand, {double size = 42}) {
+    final b = brand.toLowerCase();
+    if (b.contains('google') || b.contains('gpay') || b.contains('g pay')) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Center(
+          child: RichText(
+            text: const TextSpan(
+              children: [
+                TextSpan(
+                  text: 'G',
+                  style: TextStyle(
+                    color: Color(0xFF4285F4),
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                  ),
+                ),
+                TextSpan(
+                  text: 'Pay',
+                  style: TextStyle(
+                    color: Color(0xFF5F6368),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    if (b.contains('phonepe')) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFF5F259F),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x245F259F),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Text(
+            'पे',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 22,
+            ),
+          ),
+        ),
+      );
+    }
+    if (b.contains('paypal')) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFF003087),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x24003087),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: const Center(
+          child: Text(
+            'P',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              fontSize: 22,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      );
+    }
+    if (b.contains('qr')) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B6B63).withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: const Color(0xFF0B6B63).withValues(alpha: 0.25),
+          ),
+        ),
+        child: const Center(
+          child: Icon(Icons.qr_code_rounded, color: Color(0xFF0B6B63), size: 22),
+        ),
+      );
+    }
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: const Color(0xFF0D9488).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF0D9488).withValues(alpha: 0.25),
+        ),
+      ),
+      child: const Center(
+        child: Icon(Icons.credit_card_rounded, color: Color(0xFF0D9488), size: 22),
+      ),
     );
   }
 
@@ -2757,24 +2686,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: brandColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: brandColor.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      iconData,
-                      size: isIconLetter ? 28 : 20,
-                      color: brandColor,
-                    ),
-                  ),
-                ),
+                _buildBrandLogoWidget(title, size: 42),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
@@ -3103,7 +3015,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     delay: const Duration(milliseconds: 100),
                     child: _buildPaymentMethodTile(
                       title: 'Google Pay (G Pay)',
-                      subtitle: 'Direct transfer to $_payeeName via Google Pay',
+                      subtitle: 'Instant UPI transfer via Google Pay',
                       brandColor: const Color(0xFF4285F4),
                       iconData: Icons.g_mobiledata_rounded,
                       isIconLetter: true,
@@ -3118,8 +3030,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     delay: const Duration(milliseconds: 145),
                     child: _buildPaymentMethodTile(
                       title: 'PhonePe',
-                      subtitle:
-                          'Fast UPI payment via PhonePe app to $_payeeName',
+                      subtitle: 'Instant UPI transfer via PhonePe',
                       brandColor: const Color(0xFF5F259F),
                       iconData: Icons.payments_rounded,
                       isIconLetter: false,
@@ -3134,8 +3045,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     delay: const Duration(milliseconds: 190),
                     child: _buildPaymentMethodTile(
                       title: 'PayPal',
-                      subtitle:
-                          'Fast and secure worldwide checkout with PayPal',
+                      subtitle: 'International & balance checkout',
                       brandColor: const Color(0xFF003087),
                       iconData: Icons.payment_rounded,
                       isIconLetter: false,
@@ -3150,7 +3060,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
                     delay: const Duration(milliseconds: 235),
                     child: _buildPaymentMethodTile(
                       title: 'Credit Card / Debit Card',
-                      subtitle: 'Visa, MasterCard, RuPay, Amex • Instant bank settlement',
+                      subtitle: 'Visa, MasterCard, RuPay, Maestro',
                       brandColor: const Color(0xFF0D9488),
                       iconData: Icons.credit_card_rounded,
                       isIconLetter: false,
@@ -3432,24 +3342,7 @@ class _RentPaymentScreenState extends State<RentPaymentScreen> {
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: brandColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: brandColor.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: Center(
-                      child: Icon(
-                        iconData,
-                        size: isIconLetter ? 30 : 22,
-                        color: brandColor,
-                      ),
-                    ),
-                  ),
+                  _buildBrandLogoWidget(title, size: 44),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(

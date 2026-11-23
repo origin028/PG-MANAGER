@@ -867,6 +867,67 @@ def checkout_resident(
     )
 
 
+@router.get("/announcements", status_code=status.HTTP_200_OK)
+def list_resident_announcements(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Returns active announcements for the resident's assigned property and company-wide."""
+    from app.models.announcement import Announcement
+    from app.schemas.announcement import AnnouncementRead
+
+    query = db.query(Announcement).filter(
+        Announcement.company_id == current_user.company_id,
+        Announcement.is_active == True,
+    )
+    if current_user.role and current_user.role.name == "RESIDENT":
+        res_profile = current_user.resident_profile
+        if not res_profile or not res_profile.property_id:
+            return {"success": True, "message": "No property assigned.", "data": []}
+        query = query.filter(
+            sa.or_(
+                Announcement.property_id == res_profile.property_id,
+                Announcement.property_id.is_(None),
+            )
+        )
+
+    announcements = query.order_by(Announcement.created_at.desc()).all()
+    items = []
+    for a in announcements:
+        prop_name = "All Properties"
+        if a.property_id:
+            p = db.get(Property, a.property_id)
+            if p:
+                prop_name = p.name
+        created_by_name = None
+        if a.created_by_user_id:
+            u = db.get(User, a.created_by_user_id)
+            if u:
+                created_by_name = u.full_name or u.email
+
+        items.append(
+            AnnouncementRead(
+                id=a.id,
+                company_id=a.company_id,
+                property_id=a.property_id,
+                property_name=prop_name,
+                created_by_user_id=a.created_by_user_id,
+                created_by_name=created_by_name,
+                title=a.title,
+                content=a.content,
+                is_active=a.is_active,
+                created_at=a.created_at,
+                updated_at=a.updated_at,
+            )
+        )
+
+    return {
+        "success": True,
+        "message": f"Retrieved {len(items)} active announcements.",
+        "data": [item.model_dump() for item in items],
+    }
+
+
 @router.get("/{resident_id}", response_model=APIResponse[ResidentDetailRead], status_code=status.HTTP_200_OK, summary="Get Resident Details")
 def get_resident_detail(
     resident_id: uuid.UUID,
@@ -1212,3 +1273,4 @@ def get_resident_kyc_document(
             "X-Content-Type-Options": "nosniff",
         },
     )
+

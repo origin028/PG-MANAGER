@@ -346,35 +346,6 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     return (monthAbbr: 'DUE', day: '--');
   }
 
-  String _resolvePropertySubtitle() {
-    final stay =
-        (AppData.currentResident['stay_details'] as Map?)
-            ?.cast<String, dynamic>() ??
-        const <String, dynamic>{};
-    final property =
-        (stay['property_name'] ??
-                AppData.currentResident['property'] ??
-                AppData.currentResident['pg_name'] ??
-                'BNR Luxury PG')
-            .toString()
-            .trim();
-    final rawRoom =
-        (stay['room_number'] ??
-                AppData.currentResident['room_number'] ??
-                AppData.currentResident['room'] ??
-                '')
-            .toString()
-            .trim();
-
-    if (rawRoom.isEmpty || rawRoom == 'null') {
-      return property.isNotEmpty ? property : 'Origin PG';
-    }
-    final roomLabel = rawRoom.toLowerCase().startsWith('room')
-        ? rawRoom
-        : 'Room $rawRoom';
-    return property.isNotEmpty ? '$property · $roomLabel' : roomLabel;
-  }
-
   void _openRentPayment(BuildContext context, Map<String, dynamic> invoice) {
     context.push('/rent-payment', extra: {...invoice, 'autoOpen': true}).then((
       _,
@@ -480,7 +451,6 @@ class _PaymentsScreenState extends State<PaymentsScreen>
     final textSec = HomeThemeTokens.textSecondary(context);
     final tealCol = HomeThemeTokens.teal(context);
     final softTealCol = HomeThemeTokens.softTeal(context);
-    final propertySubtitle = _resolvePropertySubtitle();
 
     return Scaffold(
       backgroundColor: pageBg,
@@ -507,18 +477,6 @@ class _PaymentsScreenState extends State<PaymentsScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            propertySubtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: HomeThemeTokens.manrope(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: textSec,
-                              height: 1.35,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
                           Text(
                             'Rent & Payments',
                             maxLines: 2,

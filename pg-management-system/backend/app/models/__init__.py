@@ -23,6 +23,7 @@ from app.models.otp_verification import OTPVerification
 from app.models.pending_registration import PendingResidentRegistration
 from app.models.food_menu import FoodMenu
 from app.models.resident_preference import ResidentPreference
+from app.models.announcement import Announcement
 
 __all__ = [
     "Base",
@@ -42,6 +43,7 @@ __all__ = [
     "Staff",
     "Lead",
     "Notice",
+    "Announcement",
     "AuditLog",
     "Notification",
     "DeviceToken",

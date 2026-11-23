@@ -359,6 +359,49 @@ class AdminApiService {
   }
 
   // ---------------------------------------------------------------------------
+  // Announcements
+  // ---------------------------------------------------------------------------
+  static Future<List<Map<String, dynamic>>> getAnnouncements({
+    String? propertyId,
+    bool? isActive,
+  }) async {
+    final query = <String, dynamic>{};
+    if (propertyId != null && propertyId.isNotEmpty) {
+      query['property_id'] = propertyId;
+    }
+    if (isActive != null) {
+      query['is_active'] = isActive;
+    }
+    final res = await ApiClient.get('/announcements', queryParameters: query);
+    if (res is List) {
+      return res.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    if (res is Map && res['data'] is List) {
+      return (res['data'] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    }
+    return [];
+  }
+
+  static Future<Map<String, dynamic>> createAnnouncement(Map<String, dynamic> data) async {
+    final res = await ApiClient.post('/announcements', body: data);
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> updateAnnouncement(String id, Map<String, dynamic> data) async {
+    final res = await ApiClient.put('/announcements/$id', body: data);
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  static Future<Map<String, dynamic>> updateAnnouncementStatus(String id, bool isActive) async {
+    final res = await ApiClient.patch('/announcements/$id/status', body: {'is_active': isActive});
+    return res is Map<String, dynamic> ? res : <String, dynamic>{};
+  }
+
+  static Future<void> deleteAnnouncement(String id) async {
+    await ApiClient.delete('/announcements/$id');
+  }
+
+  // ---------------------------------------------------------------------------
   // Staff
   // ---------------------------------------------------------------------------
   static Future<List<Map<String, dynamic>>> getStaff({String? propertyId}) async {
