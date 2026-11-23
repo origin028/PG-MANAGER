@@ -1,36 +1,38 @@
 import Image from "next/image";
+import { Reveal } from "@/components/ui/reveal";
 import Link from "next/link";
 import { Logo } from "@/components/ui/brand";
-import { Reveal } from "@/components/ui/reveal";
+import { P, photo } from "@/lib/photos";
 import { VisitForm } from "./visit-form";
 
 export function Visit() {
   return (
-    <section id="visit" className="mx-auto grid max-w-7xl scroll-mt-20 items-stretch gap-10 px-4 py-20 md:grid-cols-2 md:gap-14 md:px-8 md:py-28">
-      <Reveal className="flex flex-col">
-        <h2 className="text-4xl font-semibold tracking-[-0.03em] md:text-5xl">See it in person.</h2>
-        <p className="mt-4 max-w-[38ch] text-lg text-ink-2">Leave your number and we will set up a visit at a time that suits you.</p>
-        <div className="relative mt-10 hidden min-h-[300px] flex-1 overflow-hidden rounded-[var(--radius-card)] md:block">
-          {/* TODO(real photos): replace with the PG's entrance or common area */}
-          <Image src="https://picsum.photos/seed/origin-entrance/900/700" alt="The entrance of an Origin Living home" fill sizes="45vw" className="object-cover" />
-        </div>
-      </Reveal>
-      <Reveal delay={0.08}><VisitForm /></Reveal>
+    <section id="visit" className="mx-auto grid max-w-6xl scroll-mt-24 items-center gap-12 px-4 py-28 md:grid-cols-[1fr_1.05fr] md:py-40">
+      <div>
+        <Reveal className=""><h2 className="text-5xl leading-[0.95] font-semibold tracking-[-0.05em] md:text-7xl">Come see it.</h2></Reveal>
+        <p className="mt-6 max-w-[30ch] text-lg text-ink-2">Leave your number. We will call to set up a visit.</p>
+      </div>
+      <div className="relative overflow-hidden rounded-[36px] p-3 md:p-5">
+        <Image src={photo(P.cafe, 1200, 1400)} alt="" fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+        <div className="relative"><VisitForm /></div>
+      </div>
     </section>
   );
 }
 
 export function Footer() {
   return (
-    <footer className="border-t border-line">
-      <div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-12 md:flex-row md:items-center md:justify-between md:px-8">
-        <Logo />
-        <nav className="flex flex-wrap gap-x-8 gap-y-3 text-[15px] text-ink-2">
-          <Link href="/app" className="hover:text-ink">Resident login</Link>
-          <Link href="/owner/login" className="hover:text-ink">Owner login</Link>
-          <a href="#homes" className="hover:text-ink">Homes</a>
+    <footer className="bg-black text-[#faf7f0]">
+      <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 py-16 md:flex-row md:items-end md:justify-between">
+        <div className="[&_span.bg-black]:bg-[#faf7f0] [&_span.bg-\[\#faf7f0\]]:bg-black">
+          <Logo />
+          <p className="mt-4 max-w-[30ch] text-[#faf7f0]/55">Co-living and women-only homes.</p>
+        </div>
+        <nav className="flex flex-wrap gap-x-8 gap-y-3 text-[15px] text-[#faf7f0]/70">
+          <Link href="/app" className="hover:text-[#faf7f0]">Resident login</Link>
+          <Link href="/owner/login" className="hover:text-[#faf7f0]">Owner login</Link>
+          <a href="#rooms" className="hover:text-[#faf7f0]">Rooms</a>
         </nav>
-        <p className="text-sm text-ink-3">© Origin Living</p>
       </div>
     </footer>
   );

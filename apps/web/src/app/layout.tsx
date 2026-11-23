@@ -10,12 +10,7 @@ export const metadata: Metadata = {
   description: "Furnished co-living and women-only PG homes. One monthly rent with food, housekeeping and secure entry.",
 };
 
-export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafaf9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f1112" },
-  ],
-};
+export const viewport: Viewport = { themeColor: "#faf7f0", colorScheme: "light" };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

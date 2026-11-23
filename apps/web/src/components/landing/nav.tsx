@@ -1,27 +1,27 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/brand";
-import { ButtonLink } from "@/components/ui/button";
 
 const links = [
-  { href: "#homes", label: "Homes" },
-  { href: "#included", label: "What's included" },
+  { href: "#story", label: "Life here" },
+  { href: "#rooms", label: "Rooms" },
+  { href: "#included", label: "Included" },
   { href: "#join", label: "Joining" },
 ];
 
+/** Floating frosted-glass pill, Apple-style. */
 export function Nav() {
   return (
-    <header className="sticky top-0 z-30 border-b border-line/60 bg-bg/80 backdrop-blur-xl">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
+    <header className="fixed inset-x-0 top-3 z-40 px-3">
+      <nav className="glass mx-auto flex h-14 max-w-5xl items-center justify-between rounded-full pr-2 pl-5">
         <Link href="/" aria-label="Origin Living home"><Logo /></Link>
-        <ul className="hidden items-center gap-8 text-[15px] text-ink-2 md:flex">
+        <ul className="hidden items-center gap-7 text-[14px] text-ink-2 md:flex">
           {links.map((l) => (
-            <li key={l.href}><a href={l.href} className="transition-colors hover:text-ink">{l.label}</a></li>
+            <li key={l.href}><a href={l.href} className="transition-colors hover:text-black">{l.label}</a></li>
           ))}
         </ul>
-        <div className="flex items-center gap-3">
-          <Link href="/app" className="hidden text-[15px] text-ink-2 transition-colors hover:text-ink sm:block">Resident login</Link>
-          <ButtonLink href="#visit" className="h-10 px-4">Book a visit</ButtonLink>
-        </div>
+        <a href="#visit" className="inline-flex h-10 items-center rounded-full bg-black px-5 text-[14px] font-medium text-[#faf7f0] transition-transform active:scale-[0.97]">
+          Book a visit
+        </a>
       </nav>
     </header>
   );

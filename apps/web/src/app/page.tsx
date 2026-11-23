@@ -1,5 +1,10 @@
 import { Nav } from "@/components/landing/nav";
-import { DepositPromise, Hero, Homes, Included, Join } from "@/components/landing/sections";
+import { Hero } from "@/components/landing/hero";
+import { Story } from "@/components/landing/story";
+import { Rooms } from "@/components/landing/rooms";
+import { Highlights } from "@/components/landing/highlights";
+import { DepositPromise } from "@/components/landing/promise";
+import { Join } from "@/components/landing/join";
 import { Footer, Visit } from "@/components/landing/footer";
 
 export default function Home() {
@@ -8,10 +13,11 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
-        <Homes />
-        <Included />
-        <Join />
+        <Story />
+        <Rooms />
+        <Highlights />
         <DepositPromise />
+        <Join />
         <Visit />
       </main>
       <Footer />
