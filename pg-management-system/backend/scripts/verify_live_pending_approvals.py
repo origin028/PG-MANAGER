@@ -47,7 +47,18 @@ def main():
             user = login_res["data"]["user"]
             print(f"Logged in successfully as {user['email']} (Role: {user['role']}, Company: {user.get('company_id')})")
 
-        print("3. Querying GET /api/v1/residents/pending-approvals...")
+        print("3. Querying GET /api/v1/properties...")
+        req_props = urllib.request.Request(
+            "https://pg-management-api-sw09.onrender.com/api/v1/properties",
+            headers={"Authorization": f"Bearer {token}"}
+        )
+        with urllib.request.urlopen(req_props, timeout=30) as resp_p:
+            props_data = json.loads(resp_p.read().decode("utf-8")).get("data", [])
+            print(f"Retrieved {len(props_data)} accessible properties:")
+            for p in props_data:
+                print(f" - {p['name']} ({p.get('code')})")
+
+        print("\n4. Querying GET /api/v1/residents/pending-approvals...")
         req_appv = urllib.request.Request(
             "https://pg-management-api-sw09.onrender.com/api/v1/residents/pending-approvals",
             headers={"Authorization": f"Bearer {token}"}
@@ -59,6 +70,17 @@ def main():
             print("Items count:", len(appv_res["data"]["items"]))
             for item in appv_res["data"]["items"]:
                 print(f" - [{item['status']}] {item['full_name']} | Phone: {item['phone']} | Email: {item['email']} | Property: {item['property_name']}")
+
+        if props_data:
+            first_p = props_data[0]
+            print(f"\n5. Verifying property access for '{first_p['name']}' ({first_p['id']})...")
+            req_single = urllib.request.Request(
+                f"https://pg-management-api-sw09.onrender.com/api/v1/properties/{first_p['id']}",
+                headers={"Authorization": f"Bearer {token}"}
+            )
+            with urllib.request.urlopen(req_single, timeout=30) as resp_s:
+                single_res = json.loads(resp_s.read().decode("utf-8"))
+                print(f"Property access verified! Success: {single_res.get('success')}, Name: {single_res['data']['name']}")
     except urllib.error.HTTPError as e:
         print(f"Error {e.code}: {e.read().decode('utf-8')}")
     except Exception as e:
