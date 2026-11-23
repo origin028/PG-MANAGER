@@ -76,3 +76,9 @@ class UserRepository:
         if token:
             token.is_revoked = True
             self.db.commit()
+
+    def revoke_all_refresh_tokens(self, user_id: uuid.UUID) -> None:
+        self.db.execute(
+            sa.update(RefreshToken).where(RefreshToken.user_id == user_id).values(is_revoked=True)
+        )
+        self.db.commit()

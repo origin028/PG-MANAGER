@@ -169,3 +169,74 @@ def test_rate_limiter_blocks_after_limit():
     assert all(hit("t:1.1.1.1", 3, 60) == 0 for _ in range(3))
     assert hit("t:1.1.1.1", 3, 60) > 0
     assert hit("t:2.2.2.2", 3, 60) == 0
+
+
+# ---- Auth: throttle, lockout, refresh rotation -----------------------------
+@pytest.fixture
+def limits_on(monkeypatch):
+    from app.core.config import settings
+
+    reset_rate_limits()
+    monkeypatch.setattr(settings, "RATE_LIMIT_ENABLED", True)
+    yield
+    reset_rate_limits()
+
+
+def _login(client, ident, pw):
+    return client.post(
+        "/api/v1/auth/login",
+        json={"identifier": ident, "password": pw, "client_type": "admin_web"},
+    )
+
+
+def test_login_endpoint_is_throttled_per_ip(client: TestClient, limits_on):
+    codes = [_login(client, f"nobody{i}@example.com", "x").status_code for i in range(12)]
+    assert 429 in codes
+    assert codes[:10].count(429) == 0
+
+
+def test_account_lockout_after_repeated_failures(client: TestClient, limits_on):
+    for _ in range(5):
+        assert _login(client, "victim@example.com", "wrong").status_code == 401
+    r = _login(client, "victim@example.com", "wrong")
+    assert r.status_code == 429
+    assert r.json()["error"]["code"] == "ACCOUNT_LOCKED"
+
+
+def _register_admin(client):
+    from app.core.config import settings
+
+    reg = client.post(
+        "/api/v1/auth/admin/register",
+        json={
+            "full_name": "Owner One",
+            "email": "owner.one@example.com",
+            "phone": "9876500001",
+            "password": "StrongPass#123",
+            "business_name": "Test PG",
+            "super_key": settings.ADMIN_REGISTRATION_SUPER_KEY,
+        },
+    )
+    return reg
+
+
+def test_refresh_token_rotation_and_reuse_detection(client: TestClient):
+    reg = _register_admin(client)
+    assert reg.status_code in (200, 201), reg.text
+    data = reg.json()["data"]
+    tokens = data.get("tokens") or data
+    old = tokens.get("refresh_token")
+    if not old:
+        login = _login(client, "owner.one@example.com", "StrongPass#123")
+        old = login.json()["data"]["refresh_token"]
+
+    first = client.post("/api/v1/auth/refresh", json={"refresh_token": old, "client_type": "admin_web"})
+    assert first.status_code == 200, first.text
+    new = first.json()["data"]["refresh_token"]
+    assert new != old
+
+    # Replaying the old (rotated) token is rejected AND revokes the whole family.
+    replay = client.post("/api/v1/auth/refresh", json={"refresh_token": old, "client_type": "admin_web"})
+    assert replay.status_code == 401
+    after = client.post("/api/v1/auth/refresh", json={"refresh_token": new, "client_type": "admin_web"})
+    assert after.status_code == 401

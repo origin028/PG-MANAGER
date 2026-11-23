@@ -1,15 +1,15 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
-import mimetypes
 from pathlib import Path
 import secrets
 from typing import List, Optional
 import uuid
 from fastapi import APIRouter, Depends, Query, status
-from fastapi.responses import FileResponse
+from fastapi.responses import Response
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
+from app.services.file_service import FileService
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, PermissionDeniedError
 from app.core.security import get_password_hash
 from app.dependencies import get_current_user, get_db, require_roles, verify_property_access
@@ -1176,12 +1176,12 @@ def onboard_resident_alias(
 @router.get(
     "/{resident_id}/kyc-document/{doc_type}",
     summary="Download or Preview Resident KYC Document",
-    response_class=FileResponse,
+    response_class=Response,
 )
 @router.get(
     "/{resident_id}/kyc-documents/{doc_type}",
     summary="Download or Preview Resident KYC Document (Alias)",
-    response_class=FileResponse,
+    response_class=Response,
     include_in_schema=False,
 )
 def get_resident_kyc_document(
@@ -1257,16 +1257,17 @@ def get_resident_kyc_document(
     if not full_path.is_file():
         raise NotFoundError(f"KYC document file '{doc_type}' not found on server storage.")
 
-    # 6. Stream file with strict privacy headers
-    mime_type, _ = mimetypes.guess_type(str(full_path))
-    if not mime_type:
-        mime_type = "application/octet-stream"
+    # 6. Decrypt in memory and stream with strict privacy headers
+    try:
+        content, mime_type = FileService.read_document(full_path)
+    except ValueError:
+        raise NotFoundError(f"KYC document '{doc_type}' could not be read.")
 
-    return FileResponse(
-        path=str(full_path),
+    return Response(
+        content=content,
         media_type=mime_type,
-        filename=full_path.name,
         headers={
+            "Content-Disposition": f'inline; filename="{normalized_type}"',
             "Cache-Control": "private, no-cache, no-store, must-revalidate",
             "Pragma": "no-cache",
             "Expires": "0",

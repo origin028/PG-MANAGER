@@ -1,4 +1,7 @@
 import io
+
+FAKE_JPEG = b"\xff\xd8\xff\xe0" + b"\x00" * 32  # minimal valid JPEG signature
+FAKE_PDF = b"%PDF-1.4\n" + b"0" * 32
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from unittest.mock import patch
@@ -84,10 +87,10 @@ def test_01_successful_resident_registration_otp_request(client: TestClient, see
         "verification_method": "Aadhaar + PAN",
     }
     files = {
-        "aadhaar_front_file": ("aadhaar_f.jpg", io.BytesIO(b"dummy aadhaar front content"), "image/jpeg"),
-        "aadhaar_back_file": ("aadhaar_b.jpg", io.BytesIO(b"dummy aadhaar back content"), "image/jpeg"),
-        "pan_card_file": ("pan.jpg", io.BytesIO(b"dummy pan card content"), "image/jpeg"),
-        "resident_selfie_file": ("selfie.jpg", io.BytesIO(b"dummy resident selfie content"), "image/jpeg"),
+        "aadhaar_front_file": ("aadhaar_f.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
+        "aadhaar_back_file": ("aadhaar_b.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
+        "pan_card_file": ("pan.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
+        "resident_selfie_file": ("selfie.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
     }
 
     response = client.post("/api/v1/auth/resident/register/otp/request", data=form_data, files=files)
@@ -178,10 +181,10 @@ def test_03_missing_required_kyc_documents(client: TestClient, seed_data):
         "verification_method": "Aadhaar + PAN",
     }
     files = {
-        "aadhaar_front_file": ("aadhaar_f.jpg", io.BytesIO(b"content"), "image/jpeg"),
-        "aadhaar_back_file": ("aadhaar_b.jpg", io.BytesIO(b"content"), "image/jpeg"),
+        "aadhaar_front_file": ("aadhaar_f.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
+        "aadhaar_back_file": ("aadhaar_b.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
         # pan_card_file is missing!
-        "resident_selfie_file": ("selfie.jpg", io.BytesIO(b"content"), "image/jpeg"),
+        "resident_selfie_file": ("selfie.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
     }
     response = client.post("/api/v1/auth/resident/register/otp/request", data=form_data, files=files)
     assert response.status_code == 400
@@ -210,7 +213,7 @@ def test_04_invalid_kyc_method(client: TestClient, seed_data):
         "verification_method": "Driving License Only",  # Not allowed!
     }
     files = {
-        "resident_selfie_file": ("selfie.jpg", io.BytesIO(b"content"), "image/jpeg"),
+        "resident_selfie_file": ("selfie.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
     }
     response = client.post("/api/v1/auth/resident/register/otp/request", data=form_data, files=files)
     assert response.status_code == 400
@@ -219,9 +222,9 @@ def test_04_invalid_kyc_method(client: TestClient, seed_data):
     # Passport Only selected, but Aadhaar file also uploaded
     form_data["verification_method"] = "Passport Only"
     files = {
-        "passport_file": ("passport.pdf", io.BytesIO(b"content"), "application/pdf"),
-        "aadhaar_front_file": ("aadhaar.jpg", io.BytesIO(b"content"), "image/jpeg"),  # Forbidden!
-        "resident_selfie_file": ("selfie.jpg", io.BytesIO(b"content"), "image/jpeg"),
+        "passport_file": ("passport.pdf", io.BytesIO(FAKE_PDF), "application/pdf"),
+        "aadhaar_front_file": ("aadhaar.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),  # Forbidden!
+        "resident_selfie_file": ("selfie.jpg", io.BytesIO(FAKE_JPEG), "image/jpeg"),
     }
     response = client.post("/api/v1/auth/resident/register/otp/request", data=form_data, files=files)
     assert response.status_code == 400

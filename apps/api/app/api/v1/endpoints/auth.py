@@ -2,6 +2,7 @@ import json
 import secrets
 import uuid
 from datetime import date, datetime, timedelta, timezone
+from app.core.rate_limit import auth_throttle
 from fastapi import APIRouter, Depends, File, Form, Request, UploadFile, status
 from sqlalchemy.orm import Session
 import sqlalchemy as sa
@@ -58,7 +59,7 @@ from app.services.auth_service import AuthService
 from app.services.file_service import FileService
 from app.services.otp_service import OTPService, hash_otp, normalize_phone
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(auth_throttle)])
 
 
 @router.post("/login", response_model=APIResponse[TokenResponse], status_code=status.HTTP_200_OK)

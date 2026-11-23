@@ -5,10 +5,10 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
+from app.core.crypto import decrypt_bytes, encrypt_bytes
 from app.core.exceptions import BadRequestError
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".pdf"}
-ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "application/pdf", "application/octet-stream"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -22,11 +22,52 @@ def sanitize_filename(filename: str) -> str:
     return clean[:100]  # truncate overly long names
 
 
+# Magic-byte signatures: the declared extension/MIME is never trusted on its own.
+_SIGNATURES = (
+    (b"\xff\xd8\xff", "image/jpeg", {".jpg", ".jpeg"}),
+    (b"\x89PNG\r\n\x1a\n", "image/png", {".png"}),
+    (b"%PDF-", "application/pdf", {".pdf"}),
+)
+
+
+def sniff_mime(content: bytes) -> Optional[str]:
+    for magic, mime, _ in _SIGNATURES:
+        if content.startswith(magic):
+            return mime
+    return None
+
+
 class FileService:
     @staticmethod
     def ensure_upload_dir() -> Path:
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         return UPLOAD_DIR
+
+    @classmethod
+    def _validate_and_store(cls, content: bytes, orig_name: str, field_name: str) -> str:
+        ext = os.path.splitext(orig_name)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise BadRequestError(
+                f"Invalid file extension '{ext}' for '{field_name}'. Allowed extensions: {', '.join(sorted(ALLOWED_EXTENSIONS))}."
+            )
+        if len(content) == 0:
+            raise BadRequestError(f"Uploaded file for '{field_name}' is empty.")
+        if len(content) > MAX_FILE_SIZE:
+            raise BadRequestError(
+                f"File '{orig_name}' ({len(content)} bytes) exceeds the 5MB size limit for '{field_name}'."
+            )
+        detected = sniff_mime(content)
+        if detected is None:
+            raise BadRequestError(f"File for '{field_name}' is not a valid JPEG, PNG or PDF document.")
+        allowed_exts = next(exts for _, mime, exts in _SIGNATURES if mime == detected)
+        if ext not in allowed_exts:
+            raise BadRequestError(f"File content does not match its extension for '{field_name}'.")
+
+        cls.ensure_upload_dir()
+        # Random name only: user-supplied names never reach the filesystem.
+        stored_filename = f"{uuid.uuid4().hex}{ext}.enc"
+        (UPLOAD_DIR / stored_filename).write_bytes(encrypt_bytes(content))
+        return f"uploads/kyc/{stored_filename}"
 
     @classmethod
     async def validate_and_save_upload(
@@ -35,69 +76,28 @@ class FileService:
         field_name: str,
         filename: Optional[str] = None,
     ) -> str:
-        """
-        Validates uploaded file format and size, writes to disk, and returns relative storage path.
-        Accepts FastAPI/Starlette UploadFile or raw bytes with filename.
-        """
+        """Validates (size, extension, magic bytes), encrypts, stores. Returns the storage key."""
         if upload is None:
             raise BadRequestError(f"Missing required file for '{field_name}'.")
 
-        cls.ensure_upload_dir()
-
         if hasattr(upload, "read") and hasattr(upload, "filename"):
             orig_name = upload.filename or f"{field_name}.jpg"
-            ext = os.path.splitext(orig_name)[1].lower()
-            if ext not in ALLOWED_EXTENSIONS:
-                raise BadRequestError(
-                    f"Invalid file extension '{ext}' for '{field_name}'. Allowed extensions: {', '.join(sorted(ALLOWED_EXTENSIONS))}."
-                )
-
             raw = upload.read()
-            if inspect.iscoroutine(raw):
-                content = await raw
-            else:
-                content = raw
+            content = await raw if inspect.iscoroutine(raw) else raw
+            return cls._validate_and_store(content, orig_name, field_name)
 
-            if len(content) == 0:
-                raise BadRequestError(f"Uploaded file for '{field_name}' is empty.")
-            if len(content) > MAX_FILE_SIZE:
-                raise BadRequestError(
-                    f"File '{orig_name}' ({len(content)} bytes) exceeds the 5MB size limit for '{field_name}'."
-                )
-
-            safe_name = sanitize_filename(orig_name)
-            stored_filename = f"{uuid.uuid4().hex}_{safe_name}"
-            target_path = UPLOAD_DIR / stored_filename
-
-            with open(target_path, "wb") as f:
-                f.write(content)
-
-            return f"uploads/kyc/{stored_filename}"
-
-        elif isinstance(upload, bytes):
-            orig_name = filename or f"{field_name}.jpg"
-            ext = os.path.splitext(orig_name)[1].lower()
-            if ext not in ALLOWED_EXTENSIONS:
-                raise BadRequestError(
-                    f"Invalid file extension '{ext}' for '{field_name}'. Allowed extensions: {', '.join(sorted(ALLOWED_EXTENSIONS))}."
-                )
-            if len(upload) == 0:
-                raise BadRequestError(f"Uploaded file for '{field_name}' is empty.")
-            if len(upload) > MAX_FILE_SIZE:
-                raise BadRequestError(
-                    f"File '{orig_name}' exceeds the 5MB size limit for '{field_name}'."
-                )
-
-            safe_name = sanitize_filename(orig_name)
-            stored_filename = f"{uuid.uuid4().hex}_{safe_name}"
-            target_path = UPLOAD_DIR / stored_filename
-
-            with open(target_path, "wb") as f:
-                f.write(upload)
-
-            return f"uploads/kyc/{stored_filename}"
+        if isinstance(upload, bytes):
+            return cls._validate_and_store(upload, filename or f"{field_name}.jpg", field_name)
 
         raise BadRequestError(f"Unsupported upload type for '{field_name}'.")
+
+    @staticmethod
+    def read_document(full_path: Path) -> Tuple[bytes, str]:
+        """Returns (plaintext bytes, mime type). Handles encrypted (.enc) and legacy plain files."""
+        raw = full_path.read_bytes()
+        if full_path.name.endswith(".enc"):
+            raw = decrypt_bytes(raw)
+        return raw, sniff_mime(raw) or "application/octet-stream"
 
     @classmethod
     def validate_kyc_method_and_files(

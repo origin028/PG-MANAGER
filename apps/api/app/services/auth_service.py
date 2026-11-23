@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 import jwt
 
 from app.core.config import settings
-from app.core.exceptions import AuthenticationError, PermissionDeniedError, ValidationError
+from app.core.exceptions import AuthenticationError, PGException, PermissionDeniedError, ValidationError
+from app.core.rate_limit import clear_failures, lockout_seconds_remaining, record_failure
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -23,6 +24,9 @@ from app.schemas.user import RoleRead, UserProfile
 from app.services.audit_service import record_audit_log
 
 
+_DUMMY_HASH = get_password_hash("not-a-real-password")
+
+
 def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
@@ -34,13 +38,26 @@ class AuthService:
         self.prop_repo = PropertyRepository(db)
 
     def authenticate_user(self, identifier: str, password: str) -> User:
+        lock_key = f"login:{(identifier or '').strip().lower()}"
+        if settings.RATE_LIMIT_ENABLED:
+            wait = lockout_seconds_remaining(lock_key)
+            if wait:
+                raise PGException(
+                    status_code=429,
+                    message=f"Too many failed attempts. Try again in {max(1, wait // 60)} minute(s).",
+                    code="ACCOUNT_LOCKED",
+                    details={"retry_after_seconds": wait},
+                )
         user = self.user_repo.get_by_identifier(identifier)
-        if not user:
+        # Always run a password check so response time does not reveal whether the account exists.
+        hash_to_check = user.password_hash if user else _DUMMY_HASH
+        password_ok = verify_password(password, hash_to_check)
+        if not user or not password_ok:
+            record_failure(lock_key)
             raise AuthenticationError("Invalid email/phone or password.")
         if not user.is_active:
             raise AuthenticationError("Account is inactive. Please contact the administrator.")
-        if not verify_password(password, user.password_hash):
-            raise AuthenticationError("Invalid email/phone or password.")
+        clear_failures(lock_key)
         return user
 
     def validate_client_access(self, user: User, client_type: str) -> None:
@@ -291,24 +308,27 @@ class AuthService:
         )
 
     def refresh(self, refresh_token_str: str, client_type: Optional[str] = None) -> TokenResponse:
+        """Rotates the refresh token. Replaying an already-used token revokes every session."""
         try:
             payload = decode_token(refresh_token_str)
-        except jwt.PyJWTError as e:
-            raise AuthenticationError(f"Invalid or expired refresh token: {str(e)}")
+        except jwt.PyJWTError:
+            raise AuthenticationError("Invalid or expired refresh token.")
 
         if payload.get("type") != "refresh":
             raise AuthenticationError("Invalid token type. Refresh token required.")
 
-        user_id_str = payload.get("sub")
-        if not user_id_str:
+        try:
+            user_id = uuid.UUID(payload.get("sub", ""))
+        except ValueError:
             raise AuthenticationError("Invalid token subject.")
 
-        user_id = uuid.UUID(user_id_str)
-        token_hash = hash_token(refresh_token_str)
-        db_token = self.user_repo.get_refresh_token(user_id, token_hash)
-
-        if not db_token or db_token.is_revoked:
+        db_token = self.user_repo.get_refresh_token(user_id, hash_token(refresh_token_str))
+        if not db_token:
             raise AuthenticationError("Refresh token has been revoked or is invalid.")
+        if db_token.is_revoked:
+            # Reuse of a rotated/revoked token: assume theft, kill all sessions for this user.
+            self.user_repo.revoke_all_refresh_tokens(user_id)
+            raise AuthenticationError("Refresh token reuse detected. Please sign in again.")
 
         user = self.user_repo.get_by_id(user_id)
         if not user or not user.is_active:
@@ -319,7 +339,6 @@ class AuthService:
 
         props = self.prop_repo.list_accessible_properties(user)
         prop_ids = ["*"] if user.role.name == "SUPER_ADMIN" else [str(p.id) for p in props]
-
         claims = {
             "role": user.role.name,
             "company_id": str(user.company_id),
@@ -327,14 +346,28 @@ class AuthService:
             "client_type": resolved_client,
         }
         new_access_token = create_access_token(subject=str(user.id), claims=claims)
-        profile = self.build_user_profile(user)
+        new_refresh_token = create_refresh_token(subject=str(user.id), claims={"client_type": resolved_client})
+        exp = decode_token(new_refresh_token)["exp"]
+
+        db_token.is_revoked = True
+        self.db.add(
+            RefreshToken(
+                user_id=user.id,
+                token_hash=hash_token(new_refresh_token),
+                client_type=resolved_client,
+                device_info=db_token.device_info,
+                expires_at=datetime.fromtimestamp(exp, tz=timezone.utc),
+                is_revoked=False,
+            )
+        )
+        self.db.commit()
 
         return TokenResponse(
             access_token=new_access_token,
-            refresh_token=refresh_token_str,
+            refresh_token=new_refresh_token,
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-            user=profile,
+            user=self.build_user_profile(user),
         )
 
     def logout(self, user: User, refresh_token_str: str, ip_address: Optional[str] = None, user_agent: Optional[str] = None) -> None:
