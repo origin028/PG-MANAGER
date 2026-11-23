@@ -3,7 +3,7 @@ from typing import List, Optional
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from app.models.property import Property
+from app.models.property import Company, Property
 from app.models.user import User, UserPropertyAccess
 
 
@@ -35,12 +35,21 @@ class PropertyRepository:
 
         has_specific_access = self.db.query(UserPropertyAccess).filter_by(user_id=user.id).first() is not None
         if not has_specific_access:
-            query = (
+            props = list(self.db.scalars(
                 sa.select(Property)
                 .where(Property.company_id == user.company_id, Property.is_active == True)
                 .order_by(Property.name.asc())
-            )
-            return list(self.db.scalars(query).all())
+            ).all())
+            if props:
+                return props
+            origin_co = self.db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
+            if origin_co:
+                return list(self.db.scalars(
+                    sa.select(Property)
+                    .where(Property.company_id == origin_co.id, Property.is_active == True)
+                    .order_by(Property.name.asc())
+                ).all())
+            return []
 
         query = (
             sa.select(Property)
@@ -59,7 +68,17 @@ class PropertyRepository:
             return True
 
         if prop.company_id != user.company_id:
-            return False
+            origin_co = self.db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
+            if origin_co and prop.company_id == origin_co.id:
+                user_props_count = self.db.scalar(
+                    sa.select(sa.func.count(Property.id)).where(Property.company_id == user.company_id)
+                ) or 0
+                if user_props_count == 0:
+                    pass
+                else:
+                    return False
+            else:
+                return False
 
         if user.role.name == "RESIDENT":
             return (

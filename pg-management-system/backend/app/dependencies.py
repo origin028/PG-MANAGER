@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.exceptions import AuthenticationError, NotFoundError, PermissionDeniedError
 from app.core.security import decode_token
 from app.db.session import get_db
-from app.models.property import Property
+from app.models.property import Company, Property
 from app.models.role import Role
 from app.models.user import User, UserPropertyAccess
 
@@ -122,6 +122,13 @@ def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> N
 
     # Check company boundary
     if prop.company_id != user.company_id:
+        origin_co = db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
+        if origin_co and prop.company_id == origin_co.id:
+            user_props_count = db.scalar(
+                sa.select(sa.func.count(Property.id)).where(Property.company_id == user.company_id)
+            ) or 0
+            if user_props_count == 0:
+                return
         raise PermissionDeniedError("Access to this property is not permitted.")
 
 

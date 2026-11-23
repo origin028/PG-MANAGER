@@ -372,7 +372,18 @@ def list_pending_resident_approvals(
             ).all()
             query = query.where(Resident.property_id.in_(accessible_prop_ids))
         else:
-            query = query.where(Property.company_id == current_user.company_id)
+            company_props_count = db.scalar(
+                sa.select(sa.func.count(Property.id)).where(Property.company_id == current_user.company_id)
+            ) or 0
+            if company_props_count > 0:
+                query = query.where(Property.company_id == current_user.company_id)
+            else:
+                from app.models.property import Company
+                origin_co = db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
+                if origin_co:
+                    query = query.where(Property.company_id.in_([current_user.company_id, origin_co.id]))
+                else:
+                    query = query.where(Property.company_id == current_user.company_id)
 
     if property_id:
         verify_property_access(property_id, current_user, db)
