@@ -358,3 +358,26 @@ def update_resident_settings(
         message="Resident settings updated successfully.",
         data=data,
     )
+
+
+@router.get("/deposit", status_code=status.HTTP_200_OK, summary="My Security Deposit")
+def get_my_deposit(
+    active_resident: Resident = Depends(get_current_active_resident),
+    db: Session = Depends(get_db),
+):
+    """The resident's deposit held and what they would get back on moving out today (refund policy)."""
+    from app.core.config import settings
+    from app.services.deposit_service import DepositService, compute_exit_settlement, money
+
+    svc = DepositService(db)
+    held = svc.balance(active_resident.id) or money(active_resident.security_deposit)
+    preview = compute_exit_settlement(held)
+    return APIResponse(
+        success=True,
+        message="Deposit retrieved.",
+        data={
+            "deposit_held": float(held),
+            "refund_percent": settings.DEPOSIT_REFUND_PERCENT,
+            "refund_on_exit": float(preview.refund),
+        },
+    )

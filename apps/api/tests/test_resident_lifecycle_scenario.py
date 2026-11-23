@@ -98,3 +98,14 @@ def test_full_resident_lifecycle(client: TestClient):
     assert [e["type"] for e in final["entries"]] == [
         "DEPOSIT_RECEIVED", "DEPOSIT_FORFEITED", "DEPOSIT_REFUNDED",
     ]
+
+
+def test_resident_sees_own_deposit_refund(client: TestClient):
+    from tests.test_phase3_payment_completion import setup_test_context
+
+    tokens, ids = setup_test_context(client.app.state.testing_session)
+    r = client.get("/api/v1/resident/deposit", headers={"Authorization": f"Bearer {tokens['res1']}"})
+    assert r.status_code == 200, r.text
+    assert r.json()["data"] == {"deposit_held": 10000.0, "refund_percent": 50, "refund_on_exit": 5000.0}
+    other = client.get("/api/v1/resident/deposit", headers={"Authorization": f"Bearer {tokens['admin']}"})
+    assert other.status_code == 403

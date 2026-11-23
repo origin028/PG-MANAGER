@@ -1,0 +1,65 @@
+import { router } from "expo-router";
+import { useState } from "react";
+import { Pressable, Text } from "react-native";
+import { ArrowLeft } from "phosphor-react-native";
+import { Body, Button, ErrorBox, Field, Screen, Title } from "@/components/ui";
+import { api } from "@/lib/api";
+import { useSession } from "@/lib/session";
+import { color, space, type } from "@/lib/theme";
+
+/** Resident sign-in: mobile number -> 6-digit code sent to the registered email -> in. */
+export default function ResidentLogin() {
+  const { signInWithTokens } = useSession();
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [sentTo, setSentTo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const digits = phone.replace(/\D/g, "").slice(-10);
+
+  async function requestCode() {
+    setBusy(true); setError(null);
+    try {
+      const d = await api<{ email_masked?: string }>("/auth/resident/login/otp/request", { method: "POST", json: { phone: digits }, auth: false });
+      setSentTo(d.email_masked ?? "your email");
+      setStep("otp");
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
+
+  async function verify() {
+    setBusy(true); setError(null);
+    try {
+      const d = await api<{ access_token: string; refresh_token: string }>("/auth/resident/login/otp/verify", { method: "POST", json: { phone: digits, otp }, auth: false });
+      await signInWithTokens(d.access_token, d.refresh_token, "resident_mobile");
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
+
+  return (
+    <Screen>
+      <Pressable onPress={() => (step === "otp" ? setStep("phone") : router.back())} hitSlop={12} style={{ marginTop: space(3) }} accessibilityLabel="Back">
+        <ArrowLeft size={24} color={color.ink} />
+      </Pressable>
+      {step === "phone" ? (
+        <>
+          <Title sub="We'll send a 6-digit code to the email on your account.">Welcome back</Title>
+          <Field label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" maxLength={14} autoFocus />
+          {error ? <ErrorBox message={error} /> : null}
+          <Button title="Send code" onPress={requestCode} loading={busy} disabled={digits.length !== 10} style={{ marginTop: space(2) }} />
+        </>
+      ) : (
+        <>
+          <Title sub={`Enter the code we sent to ${sentTo}.`}>Check your email</Title>
+          <Field label="6-digit code" value={otp} onChangeText={(t) => setOtp(t.replace(/\D/g, "").slice(0, 6))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" autoFocus style={{ letterSpacing: 8, fontSize: 22 } as never} />
+          {error ? <ErrorBox message={error} /> : null}
+          <Button title="Sign in" onPress={verify} loading={busy} disabled={otp.length !== 6} style={{ marginTop: space(2) }} />
+          <Pressable onPress={requestCode} style={{ marginTop: space(5), alignSelf: "center" }}>
+            <Text style={[type.label, { color: color.ink }]}>Send a new code</Text>
+          </Pressable>
+        </>
+      )}
+      <Body muted style={{ marginTop: space(8), textAlign: "center" }}>New here? Choose "Join a home" on the first screen.</Body>
+    </Screen>
+  );
+}

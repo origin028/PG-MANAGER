@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Origin Living",
+    "slug": "origin-living",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.originliving.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Take photos of your ID documents for KYC and of issues for complaints.",
+        "NSPhotoLibraryUsageDescription": "Choose ID documents and complaint photos.",
+        "NSFaceIDUsageDescription": "Unlock the owner dashboard with Face ID."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.originliving.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose ID documents and complaint photos.",
+          "cameraPermission": "Take photos of your ID documents and complaints."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Unlock the owner dashboard with Face ID."
+        }
+      ],
+      "expo-status-bar",
+      "expo-image",
+      "expo-font"
+    ],
+    "scheme": "originliving",
+    "backgroundColor": "#fbf8f1"
+  }
+}
