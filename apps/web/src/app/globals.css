@@ -3,7 +3,7 @@
 /* Origin Living: bright cream + pure black. Light only, by design. */
 :root {
   color-scheme: light;
-  --bg: #faf7f0;        /* bright cream */
+  --bg: #fbf8f1;        /* bright cream white */
   --bg-2: #f2ede2;      /* deeper cream for alternating chapters */
   --paper: #ffffff;
   --ink: #000000;       /* pure black, as requested */
@@ -20,7 +20,8 @@
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
   --color-line: var(--line);
-  --font-sans: var(--font-geist-sans);
+  /* Apple devices get SF Pro (the system font); others fall back to Geist. */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 

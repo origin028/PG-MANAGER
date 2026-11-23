@@ -4,11 +4,11 @@ import { Reveal } from "@/components/ui/reveal";
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import type { PointerEvent } from "react";
 import { ArrowRight } from "@phosphor-icons/react";
-import { P, photo } from "@/lib/photos";
+import { IMG } from "@/lib/photos";
 
 const rooms = [
-  { title: "Co-living", line: "Students and working professionals.", img: P.desk },
-  { title: "Women only", line: "Dedicated homes, women residents only.", img: P.dining },
+  { title: "Co-living", line: "Students and working professionals.", img: IMG.roomWhite },
+  { title: "Women only", line: "Dedicated homes, women residents only.", img: IMG.roomHotel },
 ];
 
 /** A card that tilts in 3D toward the pointer. The glass label floats above it (translateZ). */
@@ -35,7 +35,7 @@ function TiltCard({ title, line, img }: (typeof rooms)[number]) {
         className="motion-safe-3d group relative block aspect-[4/5] rounded-[32px] shadow-[0_40px_80px_-30px_rgb(0_0_0/0.4)]"
       >
         <div className="absolute inset-0 overflow-hidden rounded-[32px]">
-          <Image src={photo(img, 1000, 1250)} alt={title} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
+          <Image src={img(1000, 1250)} alt={title} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
           <motion.div
             aria-hidden
             style={{ left: glareX }}

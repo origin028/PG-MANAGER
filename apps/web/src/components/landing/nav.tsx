@@ -3,6 +3,7 @@ import { Logo } from "@/components/ui/brand";
 
 const links = [
   { href: "#story", label: "Life here" },
+  { href: "#food", label: "Food" },
   { href: "#rooms", label: "Rooms" },
   { href: "#included", label: "Included" },
   { href: "#join", label: "Joining" },

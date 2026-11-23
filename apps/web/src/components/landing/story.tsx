@@ -2,13 +2,14 @@
 import Image from "next/image";
 import { Reveal } from "@/components/ui/reveal";
 import { useEffect, useRef, useState } from "react";
-import { P, photo } from "@/lib/photos";
+import { IMG } from "@/lib/photos";
 
 const chapters = [
-  { time: "7:00", title: "Wake up to a clean room.", img: P.bed, alt: "A made bed in morning light" },
-  { time: "8:30", title: "Breakfast is already on.", img: P.meal, alt: "A bowl of fresh breakfast" },
-  { time: "21:00", title: "Your fingerprint opens the door.", img: P.door, alt: "The front door of the home" },
-  { time: "23:00", title: "Sleep easy.", img: P.reading, alt: "A warm mug on a knitted blanket" },
+  { time: "7:00", title: "Wake up in a bright, clean room.", img: IMG.roomHotel, alt: "A neat, bright bedroom" },
+  { time: "8:30", title: "Breakfast is already on.", img: IMG.thali, alt: "A home-style Indian thali" },
+  { time: "18:00", title: "Study with friends downstairs.", img: IMG.studying, alt: "Residents studying together" },
+  { time: "21:00", title: "Your fingerprint opens the door.", img: IMG.lock, alt: "A secure door lock" },
+  { time: "23:00", title: "Sleep easy.", img: IMG.roomGrey, alt: "A calm bedroom at night" },
 ];
 
 /**
@@ -39,8 +40,8 @@ export function Story() {
         <div className="sticky top-24 hidden h-[78vh] overflow-hidden rounded-[32px] bg-bg-2 md:block">
           {chapters.map((c, i) => (
             <Image
-              key={c.img}
-              src={photo(c.img, 1100, 1400)}
+              key={c.time}
+              src={c.img(1100, 1400)}
               alt={c.alt}
               fill
               sizes="50vw"
@@ -58,7 +59,7 @@ export function Story() {
               className="flex flex-col justify-center py-6 md:min-h-[78vh] md:py-0"
             >
               <div className="relative mb-6 aspect-[4/5] overflow-hidden rounded-[28px] md:hidden">
-                <Image src={photo(c.img, 800, 1000)} alt={c.alt} fill sizes="100vw" className="object-cover" />
+                <Image src={c.img(800, 1000)} alt={c.alt} fill sizes="100vw" className="object-cover" />
               </div>
               <p className="font-mono text-sm text-ink-3 tabular-nums">{c.time}</p>
               <p className={`mt-3 text-4xl leading-[1.02] font-semibold tracking-[-0.04em] transition-colors duration-500 md:text-6xl ${i === active ? "text-black" : "md:text-black/20"}`}>

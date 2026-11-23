@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   reactCompiler: true,
   images: {
-    // Placeholder photography until real property photos are supplied.
-    remotePatterns: [{ protocol: "https", hostname: "picsum.photos" }, { protocol: "https", hostname: "fastly.picsum.photos" }],
+    // Unsplash photography until the PG's own photos are supplied.
+    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
   turbopack: {
     rules: { "*.css": { loaders: ["@tailwindcss/turbopack"], as: "*.css" } },

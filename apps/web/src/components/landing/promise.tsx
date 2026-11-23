@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import { animate, useInView, useMotionValue, useTransform, motion } from "motion/react";
 
-/** The one black chapter: the deposit promise, with the number counting up when it comes into view. */
+/** The deposit promise, with the number counting up when it comes into view. */
 export function DepositPromise() {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, amount: 0.5 });
@@ -17,13 +17,13 @@ export function DepositPromise() {
   }, [inView, n]);
 
   return (
-    <section className="bg-black text-[#faf7f0]">
-      <div ref={ref} className="mx-auto max-w-6xl px-4 py-32 text-center md:py-44">
+    <section className="px-3 py-3 md:px-6">
+      <div ref={ref} className="mx-auto max-w-7xl rounded-[44px] bg-bg-2 px-4 py-28 text-center md:py-40">
         <motion.p className="text-[34vw] leading-[0.8] font-semibold tracking-[-0.07em] tabular-nums md:text-[300px]">{text}</motion.p>
         <p className="mx-auto mt-10 max-w-[22ch] text-3xl leading-tight font-semibold tracking-[-0.03em] md:text-5xl">
           of your deposit comes back. Always.
         </p>
-        <p className="mx-auto mt-6 max-w-[40ch] text-lg text-[#faf7f0]/60">However long you stay. No conditions, no fine print.</p>
+        <p className="mx-auto mt-6 max-w-[40ch] text-lg text-ink-2">However long you stay. No conditions, no fine print.</p>
       </div>
     </section>
   );
