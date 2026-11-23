@@ -1,0 +1,8 @@
+{
+  "name": "pg-manager",
+  "private": true,
+  "workspaces": ["apps/web", "apps/mobile", "packages/*"],
+  "scripts": {
+    "api:types": "npm run generate -w @pg/api-client"
+  }
+}
