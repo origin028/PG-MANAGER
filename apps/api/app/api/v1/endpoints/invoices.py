@@ -347,10 +347,10 @@ def download_invoice_pdf(
 def update_invoice(
     invoice_id: uuid.UUID,
     payload: InvoiceUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER")),
     db: Session = Depends(get_db),
 ):
-    """Updates an invoice's due date, notes, or status."""
+    """Updates an invoice's due date, notes, or status (never to paid: only recorded payments do that)."""
     invoice = db.get(Invoice, invoice_id)
     if not invoice:
         raise NotFoundError("Invoice not found.")
@@ -367,6 +367,8 @@ def update_invoice(
 
     if "status" in update_data and update_data["status"]:
         new_status = update_data["status"].upper()
+        if new_status not in ("PENDING", "OVERDUE", "CANCELLED"):
+            raise BadRequestError("Status can only be set to PENDING, OVERDUE or CANCELLED. Record a payment to mark a bill paid.")
         if new_status == "CANCELLED" and float(invoice.paid_amount) > 0:
             raise ConflictError("Cannot cancel an invoice with recorded payments.")
         invoice.status = new_status

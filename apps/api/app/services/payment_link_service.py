@@ -63,7 +63,7 @@ class PaymentLinkService:
         if current_user.role.name == "RESIDENT":
             if resident.user_id != current_user.id:
                 raise PermissionDeniedError("Residents can only generate payment links for their own invoices.")
-        elif current_user.role.name != "SUPER_ADMIN":
+        else:
             from app.dependencies import verify_property_access
             verify_property_access(invoice.property_id, current_user, self.db)
 

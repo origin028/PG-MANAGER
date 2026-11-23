@@ -74,9 +74,9 @@ def approval_setup(client: TestClient):
         db_session.add(co_admin)
         db_session.flush()
 
-        # Super Admin under Company 2 (different company from Property 1!)
+        # Owner (SUPER_ADMIN) of Company 1, which owns Property 1.
         super_admin = User(
-            company_id=co_admin.id,
+            company_id=co_origin.id,
             role_id=super_admin_role.id,
             full_name="Platform Super Admin",
             email=f"superadmin_{uuid.uuid4().hex[:6]}@example.com",
@@ -110,7 +110,19 @@ def approval_setup(client: TestClient):
             is_verified=True,
             approval_status="APPROVED",
         )
-        db_session.add_all([super_admin, manager, manager_other])
+        # Owner (SUPER_ADMIN) of Company 2: must never see or act on Company 1's residents.
+        other_owner = User(
+            company_id=co_admin.id,
+            role_id=super_admin_role.id,
+            full_name="Other Company Owner",
+            email=f"other_owner_{uuid.uuid4().hex[:6]}@example.com",
+            phone="9876500004",
+            password_hash=get_password_hash("OtherOwner123!"),
+            is_active=True,
+            is_verified=True,
+            approval_status="APPROVED",
+        )
+        db_session.add_all([super_admin, manager, manager_other, other_owner])
         db_session.flush()
 
         # 4. Pending Resident registered for Property 1 (Company 1)
@@ -153,6 +165,8 @@ def approval_setup(client: TestClient):
             "co_admin_id": co_admin.id,
             "super_admin_id": super_admin.id,
             "super_admin_email": super_admin.email,
+            "other_owner_id": other_owner.id,
+            "other_owner_email": other_owner.email,
             "manager_id": manager.id,
             "manager_email": manager.email,
             "manager_other_id": manager_other.id,
@@ -162,12 +176,12 @@ def approval_setup(client: TestClient):
         }
 
 
-def test_super_admin_can_view_pending_resident_approvals_across_companies(client: TestClient, approval_setup):
-    """Verifies that SUPER_ADMIN can see pending resident registrations across all properties."""
+def test_owner_cannot_view_pending_resident_approvals_of_another_company(client: TestClient, approval_setup):
+    """An owner of one PG company must never see sign-ups waiting in another company's homes."""
     token = create_access_token(
-        subject=str(approval_setup["super_admin_id"]),
+        subject=str(approval_setup["other_owner_id"]),
         claims={
-            "email": approval_setup["super_admin_email"],
+            "email": approval_setup["other_owner_email"],
             "role": "SUPER_ADMIN",
             "company_id": str(approval_setup["co_admin_id"]),
             "allowed_properties": ["*"],
@@ -179,14 +193,8 @@ def test_super_admin_can_view_pending_resident_approvals_across_companies(client
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 200, response.text
-    data = response.json()
-    assert data["success"] is True
-    items = data["data"]["items"]
-    assert any(item["resident_id"] == str(approval_setup["resident_id"]) for item in items)
-    pending_item = next(item for item in items if item["resident_id"] == str(approval_setup["resident_id"]))
-    assert pending_item["full_name"] == "Ananya Sharma"
-    assert pending_item["property_name"] == approval_setup["prop_name"]
-    assert pending_item["status"] == "PENDING_APPROVAL"
+    items = response.json()["data"]["items"]
+    assert all(item["resident_id"] != str(approval_setup["resident_id"]) for item in items)
 
 
 def test_property_manager_can_view_company_pending_approvals(client: TestClient, approval_setup):

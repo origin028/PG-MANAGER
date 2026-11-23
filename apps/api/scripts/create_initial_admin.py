@@ -86,6 +86,10 @@ def create_initial_admin(db: Session) -> None:
 
 
 if __name__ == "__main__":
+    from app.core.config import settings as _settings
+    if _settings.is_production:
+        # Creates a login with a well-known password: development only. Use scripts/create_owner.py.
+        raise SystemExit("Refusing to run in production. Use scripts/create_owner.py instead.")
     db = SessionLocal()
     try:
         create_initial_admin(db)

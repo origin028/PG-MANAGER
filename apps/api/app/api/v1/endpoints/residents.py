@@ -13,7 +13,7 @@ from app.services.file_service import FileService
 from app.services.deposit_service import DepositService, compute_exit_settlement, money
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, PermissionDeniedError
 from app.core.security import get_password_hash
-from app.dependencies import get_current_user, get_db, require_roles, verify_property_access
+from app.dependencies import accessible_property_ids, get_current_user, get_db, require_roles, verify_property_access
 from app.models.bed import Bed
 from app.models.invoice import Invoice
 from app.models.property import Property
@@ -364,27 +364,7 @@ def list_pending_resident_approvals(
         )
     )
 
-    if current_user.role.name != "SUPER_ADMIN":
-        from app.models.user import UserPropertyAccess
-        has_specific_access = db.query(UserPropertyAccess).filter_by(user_id=current_user.id).first() is not None
-        if has_specific_access:
-            accessible_prop_ids = db.scalars(
-                sa.select(UserPropertyAccess.property_id).where(UserPropertyAccess.user_id == current_user.id)
-            ).all()
-            query = query.where(Resident.property_id.in_(accessible_prop_ids))
-        else:
-            company_props_count = db.scalar(
-                sa.select(sa.func.count(Property.id)).where(Property.company_id == current_user.company_id)
-            ) or 0
-            if company_props_count > 0:
-                query = query.where(Property.company_id == current_user.company_id)
-            else:
-                query = query.where(
-                    sa.or_(
-                        Property.company_id == current_user.company_id,
-                        Property.code.like("OG-%"),
-                    )
-                )
+    query = query.where(Resident.property_id.in_(accessible_property_ids(current_user, db)))
 
     if property_id:
         verify_property_access(property_id, current_user, db)

@@ -85,6 +85,10 @@ def update_current_user_profile(
         current_user.avatar_url = update_data["avatar_url"]
     if "phone" in update_data and update_data["phone"]:
         clean_phone = update_data["phone"].strip()
+        import sqlalchemy as sa
+        if db.scalar(sa.select(User.id).where(User.phone == clean_phone, User.id != current_user.id)):
+            from app.core.exceptions import ConflictError
+            raise ConflictError("This phone number is already used by another account.")
         current_user.phone = clean_phone
         from app.models.resident import Resident
         import sqlalchemy as sa
@@ -113,7 +117,7 @@ def get_user_detail(
     """Retrieves full profile of a user by UUID."""
     repo = UserRepository(db)
     user = repo.get_by_id(user_id)
-    if not user:
+    if not user or user.company_id != current_user.company_id:
         from app.core.exceptions import NotFoundError
         raise NotFoundError(f"User with ID '{user_id}' not found.")
 

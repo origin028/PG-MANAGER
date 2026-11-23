@@ -9,7 +9,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, NotFoundError, PermissionDeniedError
-from app.dependencies import get_db, require_roles, verify_property_access
+from app.dependencies import accessible_property_ids, get_db, require_roles, verify_property_access
 from app.models.bed import Bed
 from app.models.complaint import Complaint
 from app.models.expense import Expense
@@ -42,10 +42,8 @@ def get_dashboard_summary(
     prop_filter = []
     if property_id:
         prop_filter.append(Property.id == property_id)
-    elif current_user.role.name not in ("SUPER_ADMIN", "OWNER"):
-        allowed = getattr(current_user, "allowed_properties", []) or []
-        allowed_uuids = [uuid.UUID(str(p)) for p in allowed if p]
-        prop_filter.append(Property.id.in_(allowed_uuids))
+    else:
+        prop_filter.append(Property.id.in_(accessible_property_ids(current_user, db)))
 
     # Properties count
     props_query = sa.select(sa.func.count(Property.id))
@@ -168,6 +166,8 @@ def get_financial_report(
     pay_query = sa.select(Payment).where(Payment.status.in_(("SUCCESS", "PAID")))
     if property_id:
         pay_query = pay_query.where(Payment.property_id == property_id)
+    else:
+        pay_query = pay_query.where(Payment.property_id.in_(accessible_property_ids(current_user, db)))
     if date_from:
         pay_query = pay_query.where(sa.cast(Payment.paid_at, sa.Date) >= date_from)
     if date_to:
@@ -186,6 +186,8 @@ def get_financial_report(
     exp_query = sa.select(Expense)
     if property_id:
         exp_query = exp_query.where(Expense.property_id == property_id)
+    else:
+        exp_query = exp_query.where(Expense.property_id.in_(accessible_property_ids(current_user, db)))
     if date_from:
         exp_query = exp_query.where(Expense.date >= date_from)
     if date_to:
@@ -206,6 +208,8 @@ def get_financial_report(
     inv_query = sa.select(Invoice).where(Invoice.status.in_(("PENDING", "PARTIALLY_PAID", "OVERDUE")))
     if property_id:
         inv_query = inv_query.where(Invoice.property_id == property_id)
+    else:
+        inv_query = inv_query.where(Invoice.property_id.in_(accessible_property_ids(current_user, db)))
     if date_from:
         inv_query = inv_query.where(Invoice.due_date >= date_from)
     if date_to:
@@ -251,6 +255,8 @@ def get_payments_report(
     query = sa.select(Payment).where(Payment.status.in_(("SUCCESS", "PAID"))).order_by(Payment.paid_at.desc())
     if property_id:
         query = query.where(Payment.property_id == property_id)
+    else:
+        query = query.where(Payment.property_id.in_(accessible_property_ids(current_user, db)))
     if payment_mode:
         query = query.where(Payment.payment_mode == payment_mode.upper())
     if date_from:
@@ -308,6 +314,8 @@ def export_payments_csv(
     query = sa.select(Payment).where(Payment.status.in_(("SUCCESS", "PAID"))).order_by(Payment.paid_at.desc())
     if property_id:
         query = query.where(Payment.property_id == property_id)
+    else:
+        query = query.where(Payment.property_id.in_(accessible_property_ids(current_user, db)))
     if payment_mode:
         query = query.where(Payment.payment_mode == payment_mode.upper())
     if date_from:

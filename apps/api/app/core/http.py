@@ -34,7 +34,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/api"):
             response.headers.setdefault("Cache-Control", "no-store")
             logger.info(
-                "request_id=%s %s %s -> %s %dms",
-                request_id, request.method, request.url.path, response.status_code, elapsed_ms,
+                "request_id=%s ip=%s %s %s -> %s %dms",
+                request_id, request.client.host if request.client else "-", request.method, request.url.path, response.status_code, elapsed_ms,
             )
         return response

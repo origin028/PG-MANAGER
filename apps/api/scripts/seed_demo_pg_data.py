@@ -26,6 +26,11 @@ from app.models.complaint import Complaint
 
 
 def seed_demo_data(db: Session) -> None:
+    from app.core.config import settings
+
+    if settings.is_production:
+        # Creates logins with well-known passwords: never in production.
+        raise SystemExit("Refusing to seed demo data in production.")
     setup_logging()
     logger.info("Initializing metadata tables...")
     Base.metadata.create_all(bind=engine)

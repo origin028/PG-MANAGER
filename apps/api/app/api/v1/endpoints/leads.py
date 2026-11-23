@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError
 from app.core.security import get_password_hash
-from app.dependencies import get_current_user, get_db, require_roles, verify_property_access
+from app.dependencies import accessible_property_ids, get_current_user, get_db, require_roles, verify_property_access
 from app.models.bed import Bed
 from app.models.lead import Lead
 from app.models.property import Property
@@ -102,10 +102,8 @@ def list_leads(
     if property_id:
         verify_property_access(property_id, current_user, db)
         query = query.where(Lead.property_id == property_id)
-    elif current_user.role.name not in ("SUPER_ADMIN", "OWNER"):
-        allowed = getattr(current_user, "allowed_properties", []) or []
-        allowed_uuids = [uuid.UUID(str(p)) for p in allowed if p]
-        query = query.where(Lead.property_id.in_(allowed_uuids))
+    else:
+        query = query.where(Lead.property_id.in_(accessible_property_ids(current_user, db)))
 
     if status:
         query = query.where(Lead.status == status.strip().upper())

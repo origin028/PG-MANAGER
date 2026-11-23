@@ -16,6 +16,7 @@ ENV PATH="/opt/venv/bin:$PATH" PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
 COPY --chown=app:app alembic.ini .
 COPY --chown=app:app migrations/ migrations/
 COPY --chown=app:app app/ app/
+COPY --chown=app:app scripts/ scripts/
 # Encrypted KYC files live here; mount a persistent volume at /app/uploads in production.
 RUN mkdir -p /app/uploads/kyc && chown -R app:app /app/uploads
 USER app

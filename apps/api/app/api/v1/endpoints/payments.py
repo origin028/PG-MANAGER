@@ -1293,6 +1293,9 @@ def process_demo_payment(
     db: Session = Depends(get_db),
 ):
     """Processes an instant demo payment in local testing mode without requiring external payment gateway credentials."""
+    if settings.is_production:
+        # Would let a resident mark their own rent as paid without paying.
+        raise NotFoundError("Not found.")
     invoice = db.scalar(sa.select(Invoice).where(Invoice.id == payload.invoice_id).with_for_update())
     if not invoice:
         raise NotFoundError("Invoice not found.")

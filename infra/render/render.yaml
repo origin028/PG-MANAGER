@@ -2,9 +2,9 @@
 # Create in the COMPANY Render account: New > Blueprint > pick this repo > this file path.
 #
 # Before the first sync, create an Environment Group named "pg-secrets" in the Render dashboard with:
-#   SECRET_KEY, ENCRYPTION_KEY, ADMIN_REGISTRATION_SUPER_KEY, CORS_ORIGINS,
-#   SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL, ATTENDANCE_DEVICE_KEY
-# (generation commands are in apps/api/.env.example). Never put these values in git.
+#   SECRET_KEY, ENCRYPTION_KEY, ADMIN_REGISTRATION_SUPER_KEY, ATTENDANCE_DEVICE_KEY, CORS_ORIGINS,
+#   SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL, SMTP_FROM_NAME
+# Step-by-step guide: docs/DEPLOY.md. Never put these values in git.
 #
 # Plan names/prices change - confirm on render.com/pricing before syncing.
 
@@ -38,7 +38,11 @@ services:
       - key: DATABASE_URL
         fromDatabase: { name: pg-db, property: connectionString }
       - key: FORWARDED_ALLOW_IPS
-        value: "*"           # Render's proxy is the only path to this service (see docs/architecture.md)
+        # Trust only Render's private proxy network. Never "*": uvicorn would then take the
+        # left-most X-Forwarded-For entry, which the visitor controls, and per-IP rate limits
+        # could be dodged. After the first deploy, check that request logs show real visitor
+        # IPs (ip=...) and not a 10.x address for everyone (see docs/DEPLOY.md).
+        value: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1"
       - key: EMAIL_PROVIDER
         value: SMTP
       - fromGroup: pg-secrets

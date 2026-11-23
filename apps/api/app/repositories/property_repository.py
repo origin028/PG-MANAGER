@@ -21,7 +21,7 @@ class PropertyRepository:
         if user.role.name == "SUPER_ADMIN":
             query = (
                 sa.select(Property)
-                .where(Property.is_active == True)
+                .where(Property.company_id == user.company_id, Property.is_active == True)
                 .order_by(Property.name.asc())
             )
             return list(self.db.scalars(query).all())
@@ -40,21 +40,12 @@ class PropertyRepository:
                 .where(Property.company_id == user.company_id, Property.is_active == True)
                 .order_by(Property.name.asc())
             ).all())
-            if props:
-                return props
-            default_props = list(self.db.scalars(
-                sa.select(Property)
-                .where(Property.is_active == True, Property.code.like("OG-%"))
-                .order_by(Property.name.asc())
-            ).all())
-            if default_props:
-                return default_props
-            return []
+            return props
 
         query = (
             sa.select(Property)
             .join(UserPropertyAccess, UserPropertyAccess.property_id == Property.id)
-            .where(UserPropertyAccess.user_id == user.id, Property.is_active == True)
+            .where(UserPropertyAccess.user_id == user.id, Property.company_id == user.company_id, Property.is_active == True)
             .order_by(Property.name.asc())
         )
         return list(self.db.scalars(query).all())
@@ -64,20 +55,11 @@ class PropertyRepository:
         if not prop:
             return False
 
+        if prop.company_id != user.company_id:
+            return False
+
         if user.role.name == "SUPER_ADMIN":
             return True
-
-        if prop.company_id != user.company_id:
-            if prop.code and prop.code.startswith("OG-"):
-                user_props_count = self.db.scalar(
-                    sa.select(sa.func.count(Property.id)).where(Property.company_id == user.company_id)
-                ) or 0
-                if user_props_count == 0:
-                    pass
-                else:
-                    return False
-            else:
-                return False
 
         if user.role.name == "RESIDENT":
             return (

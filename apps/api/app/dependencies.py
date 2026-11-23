@@ -103,6 +103,10 @@ def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> N
     if not prop:
         raise NotFoundError(f"Target property '{property_id}' not found.")
 
+    # Hard tenant boundary: nobody (owners included) can touch another company's property.
+    if prop.company_id != user.company_id:
+        raise PermissionDeniedError("Access to this property is not permitted.")
+
     if user.role.name == "SUPER_ADMIN":
         return
 
@@ -121,15 +125,22 @@ def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> N
             raise PermissionDeniedError(f"You do not have access rights for property '{property_id}'.")
         return
 
-    # Check company boundary
-    if prop.company_id != user.company_id:
-        if prop.code and prop.code.startswith("OG-"):
-            user_props_count = db.scalar(
-                sa.select(sa.func.count(Property.id)).where(Property.company_id == user.company_id)
-            ) or 0
-            if user_props_count == 0:
-                return
-        raise PermissionDeniedError("Access to this property is not permitted.")
+
+def accessible_property_ids(user: User, db: Session) -> list:
+    """Every property this user may see, always inside the user's own company.
+
+    Owners see the whole company, assigned managers/staff only their assigned homes,
+    residents only their own home.
+    """
+    if user.role.name == "RESIDENT":
+        rp = user.resident_profile
+        return [rp.property_id] if rp and rp.property_id else []
+    in_company = sa.select(Property.id).where(Property.company_id == user.company_id)
+    if user.role.name != "SUPER_ADMIN":
+        assigned = db.scalars(sa.select(UserPropertyAccess.property_id).where(UserPropertyAccess.user_id == user.id)).all()
+        if assigned:
+            in_company = in_company.where(Property.id.in_(assigned))
+    return list(db.scalars(in_company).all())
 
 
 def get_current_active_resident(

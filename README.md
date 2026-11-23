@@ -14,7 +14,7 @@ apps/
   resident/      Flutter resident app     (web + Android + iOS)     [frontend - pending design approval]
   checkout-web/  React payment-link page                            [payments untouched for now]
 docs/            architecture.md, api-contract.md, database-schema.md, archive/ (old audit reports)
-infra/           docker/ (local stack), render/ (deploy blueprint), vercel/ (web hosting config)
+infra/           docker/ (local stack), render/ (API deploy blueprint). Vercel config lives in apps/web and apps/mobile. See docs/DEPLOY.md
 .github/         CI: lint, tests against Postgres, dependency audit
 Makefile         common commands
 ```

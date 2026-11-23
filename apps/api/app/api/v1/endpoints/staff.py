@@ -5,7 +5,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, NotFoundError
-from app.dependencies import get_current_user, get_db, require_roles, verify_property_access
+from app.dependencies import accessible_property_ids, get_current_user, get_db, require_roles, verify_property_access
 from app.models.property import Property, Company
 from app.models.staff import Staff
 from app.models.user import User
@@ -107,10 +107,8 @@ def list_staff(
     if property_id:
         verify_property_access(property_id, current_user, db)
         query = query.where(Staff.property_id == property_id)
-    elif current_user.role.name not in ("SUPER_ADMIN", "OWNER"):
-        allowed = getattr(current_user, "allowed_properties", []) or []
-        allowed_uuids = [uuid.UUID(str(p)) for p in allowed if p]
-        query = query.where(Staff.property_id.in_(allowed_uuids))
+    else:
+        query = query.where(Staff.property_id.in_(accessible_property_ids(current_user, db)))
 
     if role:
         query = query.where(Staff.role == role.strip().upper())
