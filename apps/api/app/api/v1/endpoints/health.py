@@ -36,22 +36,14 @@ def health_check(db: Session = Depends(get_db)):
             db_status = "uninitialized: users table missing"
     except Exception as e:
         logger.error(f"Health check database ping failed: {e}", exc_info=True)
-        db_status = f"unhealthy: {str(e)}" if settings.DEBUG else "unhealthy: database connectivity error"
+        db_status = "unhealthy: database connectivity error"
 
     is_healthy = (db_status == "healthy")
     payload = {
         "status": "online" if is_healthy else "degraded",
         "database": db_status,
         "schema_ready": users_table_exists,
-        "alembic_version": alembic_rev,
-        "environment": settings.ENVIRONMENT,
         "version": settings.VERSION,
-        "email_provider": getattr(settings, "EMAIL_PROVIDER", "MOCK"),
-        "active_email_provider": get_email_provider().__class__.__name__,
-        "brevo_configured": bool(getattr(settings, "BREVO_API_KEY", "")),
-        "sendgrid_configured": bool(getattr(settings, "SENDGRID_API_KEY", "")),
-        "resend_configured": bool(getattr(settings, "RESEND_API_KEY", "")),
-        "smtp_configured": bool(getattr(settings, "SMTP_PASSWORD", "") and getattr(settings, "SMTP_HOST", "") not in ("localhost", "")),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return APIResponse(

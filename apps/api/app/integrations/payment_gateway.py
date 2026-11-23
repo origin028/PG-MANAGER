@@ -43,18 +43,11 @@ class RazorpayGateway(PaymentGatewayInterface):
             })
             return {"order_id": order["id"], "amount": order["amount"], "currency": order["currency"], "status": order["status"]}
         except Exception as exc:
-            from app.core.config import settings
-            provider = (getattr(settings, "PAYMENT_GATEWAY_PROVIDER", "AUTO") or "AUTO").upper()
-            if provider == "AUTO":
-                mock = MockPaymentGateway()
-                return mock.create_order(amount, currency, receipt, notes)
             raise RuntimeError(f"Unable to create Razorpay order: {exc}") from exc
 
     def verify_webhook_signature(self, payload: bytes, signature: str, secret: str) -> bool:
         if not signature or not secret:
             return False
-        if signature.startswith("demo_sig") or signature == "valid_mock_signature":
-            return True
         expected = hmac.new(secret.encode("utf-8"), payload, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, signature)
 
@@ -62,8 +55,6 @@ class RazorpayGateway(PaymentGatewayInterface):
         """Verifies the checkout callback signature documented by Razorpay."""
         if not signature or not order_id or not payment_id:
             return False
-        if signature.startswith("sig_demo_") or signature.startswith("demo_sig") or signature == "valid_mock_signature":
-            return True
         message = f"{order_id}|{payment_id}".encode("utf-8")
         expected = hmac.new(self.key_secret.encode("utf-8"), message, hashlib.sha256).hexdigest()
         return hmac.compare_digest(expected, signature)
@@ -131,6 +122,8 @@ def get_payment_gateway() -> PaymentGatewayInterface:
     provider = (getattr(settings, "PAYMENT_GATEWAY_PROVIDER", "AUTO") or "AUTO").upper()
 
     if provider == "MOCK":
+        if settings.is_production:
+            raise ValueError("The mock payment gateway is disabled in production.")
         return MockPaymentGateway()
 
     if provider == "RAZORPAY":
@@ -138,11 +131,10 @@ def get_payment_gateway() -> PaymentGatewayInterface:
             raise ValueError("Razorpay credentials are not configured in settings.")
         return RazorpayGateway(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
 
-    # AUTO mode: prefer Razorpay if credentials exist, otherwise transparently use Mock/Demo
+    # AUTO mode: Razorpay when credentials exist. Mock is for development/tests only.
     if settings.RAZORPAY_KEY_ID and settings.RAZORPAY_KEY_SECRET:
-        try:
-            return RazorpayGateway(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
-        except Exception:
-            return MockPaymentGateway()
+        return RazorpayGateway(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET)
 
+    if settings.is_production:
+        raise ValueError("Payment gateway is not configured (Razorpay credentials missing).")
     return MockPaymentGateway()

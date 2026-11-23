@@ -1,3 +1,13 @@
+import os
+
+# Must run before the app (and its settings) are imported.
+os.environ.setdefault("ENVIRONMENT", "test")
+os.environ.setdefault("DEBUG", "false")
+os.environ.setdefault("DATABASE_URL", "postgresql+psycopg://postgres:postgres@localhost:5432/pg_management_test")
+os.environ.setdefault("RATE_LIMIT_ENABLED", "false")
+# Test-only owner registration key (the app ships with NO default key).
+os.environ.setdefault("ADMIN_REGISTRATION_SUPER_KEY", "ORG-240-X7K9-PQ82")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -14,6 +24,10 @@ def default_mock_email_provider(monkeypatch):
     """Ensures test suite defaults to MOCK email provider unless overridden."""
     from app.core.config import settings
     monkeypatch.setattr(settings, "EMAIL_PROVIDER", "MOCK")
+    # Dummy credentials so SMTP tests (which mock smtplib) never depend on a local .env.
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "test-smtp-password")
+    monkeypatch.setattr(settings, "SMTP_USERNAME", "test@example.com")
+    monkeypatch.setattr(settings, "SMTP_FROM_EMAIL", "noreply@example.com")
 
 
 @pytest.fixture

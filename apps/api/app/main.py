@@ -1,14 +1,14 @@
 from contextlib import asynccontextmanager
-from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.exceptions import PGException
+from app.core.http import RequestContextMiddleware
 from app.core.logging import logger, setup_logging
 from app.schemas.common import ErrorDetail, ErrorResponse
 
@@ -28,47 +28,21 @@ async def lifespan(app: FastAPI):
         logger.info("Database connection verified successfully.")
     except Exception as exc:
         logger.error(f"Database connectivity verification check failed: {type(exc).__name__}")
-        raise RuntimeError(f"Database connectivity check failed on startup: {exc}") from exc
+        if settings.is_production:
+            raise RuntimeError("Database connectivity check failed on startup.") from exc
 
-    # 2. Automated idempotent schema migration check (critical for Render Free Plan where preDeployCommand does not run)
+    # 2. Idempotent system role bootstrap (schema is migrated by the release step, never at boot)
     try:
-        from alembic.config import Config
-        from alembic import command
+        from app.db.session import SessionLocal
+        from app.services.role_service import ensure_system_roles_exist
 
-        alembic_ini_path = Path(__file__).resolve().parent.parent / "alembic.ini"
-        if alembic_ini_path.exists():
-            alembic_cfg = Config(str(alembic_ini_path))
-            alembic_cfg.set_main_option(
-                "script_location", str(alembic_ini_path.parent / "migrations")
-            )
-
-            is_postgres = "postgres" in settings.DATABASE_URL
-            if is_postgres:
-                # Use PostgreSQL transaction-level advisory lock to serialize multi-worker migrations safely
-                with engine.connect() as conn:
-                    with conn.begin():
-                        conn.execute(sa.text("SELECT pg_advisory_xact_lock(849201948)"))
-                        logger.info("Verifying and applying pending Alembic database migrations...")
-                        command.upgrade(alembic_cfg, "head")
-                        logger.info("Alembic database migrations applied successfully.")
-            else:
-                logger.info("Verifying and applying pending Alembic database migrations...")
-                command.upgrade(alembic_cfg, "head")
-                logger.info("Alembic database migrations applied successfully.")
-
-        # 3. Automated idempotent system role verification and initialization
-        try:
-            from app.db.session import SessionLocal
-            from app.services.role_service import ensure_system_roles_exist
-            with SessionLocal() as db:
-                ensure_system_roles_exist(db)
-            logger.info("System roles verified and active.")
-        except Exception as exc:
-            logger.error(f"Error ensuring system roles on startup: {exc}", exc_info=True)
+        with SessionLocal() as db:
+            ensure_system_roles_exist(db)
+        logger.info("System roles verified and active.")
     except Exception as exc:
-        logger.error(f"Fatal error during database schema migration: {exc}", exc_info=True)
-        # Fail-fast: do not serve traffic with an incomplete or uninitialized database schema
-        raise RuntimeError(f"Database schema migration failed on startup: {exc}") from exc
+        logger.error(f"Error ensuring system roles on startup: {exc}", exc_info=True)
+        if settings.is_production:
+            raise RuntimeError("System role bootstrap failed. Run `alembic upgrade head` first.") from exc
 
     yield
     # Shutdown lifecycle
@@ -78,85 +52,31 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Unified Backend API for Origin PG Management System supporting Admin Web, Admin Android, and Resident Android clients.",
-    openapi_url="/api/v1/openapi.json",
-    docs_url="/api/v1/docs",
-    redoc_url="/api/v1/redoc",
+    description="Unified backend API for the Origin PG Management System (admin web/app and resident web/app).",
+    openapi_url="/api/v1/openapi.json" if settings.docs_enabled else None,
+    docs_url="/api/v1/docs" if settings.docs_enabled else None,
+    redoc_url=None,
     lifespan=lifespan,
 )
 
-
-@app.get("/docs", include_in_schema=False)
-def redirect_to_swagger():
-    """Convenience redirect to Swagger documentation."""
-    return RedirectResponse(url="/api/v1/docs")
-
-# Configure Cross-Origin Resource Sharing (CORS)
-base_origins = [
-    "https://pg-admin-web-nu.vercel.app",
-    "http://localhost:8080",
-    "http://localhost:8000",
-    "http://localhost:5173",
-    "http://localhost:5174",
-    "http://127.0.0.1:8080",
-    "http://127.0.0.1:8000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-]
-configured_origins = (
-    settings.CORS_ORIGINS
-    if isinstance(settings.CORS_ORIGINS, list)
-    else [str(settings.CORS_ORIGINS)]
-)
-# Do not use unrestricted "*" when credentials are enabled. Expand to valid origin list.
-cors_origins = [o for o in configured_origins if o != "*"]
-for o in base_origins:
-    if o not in cors_origins:
-        cors_origins.append(o)
-
+# Explicit allow-list only. Never reflect arbitrary origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1|.*\.vercel\.app)(:[0-9]+)?$",
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Property-Id", "X-Request-ID", "Idempotency-Key"],
+    expose_headers=["X-Request-ID"],
+    max_age=600,
 )
+app.add_middleware(RequestContextMiddleware)
 
 
-def _attach_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
-    """Explicitly attaches CORS headers to error responses to ensure client receives meaningful errors."""
-    origin = request.headers.get("origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Expose-Headers"] = "*"
-        response.headers["Vary"] = "Origin"
-    return response
-
-
-@app.middleware("http")
-async def add_pna_and_cors_headers(request: Request, call_next):
-    if request.method == "OPTIONS":
-        origin = request.headers.get("origin", "*")
-        response = JSONResponse(content="OK", status_code=200)
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-        if request.headers.get("access-control-request-private-network"):
-            response.headers["Access-Control-Allow-Private-Network"] = "true"
-        return response
-
-    response = await call_next(request)
-    origin = request.headers.get("origin")
-    if origin:
-        response.headers["Access-Control-Allow-Origin"] = origin
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-    if request.headers.get("access-control-request-private-network"):
-        response.headers["Access-Control-Allow-Private-Network"] = "true"
-    return response
+_HTTP_ERROR_CODES = {
+    400: "BAD_REQUEST", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND",
+    405: "METHOD_NOT_ALLOWED", 409: "CONFLICT", 413: "PAYLOAD_TOO_LARGE",
+    415: "UNSUPPORTED_MEDIA_TYPE", 422: "VALIDATION_ERROR", 429: "RATE_LIMITED",
+}
 
 
 # Global Exception Handlers
@@ -173,7 +93,7 @@ async def pg_exception_handler(request: Request, exc: PGException):
             ),
         ).model_dump(mode="json"),
     )
-    return _attach_cors_headers(request, res)
+    return res
 
 
 @app.exception_handler(RequestValidationError)
@@ -193,28 +113,31 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             ),
         ).model_dump(mode="json"),
     )
-    return _attach_cors_headers(request, res)
+    return res
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException):
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     res = JSONResponse(
         status_code=exc.status_code,
         content=ErrorResponse(
             success=False,
             error=ErrorDetail(
-                code="HTTP_ERROR",
+                code=_HTTP_ERROR_CODES.get(exc.status_code, "HTTP_ERROR"),
                 message=str(exc.detail),
                 details=None,
             ),
         ).model_dump(mode="json"),
     )
-    return _attach_cors_headers(request, res)
+    return res
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled error processing {request.method} {request.url.path}: {exc}", exc_info=True)
+    logger.error(
+        "request_id=%s unhandled error on %s %s", getattr(request.state, "request_id", "-"),
+        request.method, request.url.path, exc_info=True,
+    )
     res = JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=ErrorResponse(
@@ -222,27 +145,25 @@ async def global_exception_handler(request: Request, exc: Exception):
             error=ErrorDetail(
                 code="INTERNAL_SERVER_ERROR",
                 message="An unexpected server error occurred. Please contact administrator.",
-                details=str(exc) if settings.DEBUG else None,
+                details=None,
             ),
         ).model_dump(mode="json"),
     )
-    return _attach_cors_headers(request, res)
+    return res
 
 
 # Root discovery endpoint
 @app.get("/", tags=["Root"])
 def root():
-    return {
+    payload = {
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "docs": "/api/v1/docs",
         "health": "/api/v1/health",
     }
+    if settings.docs_enabled:
+        payload["docs"] = "/api/v1/docs"
+    return payload
 
 
 # Mount the versioned API router under /api
 app.include_router(api_router, prefix="/api")
-
-# Ensure uploads directory exists on disk for secure storage (not mounted publicly)
-uploads_dir = Path(__file__).resolve().parent.parent / "uploads"
-uploads_dir.mkdir(parents=True, exist_ok=True)

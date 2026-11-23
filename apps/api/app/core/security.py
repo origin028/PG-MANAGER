@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
+import uuid
 import bcrypt
 import jwt
 
@@ -40,6 +41,7 @@ def create_access_token(
         "iat": now,
         "exp": expire,
         "type": "access",
+        "jti": uuid.uuid4().hex,
     }
     if claims:
         to_encode.update(claims)
@@ -64,6 +66,7 @@ def create_refresh_token(
         "iat": now,
         "exp": expire,
         "type": "refresh",
+        "jti": uuid.uuid4().hex,
     }
     if claims:
         to_encode.update(claims)
@@ -73,4 +76,9 @@ def create_refresh_token(
 
 def decode_token(token: str) -> Dict[str, Any]:
     """Decodes and validates a JWT signature and expiration."""
-    return jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+    return jwt.decode(
+        token,
+        settings.SECRET_KEY,
+        algorithms=[settings.JWT_ALGORITHM],
+        options={"require": ["exp", "iat", "sub", "type"]},
+    )

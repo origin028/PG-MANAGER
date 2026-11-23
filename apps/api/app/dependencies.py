@@ -27,24 +27,12 @@ def get_current_user(
 
     token = credentials.credentials
 
-    is_dev = getattr(settings, "DEBUG", False) or str(getattr(settings, "ENVIRONMENT", "")).lower() in ("development", "dev", "demo", "testing", "local")
-    if is_dev and token.startswith("demo_token"):
-        phone_match = token.replace("demo_token_", "")
-        user = None
-        if phone_match and phone_match.isdigit():
-            user = db.scalar(sa.select(User).where(User.phone == phone_match))
-        if not user:
-            user = db.scalar(
-                sa.select(User).join(Role).where(Role.name == "RESIDENT", User.is_active == True)
-            )
-        if user:
-            return user
     try:
         payload = decode_token(token)
     except jwt.ExpiredSignatureError:
         raise AuthenticationError("Access token has expired. Please refresh your session.")
     except jwt.PyJWTError as e:
-        raise AuthenticationError(f"Invalid access token: {str(e)}")
+        raise AuthenticationError("Invalid access token.")
 
     if payload.get("type") != "access":
         raise AuthenticationError("Invalid token type. Access token expected.")
