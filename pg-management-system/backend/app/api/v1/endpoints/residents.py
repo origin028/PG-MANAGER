@@ -358,9 +358,8 @@ def list_pending_resident_approvals(
         .join(User, Resident.user_id == User.id)
         .join(Property, Resident.property_id == Property.id)
         .where(
-            Resident.status == "PENDING_APPROVAL",
-            User.approval_status == "PENDING_APPROVAL",
-            Property.company_id == current_user.company_id,
+            Resident.status.in_(("PENDING_APPROVAL", "PENDING")),
+            User.approval_status.in_(("PENDING_APPROVAL", "PENDING")),
         )
     )
 
@@ -372,6 +371,8 @@ def list_pending_resident_approvals(
                 sa.select(UserPropertyAccess.property_id).where(UserPropertyAccess.user_id == current_user.id)
             ).all()
             query = query.where(Resident.property_id.in_(accessible_prop_ids))
+        else:
+            query = query.where(Property.company_id == current_user.company_id)
 
     if property_id:
         verify_property_access(property_id, current_user, db)
@@ -469,7 +470,7 @@ def approve_resident_registration(
         raise PermissionDeniedError("Administrators cannot approve their own resident registrations.")
 
     # State validation
-    if resident.status != "PENDING_APPROVAL":
+    if resident.status not in ("PENDING_APPROVAL", "PENDING"):
         raise BadRequestError(
             f"Resident is not pending approval (current status: '{resident.status}')."
         )
@@ -646,7 +647,7 @@ def reject_resident_registration(
     if resident.user_id == current_user.id:
         raise PermissionDeniedError("Administrators cannot reject their own accounts.")
 
-    if resident.status != "PENDING_APPROVAL":
+    if resident.status not in ("PENDING_APPROVAL", "PENDING"):
         raise BadRequestError(
             f"Resident is not pending approval (current status: '{resident.status}')."
         )

@@ -7,7 +7,7 @@ import sqlalchemy as sa
 import jwt
 
 from app.core.config import settings
-from app.core.exceptions import AuthenticationError, PermissionDeniedError
+from app.core.exceptions import AuthenticationError, NotFoundError, PermissionDeniedError
 from app.core.security import decode_token
 from app.db.session import get_db
 from app.models.property import Property
@@ -99,8 +99,8 @@ def get_property_context(
 def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> None:
     """Verifies that the current user has access rights for the target property."""
     prop = db.get(Property, property_id)
-    if not prop or prop.company_id != user.company_id:
-        raise PermissionDeniedError("Access to this property is not permitted.")
+    if not prop:
+        raise NotFoundError(f"Target property '{property_id}' not found.")
 
     if user.role.name == "SUPER_ADMIN":
         return
@@ -110,18 +110,19 @@ def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> N
             raise PermissionDeniedError(f"You do not have access rights for property '{property_id}'.")
         return
 
-    # For Property Manager: if no specific restrictions exist, permit access to company property
-    if user.role.name == "PROPERTY_MANAGER":
-        has_specific_access = db.query(UserPropertyAccess).filter_by(user_id=user.id).first() is not None
-        if not has_specific_access:
-            return
-
     # Check property assignment junction table
-    access = db.query(UserPropertyAccess).filter_by(
-        user_id=user.id, property_id=property_id
-    ).first()
-    if not access:
-        raise PermissionDeniedError(f"You do not have access rights for property '{property_id}'.")
+    has_specific_access = db.query(UserPropertyAccess).filter_by(user_id=user.id).first() is not None
+    if has_specific_access:
+        access = db.query(UserPropertyAccess).filter_by(
+            user_id=user.id, property_id=property_id
+        ).first()
+        if not access:
+            raise PermissionDeniedError(f"You do not have access rights for property '{property_id}'.")
+        return
+
+    # Check company boundary
+    if prop.company_id != user.company_id:
+        raise PermissionDeniedError("Access to this property is not permitted.")
 
 
 def get_current_active_resident(

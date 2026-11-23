@@ -21,7 +21,7 @@ class PropertyRepository:
         if user.role.name == "SUPER_ADMIN":
             query = (
                 sa.select(Property)
-                .where(Property.company_id == user.company_id, Property.is_active == True)
+                .where(Property.is_active == True)
                 .order_by(Property.name.asc())
             )
             return list(self.db.scalars(query).all())
@@ -52,11 +52,14 @@ class PropertyRepository:
 
     def check_access(self, user: User, property_id: uuid.UUID) -> bool:
         prop = self.get_by_id(property_id)
-        if not prop or prop.company_id != user.company_id:
+        if not prop:
             return False
 
         if user.role.name == "SUPER_ADMIN":
             return True
+
+        if prop.company_id != user.company_id:
+            return False
 
         if user.role.name == "RESIDENT":
             return (
