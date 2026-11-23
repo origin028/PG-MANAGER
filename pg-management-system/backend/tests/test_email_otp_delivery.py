@@ -849,4 +849,170 @@ def test_resend_email_provider_success():
         assert req.get_header("Authorization") == "Bearer re_test_key_12345"
 
 
+def test_resend_email_provider_webmail_sanitization():
+    """Verifies that ResendEmailProvider replaces public webmail domains (@gmail.com) with onboarding@resend.dev."""
+    from app.integrations.email import ResendEmailProvider
+
+    provider = ResendEmailProvider(
+        api_key="re_test_key_12345",
+        from_email="originpg@gmail.com",
+        from_name="Origin Living",
+    )
+    assert provider.from_email == "onboarding@resend.dev"
+
+
+def test_resend_email_provider_http_403_raises_clear_error():
+    """Verifies that Resend HTTP 403 response extracts provider reason and raises EmailDeliveryError."""
+    import urllib.error
+    import io
+    from app.integrations.email import ResendEmailProvider
+    from app.core.exceptions import EmailDeliveryError
+
+    err_json = b'{"statusCode": 403, "message": "You can only send testing emails to your own email address", "name": "validation_error"}'
+    http_err = urllib.error.HTTPError(
+        url="https://api.resend.com/emails",
+        code=403,
+        msg="Forbidden",
+        hdrs={},
+        fp=io.BytesIO(err_json),
+    )
+
+    provider = ResendEmailProvider(
+        api_key="re_test_key_12345",
+        from_email="onboarding@resend.dev",
+        from_name="Origin Living",
+    )
+
+    with patch("urllib.request.urlopen", side_effect=http_err):
+        with pytest.raises(EmailDeliveryError) as exc_info:
+            provider.send_email(
+                to_email="resident@example.com",
+                subject="Verification Code",
+                body_text="Your OTP is 123456",
+            )
+        assert "HTTP 403" in str(exc_info.value)
+        assert "You can only send testing emails to your own email address" in str(exc_info.value)
+
+
+def test_resilient_email_provider_fallback_from_resend_403_to_smtp():
+    """Verifies that ResilientEmailProvider automatically catches Resend HTTP 403 and succeeds via SMTP."""
+    import urllib.error
+    import io
+    from app.integrations.email import ResendEmailProvider, ResilientEmailProvider
+    from app.core.exceptions import EmailDeliveryError
+
+    err_json = b'{"statusCode": 403, "message": "Domain not verified", "name": "validation_error"}'
+    http_err = urllib.error.HTTPError(
+        url="https://api.resend.com/emails",
+        code=403,
+        msg="Forbidden",
+        hdrs={},
+        fp=io.BytesIO(err_json),
+    )
+
+    primary_resend = ResendEmailProvider(
+        api_key="re_test_key_12345",
+        from_email="onboarding@resend.dev",
+    )
+
+    fallback_smtp = MagicMock()
+    fallback_smtp.send_email.return_value = True
+
+    composite = ResilientEmailProvider(
+        primary=primary_resend,
+        fallback=fallback_smtp,
+        primary_name="ResendEmailProvider",
+        fallback_name="SMTPEmailProvider",
+    )
+
+    with patch("urllib.request.urlopen", side_effect=http_err):
+        res = composite.send_email(
+            to_email="resident@example.com",
+            subject="Verification Code",
+            body_text="Your OTP is 123456",
+            body_html="<p>Your OTP is 123456</p>",
+        )
+        assert res is True
+        fallback_smtp.send_email.assert_called_once_with(
+            to_email="resident@example.com",
+            subject="Verification Code",
+            body_text="Your OTP is 123456",
+            body_html="<p>Your OTP is 123456</p>",
+        )
+
+
+def test_resilient_email_provider_fallback_from_smtp_timeout_to_resend():
+    """Verifies that ResilientEmailProvider catches SMTP timeout and succeeds via Resend HTTPS."""
+    from app.integrations.email import ResilientEmailProvider
+    from app.core.exceptions import EmailDeliveryError
+
+    primary_smtp = MagicMock()
+    primary_smtp.send_email.side_effect = EmailDeliveryError("SMTP connection timed out.")
+
+    fallback_resend = MagicMock()
+    fallback_resend.send_email.return_value = True
+
+    composite = ResilientEmailProvider(
+        primary=primary_smtp,
+        fallback=fallback_resend,
+        primary_name="SMTPEmailProvider",
+        fallback_name="ResendEmailProvider",
+    )
+
+    res = composite.send_email(
+        to_email="resident@example.com",
+        subject="Verification Code",
+        body_text="Your OTP is 123456",
+    )
+    assert res is True
+    fallback_resend.send_email.assert_called_once()
+
+
+def test_resilient_email_provider_both_fail_raises_email_delivery_error():
+    """Verifies that if both primary and fallback fail, an informative EmailDeliveryError is raised."""
+    from app.integrations.email import ResilientEmailProvider
+    from app.core.exceptions import EmailDeliveryError
+
+    primary = MagicMock()
+    primary.send_email.side_effect = EmailDeliveryError("Primary failed (HTTP 403)")
+
+    fallback = MagicMock()
+    fallback.send_email.side_effect = EmailDeliveryError("Fallback failed (SMTP port blocked)")
+
+    composite = ResilientEmailProvider(
+        primary=primary,
+        fallback=fallback,
+        primary_name="PrimaryProvider",
+        fallback_name="FallbackProvider",
+    )
+
+    with pytest.raises(EmailDeliveryError) as exc_info:
+        composite.send_email(
+            to_email="resident@example.com",
+            subject="Verification Code",
+            body_text="Your OTP is 123456",
+        )
+    assert "Email delivery failed across all providers" in str(exc_info.value)
+    assert "PrimaryProvider" in str(exc_info.value)
+    assert "FallbackProvider" in str(exc_info.value)
+
+
+def test_get_email_provider_returns_resilient_when_both_configured():
+    """Verifies factory constructs ResilientEmailProvider when both Resend and SMTP are configured."""
+    from app.integrations.email import get_email_provider, ResilientEmailProvider
+
+    with patch.object(settings, "ENVIRONMENT", "production"), \
+         patch.object(settings, "EMAIL_PROVIDER", "RESEND"), \
+         patch.object(settings, "RESEND_API_KEY", "re_prod_test_key"), \
+         patch.object(settings, "SMTP_HOST", "smtp.gmail.com"), \
+         patch.object(settings, "SMTP_PASSWORD", "secret_pass"), \
+         patch.object(settings, "SMTP_USERNAME", "tharadrataher@gmail.com"):
+
+        provider = get_email_provider()
+        assert isinstance(provider, ResilientEmailProvider)
+        assert provider.primary_name == "ResendEmailProvider"
+        assert provider.fallback_name == "SMTPEmailProvider"
+
+
+
 

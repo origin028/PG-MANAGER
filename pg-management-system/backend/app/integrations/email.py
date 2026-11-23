@@ -206,7 +206,33 @@ class ResendEmailProvider(EmailProvider):
         from_name: Optional[str] = None,
     ):
         self.api_key = (api_key or getattr(settings, "RESEND_API_KEY", "") or "").strip()
-        self.from_email = (from_email or settings.SMTP_FROM_EMAIL or "onboarding@resend.dev").strip()
+        configured_from = (
+            from_email
+            or getattr(settings, "RESEND_FROM_EMAIL", None)
+            or settings.SMTP_FROM_EMAIL
+            or "onboarding@resend.dev"
+        ).strip()
+
+        # Resend strictly forbids sending from public webmail domains (e.g. @gmail.com, @yahoo.com)
+        # without domain verification, returning HTTP 403 Forbidden.
+        # Fall back to Resend's sandbox domain if a public webmail domain is configured.
+        public_webmail_domains = (
+            "@gmail.com",
+            "@yahoo.com",
+            "@outlook.com",
+            "@hotmail.com",
+            "@icloud.com",
+            "@live.com",
+        )
+        if any(configured_from.lower().endswith(dom) for dom in public_webmail_domains):
+            logger.warning(
+                f"[ResendEmailProvider] Configured from_email '{configured_from}' is a public webmail domain forbidden by Resend. "
+                "Defaulting Resend sender to 'onboarding@resend.dev' to avoid HTTP 403."
+            )
+            self.from_email = "onboarding@resend.dev"
+        else:
+            self.from_email = configured_from
+
         self.from_name = (from_name or settings.SMTP_FROM_NAME or "Origin PG Living").strip()
 
     def send_email(
@@ -250,16 +276,104 @@ class ResendEmailProvider(EmailProvider):
             err_body = exc.read().decode("utf-8", errors="replace")
             masked = mask_email(to_email)
             logger.error(f"[ResendEmailProvider] HTTP {exc.code} delivering to {masked}: {err_body}")
-            raise EmailDeliveryError(f"Failed to send verification email via HTTPS: HTTP {exc.code}") from exc
+
+            # Extract clean error message from Resend JSON response
+            err_msg = ""
+            try:
+                parsed = json.loads(err_body)
+                err_msg = parsed.get("message") or parsed.get("error") or ""
+            except Exception:
+                err_msg = err_body[:200]
+
+            if exc.code == 403:
+                reason = f"Resend HTTPS delivery forbidden (HTTP 403): {err_msg or 'domain/recipient not permitted on current Resend tier'}"
+            elif exc.code == 401:
+                reason = "Resend HTTPS delivery unauthorized (HTTP 401): invalid or expired RESEND_API_KEY."
+            else:
+                reason = f"Resend HTTPS delivery failed with HTTP {exc.code}: {err_msg}"
+
+            raise EmailDeliveryError(reason) from exc
         except Exception as exc:
             masked = mask_email(to_email)
             logger.error(f"[ResendEmailProvider] Failed to deliver email to {masked}: {exc}")
-            raise EmailDeliveryError("Failed to deliver verification email via HTTPS.") from exc
+            raise EmailDeliveryError(f"Failed to deliver verification email via HTTPS: {exc}") from exc
+
+
+class ResilientEmailProvider(EmailProvider):
+    """
+    Composite provider that tries primary provider first, and automatically
+    falls back to secondary provider(s) if primary encounters an error.
+    Designed for production resilience across cloud firewalls and API restrictions.
+    """
+    def __init__(
+        self,
+        primary: EmailProvider,
+        fallback: Optional[EmailProvider] = None,
+        primary_name: Optional[str] = None,
+        fallback_name: Optional[str] = None,
+    ):
+        self.primary = primary
+        self.fallback = fallback
+        self.primary_name = primary_name or primary.__class__.__name__
+        self.fallback_name = fallback_name or (fallback.__class__.__name__ if fallback else "None")
+        self.is_mock = getattr(primary, "is_mock", False) and (
+            fallback is None or getattr(fallback, "is_mock", False)
+        )
+
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        body_text: str,
+        body_html: Optional[str] = None,
+    ) -> bool:
+        masked = mask_email(to_email)
+        try:
+            return self.primary.send_email(
+                to_email=to_email,
+                subject=subject,
+                body_text=body_text,
+                body_html=body_html,
+            )
+        except Exception as exc:
+            if not self.fallback:
+                logger.error(
+                    f"[ResilientEmailProvider] Primary provider ({self.primary_name}) failed for {masked}: {exc}. "
+                    "No fallback provider available."
+                )
+                raise
+
+            logger.warning(
+                f"[ResilientEmailProvider] Primary provider ({self.primary_name}) failed for {masked}: {exc}. "
+                f"Engaging automatic fallback to ({self.fallback_name})..."
+            )
+            try:
+                res = self.fallback.send_email(
+                    to_email=to_email,
+                    subject=subject,
+                    body_text=body_text,
+                    body_html=body_html,
+                )
+                logger.info(
+                    f"[ResilientEmailProvider] Fallback provider ({self.fallback_name}) successfully delivered email to {masked}!"
+                )
+                return res
+            except Exception as fb_exc:
+                logger.error(
+                    f"[ResilientEmailProvider] Both primary ({self.primary_name}) and fallback ({self.fallback_name}) failed for {masked}. "
+                    f"Primary: {exc} | Fallback: {fb_exc}"
+                )
+                raise EmailDeliveryError(
+                    f"Email delivery failed across all providers. Primary ({self.primary_name}): {exc} | Fallback ({self.fallback_name}): {fb_exc}"
+                ) from fb_exc
 
 
 def get_email_provider() -> EmailProvider:
-    """Factory returning active EmailProvider based on configuration and environment."""
-    provider_name = getattr(settings, "EMAIL_PROVIDER", "MOCK").strip().upper()
+    """
+    Factory returning active EmailProvider based on configuration and environment.
+    Supports single providers (MOCK, SMTP, RESEND) and resilient multi-provider fallback.
+    """
+    provider_name = getattr(settings, "EMAIL_PROVIDER", "").strip().upper()
     env = getattr(settings, "ENVIRONMENT", "").strip().lower()
     has_resend_key = bool(getattr(settings, "RESEND_API_KEY", None))
     has_smtp_creds = bool(
@@ -268,8 +382,54 @@ def get_email_provider() -> EmailProvider:
         and (settings.SMTP_PASSWORD or settings.SMTP_USERNAME or settings.SMTP_USER)
     )
 
-    if provider_name == "RESEND" or (has_resend_key and provider_name != "MOCK"):
+    if provider_name == "MOCK" or (
+        env in ("development", "test", "testing") and not has_resend_key and not has_smtp_creds
+    ):
+        return DevMockEmailProvider()
+
+    # If both Resend and SMTP are configured, build a ResilientEmailProvider!
+    if has_resend_key and has_smtp_creds:
+        from_email = (getattr(settings, "SMTP_FROM_EMAIL", "") or "").strip().lower()
+        is_webmail = any(
+            from_email.endswith(d)
+            for d in ("@gmail.com", "@yahoo.com", "@outlook.com", "@hotmail.com")
+        )
+
+        if provider_name == "RESEND":
+            # Resend primary, SMTP fallback
+            return ResilientEmailProvider(
+                primary=ResendEmailProvider(),
+                fallback=SMTPEmailProvider(),
+                primary_name="ResendEmailProvider",
+                fallback_name="SMTPEmailProvider",
+            )
+        elif provider_name == "SMTP":
+            # SMTP primary, Resend fallback
+            return ResilientEmailProvider(
+                primary=SMTPEmailProvider(),
+                fallback=ResendEmailProvider(),
+                primary_name="SMTPEmailProvider",
+                fallback_name="ResendEmailProvider",
+            )
+        else:
+            # Auto-detection: If webmail is configured as sender, prioritize SMTP (since Resend strictly rejects webmail)
+            if is_webmail:
+                return ResilientEmailProvider(
+                    primary=SMTPEmailProvider(),
+                    fallback=ResendEmailProvider(),
+                    primary_name="SMTPEmailProvider",
+                    fallback_name="ResendEmailProvider",
+                )
+            return ResilientEmailProvider(
+                primary=ResendEmailProvider(),
+                fallback=SMTPEmailProvider(),
+                primary_name="ResendEmailProvider",
+                fallback_name="SMTPEmailProvider",
+            )
+
+    if has_resend_key or provider_name == "RESEND":
         return ResendEmailProvider()
-    elif provider_name == "SMTP" or (env == "production" and has_smtp_creds):
+    elif has_smtp_creds or provider_name == "SMTP":
         return SMTPEmailProvider()
+
     return DevMockEmailProvider()

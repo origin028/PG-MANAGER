@@ -546,7 +546,12 @@ class _RegisterScreenState extends State<RegisterScreen>
         SnackBar(
           content: Text(e.message),
           backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _handleSubmitRegistration,
+          ),
         ),
       );
     } catch (e) {
@@ -555,7 +560,12 @@ class _RegisterScreenState extends State<RegisterScreen>
         SnackBar(
           content: Text('Registration OTP request failed: $e'),
           backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _handleSubmitRegistration,
+          ),
         ),
       );
     } finally {

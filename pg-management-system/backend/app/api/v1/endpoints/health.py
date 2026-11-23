@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.logging import logger
 from app.db.session import get_db
+from app.integrations.email import get_email_provider
 from app.schemas.common import APIResponse
 
 router = APIRouter()
@@ -46,6 +47,7 @@ def health_check(db: Session = Depends(get_db)):
         "environment": settings.ENVIRONMENT,
         "version": settings.VERSION,
         "email_provider": getattr(settings, "EMAIL_PROVIDER", "MOCK"),
+        "active_email_provider": get_email_provider().__class__.__name__,
         "smtp_configured": bool(getattr(settings, "SMTP_PASSWORD", "") and getattr(settings, "SMTP_HOST", "") not in ("localhost", "")),
         "resend_configured": bool(getattr(settings, "RESEND_API_KEY", "")),
         "timestamp": datetime.now(timezone.utc).isoformat(),
