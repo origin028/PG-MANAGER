@@ -13,14 +13,17 @@ class TokenStorage {
 
   /// Initializes storage and loads cached tokens into memory
   static Future<void> init() async {
-    if (_initialized) return;
     try {
       final prefs = await SharedPreferences.getInstance();
       _cachedAccessToken = prefs.getString(_accessTokenKey);
       _cachedRefreshToken = prefs.getString(_refreshTokenKey);
       final userJson = prefs.getString(_userProfileKey);
       if (userJson != null) {
-        _cachedUserProfile = jsonDecode(userJson) as Map<String, dynamic>?;
+        try {
+          _cachedUserProfile = jsonDecode(userJson) as Map<String, dynamic>?;
+        } catch (_) {
+          _cachedUserProfile = null;
+        }
       }
       _initialized = true;
     } catch (_) {
@@ -28,10 +31,39 @@ class TokenStorage {
     }
   }
 
+  /// Ensures storage has been initialized before reading tokens
+  static Future<void> ensureInitialized() async {
+    if (!_initialized || _cachedAccessToken == null) {
+      await init();
+    }
+  }
+
   static String? get accessToken => _cachedAccessToken;
   static String? get refreshToken => _cachedRefreshToken;
   static Map<String, dynamic>? get userProfile => _cachedUserProfile;
   static bool get isAuthenticated => _cachedAccessToken != null && _cachedAccessToken!.isNotEmpty;
+
+  /// Checks if the cached access token is expired based on JWT exp claim
+  static bool get isAccessTokenExpired {
+    final token = _cachedAccessToken;
+    if (token == null || token.isEmpty) return true;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return false;
+      var normalized = base64Url.normalize(parts[1]);
+      final payloadStr = utf8.decode(base64Url.decode(normalized));
+      final payload = jsonDecode(payloadStr) as Map<String, dynamic>;
+      final exp = payload['exp'];
+      if (exp is num) {
+        final expTime = DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000);
+        // Treat as expired if within 30 seconds of expiry
+        return DateTime.now().isAfter(expTime.subtract(const Duration(seconds: 30)));
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
 
   static String? get userRole {
     final profile = userProfile;

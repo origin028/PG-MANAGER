@@ -31,7 +31,7 @@ class AnnouncementRead(BaseModel):
     company_id: uuid.UUID
     property_id: Optional[uuid.UUID] = None
     property_name: Optional[str] = None
-    created_by_user_id: uuid.UUID
+    created_by_user_id: Optional[uuid.UUID] = None
     created_by_name: Optional[str] = None
     title: str
     content: str

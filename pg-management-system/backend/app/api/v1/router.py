@@ -43,6 +43,7 @@ v1_router.include_router(receipts.router, prefix="/receipts", tags=["Receipts & 
 v1_router.include_router(complaints.router, prefix="/complaints", tags=["Complaints & Maintenance"])
 v1_router.include_router(expenses.router, prefix="/expenses", tags=["Expenses"])
 v1_router.include_router(announcements.router, prefix="/announcements", tags=["Announcements"])
+v1_router.include_router(announcements.router, prefix="/announcement", tags=["Announcements"])
 v1_router.include_router(food_menus.router, prefix="/food-menus", tags=["Food Menu"])
 v1_router.include_router(staff.router, prefix="/staff", tags=["Staff"])
 v1_router.include_router(leads.router, prefix="/leads", tags=["Leads & CRM"])

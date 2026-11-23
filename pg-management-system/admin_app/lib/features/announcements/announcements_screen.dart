@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/data/app_data.dart';
+import '../../core/network/token_storage.dart';
 import '../../core/services/admin_api_service.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -291,6 +292,11 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
 
                                       setDialogState(() => isSubmitting = true);
                                       try {
+                                        await TokenStorage.ensureInitialized();
+                                        if (!TokenStorage.isAuthenticated) {
+                                          throw Exception('Administrator session required. Please sign in to publish announcements.');
+                                        }
+
                                         final payload = {
                                           'title': title,
                                           'content': content,
@@ -317,9 +323,10 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
                                         }
                                       } catch (e) {
                                         setDialogState(() => isSubmitting = false);
+                                        final cleanMsg = e.toString().replaceAll('Exception: ', '').replaceAll('ApiException: ', '');
                                         if (dialogContext.mounted) {
                                           ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                            SnackBar(content: Text('Failed to save announcement: $e'), backgroundColor: AppTheme.statusRed),
+                                            SnackBar(content: Text('Failed to save announcement: $cleanMsg'), backgroundColor: AppTheme.statusRed),
                                           );
                                         }
                                       }

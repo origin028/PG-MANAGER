@@ -27,6 +27,74 @@ class ApiClient {
   }
 
   static const Duration timeout = Duration(seconds: 60);
+  static bool _isRefreshing = false;
+
+  /// Ensures storage is initialized and access token is valid before sending request
+  static Future<void> _ensureValidToken(String path) async {
+    // Skip token validation for unauthenticated auth endpoints
+    if (path.startsWith('/auth/admin/login') ||
+        path.startsWith('/auth/admin/register') ||
+        path.startsWith('/auth/login') ||
+        path.startsWith('/auth/register') ||
+        path.startsWith('/auth/refresh')) {
+      return;
+    }
+
+    await TokenStorage.ensureInitialized();
+
+    // If access token is expired or missing, attempt refresh if refresh token exists
+    if ((TokenStorage.accessToken == null || TokenStorage.isAccessTokenExpired) &&
+        TokenStorage.refreshToken != null &&
+        TokenStorage.refreshToken!.isNotEmpty &&
+        !_isRefreshing) {
+      await _refreshAccessToken();
+    }
+  }
+
+  /// Refreshes access token using backend /auth/refresh endpoint
+  static Future<bool> _refreshAccessToken() async {
+    final refreshToken = TokenStorage.refreshToken;
+    if (refreshToken == null || refreshToken.isEmpty) return false;
+
+    _isRefreshing = true;
+    try {
+      final uri = Uri.parse('$baseUrl/auth/refresh');
+      final res = await http.post(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({
+          'refresh_token': refreshToken,
+          'client_type': 'admin_web',
+        }),
+      ).timeout(const Duration(seconds: 15));
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final body = jsonDecode(res.body);
+        final data = body is Map && body.containsKey('data') ? body['data'] : body;
+        if (data is Map) {
+          final newAccess = data['access_token']?.toString();
+          final newRefresh = data['refresh_token']?.toString() ?? refreshToken;
+          final user = data['user'] as Map<String, dynamic>?;
+          if (newAccess != null && newAccess.isNotEmpty) {
+            await TokenStorage.saveTokens(
+              accessToken: newAccess,
+              refreshToken: newRefresh,
+              user: user,
+            );
+            return true;
+          }
+        }
+      }
+    } catch (_) {
+      // Refresh failed
+    } finally {
+      _isRefreshing = false;
+    }
+    return false;
+  }
 
   static Map<String, String> _buildHeaders([Map<String, String>? extraHeaders]) {
     final headers = <String, String>{
@@ -62,7 +130,10 @@ class ApiClient {
     return uri;
   }
 
-  static dynamic _handleResponse(http.Response response) {
+  static Future<dynamic> _handleResponse(
+    http.Response response, {
+    Future<dynamic> Function()? retry,
+  }) async {
     dynamic jsonBody;
     try {
       jsonBody = jsonDecode(response.body);
@@ -78,17 +149,36 @@ class ApiClient {
     }
 
     if (response.statusCode == 401) {
-      TokenStorage.clear();
+      // Attempt token refresh on 401 if refresh token is available and retry callback provided
+      if (retry != null &&
+          TokenStorage.refreshToken != null &&
+          TokenStorage.refreshToken!.isNotEmpty &&
+          !_isRefreshing) {
+        final refreshed = await _refreshAccessToken();
+        if (refreshed) {
+          return await retry();
+        }
+      }
+      await TokenStorage.clear();
+      throw ApiException.fromResponse(response.statusCode, jsonBody);
     }
 
     throw ApiException.fromResponse(response.statusCode, jsonBody);
   }
 
-  static Future<dynamic> get(String path, {Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> get(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
+    await _ensureValidToken(path);
     try {
       final uri = _buildUri(path, queryParameters);
       final response = await http.get(uri, headers: _buildHeaders(headers)).timeout(timeout);
-      return _handleResponse(response);
+      return await _handleResponse(
+        response,
+        retry: () => get(path, queryParameters: queryParameters, headers: headers),
+      );
     } on ApiException {
       rethrow;
     } catch (e) {
@@ -96,7 +186,12 @@ class ApiClient {
     }
   }
 
-  static Future<http.Response> getRaw(String path, {Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<http.Response> getRaw(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
+    await _ensureValidToken(path);
     try {
       final uri = _buildUri(path, queryParameters);
       return await http.get(uri, headers: _buildHeaders(headers)).timeout(timeout);
@@ -107,13 +202,18 @@ class ApiClient {
     }
   }
 
-  static Future<Uint8List> getBytes(String path, {Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<Uint8List> getBytes(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
+    await _ensureValidToken(path);
     final res = await getRaw(path, queryParameters: queryParameters, headers: headers);
     if (res.statusCode >= 200 && res.statusCode < 300) {
       return res.bodyBytes;
     }
     if (res.statusCode == 401) {
-      TokenStorage.clear();
+      await TokenStorage.clear();
     }
     dynamic jsonBody;
     try {
@@ -122,7 +222,13 @@ class ApiClient {
     throw ApiException.fromResponse(res.statusCode, jsonBody);
   }
 
-  static Future<dynamic> post(String path, {dynamic body, Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> post(
+    String path, {
+    dynamic body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
+    await _ensureValidToken(path);
     try {
       final uri = _buildUri(path, queryParameters);
       final response = await http
@@ -132,7 +238,10 @@ class ApiClient {
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(timeout);
-      return _handleResponse(response);
+      return await _handleResponse(
+        response,
+        retry: () => post(path, body: body, queryParameters: queryParameters, headers: headers),
+      );
     } on ApiException {
       rethrow;
     } catch (e) {
@@ -140,7 +249,13 @@ class ApiClient {
     }
   }
 
-  static Future<dynamic> put(String path, {dynamic body, Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> put(
+    String path, {
+    dynamic body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
+    await _ensureValidToken(path);
     try {
       final uri = _buildUri(path, queryParameters);
       final response = await http
@@ -150,7 +265,10 @@ class ApiClient {
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(timeout);
-      return _handleResponse(response);
+      return await _handleResponse(
+        response,
+        retry: () => put(path, body: body, queryParameters: queryParameters, headers: headers),
+      );
     } on ApiException {
       rethrow;
     } catch (e) {
@@ -158,7 +276,13 @@ class ApiClient {
     }
   }
 
-  static Future<dynamic> patch(String path, {dynamic body, Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> patch(
+    String path, {
+    dynamic body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
+    await _ensureValidToken(path);
     try {
       final uri = _buildUri(path, queryParameters);
       final response = await http
@@ -168,7 +292,10 @@ class ApiClient {
             body: body != null ? jsonEncode(body) : null,
           )
           .timeout(timeout);
-      return _handleResponse(response);
+      return await _handleResponse(
+        response,
+        retry: () => patch(path, body: body, queryParameters: queryParameters, headers: headers),
+      );
     } on ApiException {
       rethrow;
     } catch (e) {
@@ -176,11 +303,19 @@ class ApiClient {
     }
   }
 
-  static Future<dynamic> delete(String path, {Map<String, dynamic>? queryParameters, Map<String, String>? headers}) async {
+  static Future<dynamic> delete(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
+    await _ensureValidToken(path);
     try {
       final uri = _buildUri(path, queryParameters);
       final response = await http.delete(uri, headers: _buildHeaders(headers)).timeout(timeout);
-      return _handleResponse(response);
+      return await _handleResponse(
+        response,
+        retry: () => delete(path, queryParameters: queryParameters, headers: headers),
+      );
     } on ApiException {
       rethrow;
     } catch (e) {
