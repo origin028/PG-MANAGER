@@ -1,4 +1,4 @@
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
@@ -9,20 +9,21 @@ import { color } from "@/lib/theme";
 /** Sends people to the right place: signed-out -> welcome, resident -> resident tabs, owner -> owner tabs. */
 function Gate() {
   const { ready, mode } = useSession();
-  const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     if (!ready) return;
-    const area = segments[0] ?? "";
-    // Screens each mode may visit; anything else redirects to that mode's home.
+    // Paths each mode may visit; anything else redirects to that mode's home.
     const allowed: Record<string, string[]> = {
-      resident: ["resident", "new-complaint"],
-      owner: ["owner", "approve", "announce"],
+      signedOut: ["/welcome", "/resident-login", "/owner-login", "/join"],
+      resident: ["/resident", "/new-complaint"],
+      owner: ["/owner", "/approve", "/announce"],
     };
-    if (!mode) { if (area !== "(auth)") router.replace("/welcome"); }
-    else if (!allowed[mode].includes(area)) router.replace(mode === "resident" ? "/resident" : "/owner");
-  }, [ready, mode, segments, router]);
+    const ok = (list: string[]) => list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+    if (!mode) { if (!ok(allowed.signedOut)) router.replace("/welcome"); }
+    else if (!ok(allowed[mode])) router.replace(mode === "resident" ? "/resident" : "/owner");
+  }, [ready, mode, pathname, router]);
 
   if (!ready) {
     return (

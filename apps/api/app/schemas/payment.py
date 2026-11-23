@@ -91,6 +91,8 @@ class PaymentSummary(BaseModel):
     invoice_id: Optional[uuid.UUID] = None
     created_at: Optional[datetime] = None
     paid_at: Optional[datetime] = None
+    resident_name: Optional[str] = None
+    invoice_number: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
 

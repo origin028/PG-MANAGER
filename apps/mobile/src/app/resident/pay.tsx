@@ -23,7 +23,6 @@ export default function Pay() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const pending = useRef<Upi | null>(null);
-  const attempt = useRef(0);
 
   const onReturnFromUpi = useEffectEvent(async () => {
     const p = pending.current;
@@ -43,7 +42,7 @@ export default function Pay() {
   async function pay(invoice: Invoice) {
     setBusy(invoice.id); setError(null); setSubmitted(false);
     try {
-      const upi = await api<Upi>("/payments/upi/initiate", { method: "POST", json: { invoice_id: invoice.id, idempotency_key: `${invoice.id}-${++attempt.current}-${new Date().toISOString()}` } });
+      const upi = await api<Upi>("/payments/upi/initiate", { method: "POST", json: { invoice_id: invoice.id, idempotency_key: `upi-${invoice.id}` } });
       setActive(upi);
       if (Platform.OS !== "web" && (await Linking.canOpenURL(upi.upi_uri))) {
         pending.current = upi;

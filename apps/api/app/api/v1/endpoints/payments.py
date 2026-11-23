@@ -717,7 +717,13 @@ def list_payments(
     verify_property_access(property_id, current_user, db)
     repo = PaymentRepository(db)
     payments, total = repo.list_by_property(property_id=property_id, page=page, page_size=page_size)
-    summaries = [PaymentSummary.model_validate(p) for p in payments]
+    summaries = [
+        PaymentSummary.model_validate(p).model_copy(update={
+            "resident_name": p.resident.user.full_name if p.resident and p.resident.user else None,
+            "invoice_number": p.invoice.invoice_number if p.invoice else None,
+        })
+        for p in payments
+    ]
     total_pages = (total + page_size - 1) // page_size if total > 0 else 1
 
     return APIResponse(
