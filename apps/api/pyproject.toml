@@ -1,32 +1,22 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-
 [project]
-name = "pg-management-backend"
-version = "1.0.0"
-description = "Production backend API for PG Management System"
-readme = "README.md"
+name = "pg-management-api"
+version = "2.0.0"
+description = "Origin PG Management System API"
 requires-python = ">=3.12"
-dependencies = [
-    "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.30.0",
-    "sqlalchemy>=2.0.30",
-    "alembic>=1.13.0",
-    "pydantic>=2.8.0",
-    "pydantic-settings>=2.4.0",
-    "psycopg[binary,pool]>=3.2.0",
-    "pyjwt[crypto]>=2.9.0",
-    "bcrypt>=4.0.0",
-    "python-multipart>=0.0.9",
-    "python-dotenv>=1.0.1",
-    "email-validator>=2.0.0",
-]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-filterwarnings = [
-    "ignore::DeprecationWarning",
-]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["migrations/versions"]
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82", "F811", "F5", "F6", "B006"]  # real-bug rules only; no style/unused-import churn
+
+[tool.ruff.lint.per-file-ignores]
+"app/models/*" = ["F821"]   # SQLAlchemy relationships use string forward references
+"tests/*" = ["F811", "F821"]  # pytest fixtures are imported by name

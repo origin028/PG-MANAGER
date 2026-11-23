@@ -3,11 +3,8 @@ from typing import List
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
-import uuid
-from typing import List, Optional
-from fastapi import APIRouter, Depends, Query, status
+from typing import Optional
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, PermissionDeniedError
 from app.dependencies import (

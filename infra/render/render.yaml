@@ -1,48 +1,80 @@
+# Render Blueprint - Origin PG Management API.
+# Create in the COMPANY Render account: New > Blueprint > pick this repo > this file path.
+#
+# Before the first sync, create an Environment Group named "pg-secrets" in the Render dashboard with:
+#   SECRET_KEY, ENCRYPTION_KEY, ADMIN_REGISTRATION_SUPER_KEY, CORS_ORIGINS,
+#   SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL, ATTENDANCE_DEVICE_KEY
+# (generation commands are in apps/api/.env.example). Never put these values in git.
+#
+# Plan names/prices change - confirm on render.com/pricing before syncing.
+
+databases:
+  - name: pg-db
+    region: singapore
+    plan: basic-256mb
+    databaseName: pg_management
+    postgresMajorVersion: "16"
+
 services:
   - type: web
-    name: pg-management-api
-    runtime: python
-    rootDir: pg-management-system/backend
-    buildCommand: pip install -r requirements.txt
-    preDeployCommand: alembic upgrade head
-    startCommand: "python -m alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 4 --proxy-headers --forwarded-allow-ips=*"
-    healthCheckPath: /api/v1/health
+    name: pg-api
+    runtime: docker
+    region: singapore
+    plan: starter            # paid: no sleeping (free plan sleeps and is not suitable for rent data)
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    healthCheckPath: /api/v1/health/live
+    preDeployCommand: alembic upgrade head   # migrations run once per release, before traffic switches
+    autoDeploy: false        # deploys are deliberate: trigger after CI is green
+    disk:
+      name: kyc-uploads      # encrypted KYC files; included in Render's disk snapshots
+      mountPath: /app/uploads
+      sizeGB: 5
     envVars:
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
         value: "false"
-      - key: PROJECT_NAME
-        value: "Origin PG Management System API"
-      - key: SECRET_KEY
-        generateValue: true
       - key: DATABASE_URL
-        sync: false
-      - key: CORS_ORIGINS
-        value: '["https://pg-admin-web-nu.vercel.app"]'
+        fromDatabase: { name: pg-db, property: connectionString }
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"           # Render's proxy is the only path to this service (see docs/architecture.md)
       - key: EMAIL_PROVIDER
-        value: "SMTP"
-      - key: SMTP_HOST
-        value: "smtp.gmail.com"
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USERNAME
-        sync: false
-      - key: SMTP_PASSWORD
-        sync: false
-      - key: SMTP_FROM_EMAIL
-        sync: false
-      - key: SMTP_FROM_NAME
-        value: "Origin PG Living"
-      - key: SMTP_USE_TLS
-        value: "true"
-      - key: RESEND_API_KEY
-        sync: false
-      - key: RESEND_FROM_EMAIL
-        sync: false
-      - key: BREVO_API_KEY
-        sync: false
-      - key: BREVO_FROM_EMAIL
-        sync: false
-      - key: SENDGRID_API_KEY
-        sync: false
+        value: SMTP
+      - fromGroup: pg-secrets
+
+  - type: cron
+    name: pg-monthly-invoices
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    schedule: "0 2 1 * *"    # 07:30 IST on the 1st of every month
+    dockerCommand: python -m app.tasks.run monthly-invoices
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase: { name: pg-db, property: connectionString }
+      - key: EMAIL_PROVIDER
+        value: SMTP
+      - fromGroup: pg-secrets
+
+  - type: cron
+    name: pg-rent-reminders
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    schedule: "30 3 * * *"   # 09:00 IST daily
+    dockerCommand: python -m app.tasks.run reminders
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase: { name: pg-db, property: connectionString }
+      - key: EMAIL_PROVIDER
+        value: SMTP
+      - fromGroup: pg-secrets

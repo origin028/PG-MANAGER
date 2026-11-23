@@ -1,0 +1,29 @@
+# Local development stack. `make db-up` starts only the database; `api` is optional.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pg_management
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      retries: 10
+  api:
+    build: ../../apps/api
+    profiles: ["full"]
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      ENVIRONMENT: development
+      DEBUG: "true"
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/pg_management
+      EMAIL_PROVIDER: MOCK
+      ADMIN_REGISTRATION_SUPER_KEY: dev-owner-key
+    ports: ["8000:8000"]
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+volumes:
+  pgdata:
