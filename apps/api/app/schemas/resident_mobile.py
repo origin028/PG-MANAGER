@@ -103,6 +103,7 @@ class FoodMenuItem(BaseModel):
     end_time: Optional[str] = None
     dishes: List[str]
     is_active: bool
+    has_image: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

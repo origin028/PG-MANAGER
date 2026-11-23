@@ -396,11 +396,18 @@ def get_my_meal_pass(
     from app.models.meal_serving import MealServing
     from app.services.meal_service import current_meal, issue_pass, tz
 
+    from app.models.property import Property
+    from app.services.kitchen_access import kitchen_enabled
+
+    prop = db.get(Property, active_resident.property_id)
+    if not prop or not kitchen_enabled(db, prop.company_id):
+        return APIResponse(success=True, message="Meal passes are not in use.", data={"enabled": False, "meal": None})
+
     now = datetime.now(timezone.utc)
     current, upcoming = current_meal(db, active_resident.property_id, now)
     nxt = {"meal": upcoming.meal, "starts_at": upcoming.start.isoformat()} if upcoming else None
     if current is None:
-        return APIResponse(success=True, message="No meal is being served right now.", data={"meal": None, "next": nxt})
+        return APIResponse(success=True, message="No meal is being served right now.", data={"enabled": True, "meal": None, "next": nxt})
     day = now.astimezone(tz()).date()
     served = db.scalar(sa.select(MealServing.served_at).where(
         MealServing.resident_id == active_resident.id, MealServing.meal_date == day, MealServing.meal_type == current.meal))
@@ -408,6 +415,6 @@ def get_my_meal_pass(
     return APIResponse(
         success=True,
         message="Meal pass issued.",
-        data={"meal": current.meal, "token": token, "expires_in": ttl, "served_at": served.isoformat() if served else None,
+        data={"enabled": True, "meal": current.meal, "token": token, "expires_in": ttl, "served_at": served.isoformat() if served else None,
               "window_ends_at": current.end.isoformat(), "next": nxt},
     )

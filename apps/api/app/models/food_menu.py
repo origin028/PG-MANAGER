@@ -30,6 +30,7 @@ class FoodMenu(Base, UUIDMixin, TimestampMixin):
     dishes: Mapped[List[str]] = mapped_column(
         sa.JSON, default=list, nullable=False
     )
+    image_path: Mapped[Optional[str]] = mapped_column(sa.String(512), nullable=True)  # encrypted photo of the meal
     is_active: Mapped[bool] = mapped_column(
         sa.Boolean, default=True, nullable=False
     )

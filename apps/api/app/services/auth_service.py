@@ -115,6 +115,10 @@ class AuthService:
     ) -> TokenResponse:
         user = self.authenticate_user(identifier, password)
         self.validate_client_access(user, client_type)
+        if user.role.name == "KITCHEN":
+            from app.services.kitchen_access import require_kitchen_enabled
+
+            require_kitchen_enabled(self.db, user.company_id)
 
         user.last_login_at = datetime.now(timezone.utc)
         props = self.prop_repo.list_accessible_properties(user)

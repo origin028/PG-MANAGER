@@ -249,6 +249,7 @@ class ResidentMobileService:
                     end_time=item.end_time,
                     dishes=item.dishes if isinstance(item.dishes, list) else [],
                     is_active=item.is_active,
+                    has_image=bool(item.image_path),
                 )
             )
 

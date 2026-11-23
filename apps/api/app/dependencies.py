@@ -59,8 +59,12 @@ def get_current_user(
     if not user.is_active or getattr(user, "approval_status", "APPROVED") == "REJECTED":
         raise AuthenticationError("Account has been deactivated or rejected. Please contact administrator.")
 
-    if user.role and user.role.name == "KITCHEN" and not request.url.path.startswith(KITCHEN_ALLOWED_PREFIXES):
-        raise PermissionDeniedError("Kitchen accounts can only use the kitchen and menu screens.")
+    if user.role and user.role.name == "KITCHEN":
+        if not request.url.path.startswith(KITCHEN_ALLOWED_PREFIXES):
+            raise PermissionDeniedError("Kitchen accounts can only use the kitchen and menu screens.")
+        from app.services.kitchen_access import require_kitchen_enabled
+
+        require_kitchen_enabled(db, user.company_id)
 
     return user
 

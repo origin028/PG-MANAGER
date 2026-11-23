@@ -35,6 +35,7 @@ class FoodMenuRead(BaseModel):
     end_time: Optional[str] = None
     dishes: List[str]
     is_active: bool
+    has_image: bool = False
     created_at: datetime
     updated_at: datetime
     property_name: Optional[str] = None

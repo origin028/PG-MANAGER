@@ -1,3 +1,4 @@
+from fastapi import File, UploadFile
 import uuid
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, status
@@ -76,6 +77,8 @@ def create_food_menu_item(
         end_time=menu_item.end_time,
         dishes=menu_item.dishes or [],
         is_active=menu_item.is_active,
+
+        has_image=bool(menu_item.image_path),
         created_at=menu_item.created_at,
         updated_at=menu_item.updated_at,
         property_name=property_record.name,
@@ -125,6 +128,8 @@ def list_food_menu(
             end_time=item.end_time,
             dishes=item.dishes or [],
             is_active=item.is_active,
+
+            has_image=bool(item.image_path),
             created_at=item.created_at,
             updated_at=item.updated_at,
             property_name=prop_name,
@@ -161,6 +166,8 @@ def get_food_menu_item(
         end_time=item.end_time,
         dishes=item.dishes or [],
         is_active=item.is_active,
+
+        has_image=bool(item.image_path),
         created_at=item.created_at,
         updated_at=item.updated_at,
         property_name=item.property.name if item.property else None,
@@ -223,6 +230,8 @@ def update_food_menu_item(
             end_time=item.end_time,
             dishes=item.dishes or [],
             is_active=item.is_active,
+
+            has_image=bool(item.image_path),
             created_at=item.created_at,
             updated_at=item.updated_at,
             property_name=item.property.name if item.property else None,
@@ -266,6 +275,8 @@ def update_food_menu_item(
         end_time=item.end_time,
         dishes=item.dishes or [],
         is_active=item.is_active,
+
+        has_image=bool(item.image_path),
         created_at=item.created_at,
         updated_at=item.updated_at,
         property_name=item.property.name if item.property else None,
@@ -310,3 +321,42 @@ def delete_food_menu_item(
         message="Food menu item deleted successfully.",
         data={"deleted_id": str(menu_id)},
     )
+
+
+@router.post("/{menu_id}/image", status_code=status.HTTP_200_OK, summary="Upload Meal Photo")
+async def upload_menu_image(
+    menu_id: uuid.UUID,
+    photo: UploadFile = File(..., description="JPG or PNG, max 5MB"),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "ADMIN", "OWNER", "PROPERTY_MANAGER", "KITCHEN")),
+    db: Session = Depends(get_db),
+):
+    """Attaches a photo to one meal of the weekly menu (validated by content, stored encrypted)."""
+    from app.services.file_service import FileService
+
+    item = db.get(FoodMenu, menu_id)
+    if not item:
+        raise NotFoundError("Menu entry not found.")
+    verify_property_access(item.property_id, current_user, db)
+    item.image_path = await FileService.validate_and_save_upload(photo, "photo")
+    db.commit()
+    return APIResponse(success=True, message="Photo added.", data={"has_image": True})
+
+
+@router.get("/{menu_id}/image", status_code=status.HTTP_200_OK, summary="Meal Photo")
+def get_menu_image(menu_id: uuid.UUID, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Streams the meal photo to anyone who belongs to that home (residents included)."""
+    from pathlib import Path
+
+    from fastapi.responses import Response
+
+    from app.services.file_service import BASE_DIR, FileService
+
+    item = db.get(FoodMenu, menu_id)
+    if not item or not item.image_path:
+        raise NotFoundError("No photo for this meal.")
+    verify_property_access(item.property_id, current_user, db)
+    full = (BASE_DIR / item.image_path).resolve()
+    if (BASE_DIR / "uploads").resolve() not in full.parents or not Path(full).is_file():
+        raise NotFoundError("No photo for this meal.")
+    content, mime = FileService.read_document(full)
+    return Response(content=content, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})

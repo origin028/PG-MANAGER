@@ -19,6 +19,8 @@ class Company(Base, UUIDMixin, TimestampMixin):
     subscription_plan: Mapped[str] = mapped_column(sa.String(50), default="STANDARD", nullable=False)
     subscription_status: Mapped[str] = mapped_column(sa.String(50), default="ACTIVE", nullable=False)
     bed_limit: Mapped[int] = mapped_column(sa.Integer, default=240, nullable=False, server_default="240")
+    # Kitchen module (meal passes + kitchen staff logins). Off until the owner switches it on.
+    kitchen_enabled: Mapped[bool] = mapped_column(sa.Boolean, default=False, nullable=False, server_default=sa.false())
 
     # Relationships
     properties: Mapped[List["Property"]] = relationship("Property", back_populates="company")

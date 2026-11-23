@@ -69,8 +69,11 @@ def test_checked_out_resident_refused_and_forged_token_rejected(client: TestClie
         assert scan(db, "eyJhbGciOiJIUzI1NiJ9.e30.forged-signature-value", None, ids["res_user1"], BREAKFAST).status == "INVALID"
 
 
-def _kitchen_token(factory, company_id):
+def _kitchen_token(factory, company_id, enable=True):
+    from app.models.property import Company
+
     with factory() as db:
+        db.get(Company, company_id).kitchen_enabled = enable
         role = db.scalar(sa.select(Role).where(Role.name == "KITCHEN"))
         if not role:
             role = Role(name="KITCHEN", display_name="Kitchen Staff")
