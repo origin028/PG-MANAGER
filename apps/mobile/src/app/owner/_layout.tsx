@@ -2,7 +2,7 @@ import * as LocalAuthentication from "expo-local-authentication";
 import { Tabs } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { AppState, Platform, Text, View } from "react-native";
-import { ChatCircleDots, DotsThreeOutline, House, LockSimple, UserCheck, Wallet } from "phosphor-react-native";
+import { Bed, DotsThreeOutline, House, LockSimple, Users, Wallet } from "phosphor-react-native";
 import { Button } from "@/components/ui";
 import { color, space, type } from "@/lib/theme";
 
@@ -57,10 +57,10 @@ export default function OwnerTabs() {
         sceneStyle: { backgroundColor: color.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Today", tabBarIcon: icon(House) }} />
-      <Tabs.Screen name="approvals" options={{ title: "Approvals", tabBarIcon: icon(UserCheck) }} />
-      <Tabs.Screen name="payments" options={{ title: "Payments", tabBarIcon: icon(Wallet) }} />
-      <Tabs.Screen name="complaints" options={{ title: "Issues", tabBarIcon: icon(ChatCircleDots) }} />
+      <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: icon(House) }} />
+      <Tabs.Screen name="residents" options={{ title: "Residents", tabBarIcon: icon(Users) }} />
+      <Tabs.Screen name="rooms" options={{ title: "Rooms", tabBarIcon: icon(Bed) }} />
+      <Tabs.Screen name="money" options={{ title: "Money", tabBarIcon: icon(Wallet) }} />
       <Tabs.Screen name="more" options={{ title: "More", tabBarIcon: icon(DotsThreeOutline) }} />
     </Tabs>
   );

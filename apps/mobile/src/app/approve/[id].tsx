@@ -1,33 +1,18 @@
-import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { X } from "phosphor-react-native";
 import { Body, Button, Card, ErrorBox, Field, H2, Row, Screen, Segmented, Skeleton } from "@/components/ui";
-import type { Pending } from "@/app/owner/approvals";
+import type { Pending } from "@/app/manage/approvals";
+import { KycDoc } from "@/components/kyc-doc";
 import { api } from "@/lib/api";
 import { fmtDate } from "@/lib/dates";
-import { loadProtectedImage } from "@/lib/owner";
-import { color, radius, rupees, space, type } from "@/lib/theme";
+import { color, rupees, space, type } from "@/lib/theme";
 
 type Bed = { id: string; room_id: string; room_number?: string; bed_number: string; monthly_rent?: number };
 const DOCS = [
   ["aadhaar_front", "Aadhaar front"], ["aadhaar_back", "Aadhaar back"], ["pan_card", "PAN"], ["passport", "Passport"], ["resident_selfie", "Selfie"],
 ] as const;
-
-function KycDoc({ residentId, doc, label, onMissing }: { residentId: string; doc: string; label: string; onMissing: () => void }) {
-  const [uri, setUri] = useState<string | null | undefined>(undefined);
-  useEffect(() => {
-    loadProtectedImage(`/residents/${residentId}/kyc-document/${doc}`).then(setUri).catch(() => { setUri(null); onMissing(); });
-  }, [residentId, doc, onMissing]);
-  if (uri === null) return null; // not provided for this verification method
-  return (
-    <View style={{ width: 220, gap: space(2) }}>
-      {uri ? <Image source={uri} style={{ width: 220, height: 150, borderRadius: radius.md, backgroundColor: color.cream }} contentFit="cover" /> : <Skeleton w={220} h={150} r={radius.md} />}
-      <Body muted>{label}</Body>
-    </View>
-  );
-}
 
 export default function Approve() {
   const { id, data } = useLocalSearchParams<{ id: string; data?: string }>();
