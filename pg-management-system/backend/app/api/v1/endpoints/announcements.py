@@ -67,10 +67,6 @@ def create_announcement(
     """Creates a new property or company-wide announcement."""
     if payload.property_id:
         verify_property_access(payload.property_id, current_user, db)
-    else:
-        # Only Super Admin or Owner can create company-wide announcements
-        if current_user.role.name not in ("SUPER_ADMIN", "ADMIN", "OWNER"):
-            raise PermissionDeniedError("Property managers must specify a property for announcements.")
 
     announcement = Announcement(
         company_id=current_user.company_id,
@@ -243,7 +239,8 @@ def update_announcement(
         verify_property_access(ann.property_id, current_user, db)
 
     if payload.property_id is not None:
-        verify_property_access(payload.property_id, current_user, db)
+        if payload.property_id:
+            verify_property_access(payload.property_id, current_user, db)
         ann.property_id = payload.property_id
 
     if payload.title is not None:
