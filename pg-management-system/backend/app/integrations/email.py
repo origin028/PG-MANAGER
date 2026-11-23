@@ -150,45 +150,54 @@ class SMTPEmailProvider(EmailProvider):
         if body_html:
             msg.add_alternative(body_html, subtype="html")
 
-        try:
-            context = ssl.create_default_context()
-            if self.port == 465:
-                # Direct SSL (SMTPS)
-                with smtplib.SMTP_SSL(self.host, self.port, timeout=15, context=context) as server:
-                    if self.user and self.password:
-                        server.login(self.user, self.password)
-                    server.send_message(msg)
-            else:
-                # Standard SMTP with opportunistic/required STARTTLS
-                with smtplib.SMTP(self.host, self.port, timeout=15) as server:
-                    if self.use_tls:
-                        server.starttls(context=context)
-                    if self.user and self.password:
-                        server.login(self.user, self.password)
-                    server.send_message(msg)
+        context = ssl.create_default_context()
+        ports = [self.port]
+        alt_port = 465 if self.port != 465 else 587
+        if alt_port not in ports:
+            ports.append(alt_port)
 
-            masked = mask_email(to_email)
-            logger.info(f"[SMTPEmailProvider] Email delivered successfully to {masked} | Subject: '{subject}'")
-            return True
-        except (TimeoutError, socket.timeout) as exc:
-            masked = mask_email(to_email)
-            logger.error(f"[SMTPEmailProvider] Connection timed out delivering to {masked}: {exc}. Cloud hosting may block outbound SMTP ports (25, 465, 587).")
-            raise EmailDeliveryError(f"SMTP connection timed out: {exc}. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
-        except smtplib.SMTPAuthenticationError as exc:
-            masked = mask_email(to_email)
-            logger.error(f"[SMTPEmailProvider] SMTP authentication error delivering to {masked}: {exc}")
-            raise EmailDeliveryError(f"Failed to send verification email: SMTP authentication failed: {exc}") from exc
-        except smtplib.SMTPRecipientsRefused as exc:
-            masked = mask_email(to_email)
-            logger.error(f"[SMTPEmailProvider] SMTP recipient refused {masked}: {exc}")
-            raise BadRequestError(f"Invalid email address. The recipient was refused by mail server: {exc}") from exc
-        except (smtplib.SMTPException, OSError) as exc:
-            masked = mask_email(to_email)
-            logger.error(f"[SMTPEmailProvider] Failed to deliver email to {masked}: {exc}")
-            err_msg = str(exc)
-            if "timed out" in err_msg.lower() or "timeout" in err_msg.lower():
-                raise EmailDeliveryError(f"SMTP connection timed out: {exc}. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
-            raise EmailDeliveryError(f"Failed to send verification email. SMTP delivery error: {exc}") from exc
+        last_exc = None
+        for attempt_port in ports:
+            try:
+                if attempt_port == 465:
+                    # Direct SSL (SMTPS)
+                    with smtplib.SMTP_SSL(self.host, attempt_port, timeout=15, context=context) as server:
+                        if self.user and self.password:
+                            server.login(self.user, self.password)
+                        server.send_message(msg)
+                else:
+                    # Standard SMTP with STARTTLS
+                    with smtplib.SMTP(self.host, attempt_port, timeout=15) as server:
+                        if self.use_tls:
+                            server.starttls(context=context)
+                        if self.user and self.password:
+                            server.login(self.user, self.password)
+                        server.send_message(msg)
+
+                masked = mask_email(to_email)
+                logger.info(f"[SMTPEmailProvider] Email delivered successfully to {masked} via port {attempt_port} | Subject: '{subject}'")
+                return True
+            except smtplib.SMTPAuthenticationError as exc:
+                masked = mask_email(to_email)
+                logger.error(f"[SMTPEmailProvider] SMTP authentication error delivering to {masked}: {exc}")
+                raise EmailDeliveryError(f"Failed to send verification email: SMTP authentication failed: {exc}") from exc
+            except smtplib.SMTPRecipientsRefused as exc:
+                masked = mask_email(to_email)
+                logger.error(f"[SMTPEmailProvider] SMTP recipient refused {masked}: {exc}")
+                raise BadRequestError(f"Invalid email address. The recipient was refused by mail server: {exc}") from exc
+            except Exception as exc:
+                last_exc = exc
+                masked = mask_email(to_email)
+                logger.warning(
+                    f"[SMTPEmailProvider] SMTP attempt on {self.host}:{attempt_port} failed for {masked}: {exc}."
+                )
+
+        masked = mask_email(to_email)
+        logger.error(f"[SMTPEmailProvider] All SMTP attempts failed for {masked}: {last_exc}")
+        err_msg = str(last_exc)
+        if "timed out" in err_msg.lower() or "timeout" in err_msg.lower():
+            raise EmailDeliveryError(f"SMTP connection timed out: {last_exc}. Cloud hosting may be blocking outbound SMTP ports.") from last_exc
+        raise EmailDeliveryError(f"Failed to send verification email. SMTP delivery error: {last_exc}") from last_exc
 
 
 class ResendEmailProvider(EmailProvider):
