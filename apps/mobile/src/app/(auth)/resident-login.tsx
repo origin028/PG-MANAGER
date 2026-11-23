@@ -46,7 +46,7 @@ export default function ResidentLogin() {
   }
 
   return (
-    <Screen>
+    <Screen narrow>
       <Pressable onPress={() => (step === "otp" ? setStep("phone") : router.back())} hitSlop={12} style={{ marginTop: space(3) }} accessibilityLabel="Back">
         <ArrowLeft size={24} color={color.ink} />
       </Pressable>

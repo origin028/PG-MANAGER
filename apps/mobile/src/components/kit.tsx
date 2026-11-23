@@ -75,5 +75,6 @@ export function confirmAction(title: string, message: string, confirmLabel: stri
   Alert.alert(title, message, [{ text: "Cancel", style: "cancel" }, { text: confirmLabel, style: destructive ? "destructive" : "default", onPress: onConfirm }]);
 }
 
-export const nice = (s?: string | null) => (s ?? "").replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
+const ACRONYMS: Record<string, string> = { UPI: "UPI", KYC: "KYC", PAN: "PAN", CASH: "Cash", BANK_TRANSFER: "Bank transfer" };
+export const nice = (s?: string | null) => ACRONYMS[s ?? ""] ?? (s ?? "").replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 export const digits = (s: string) => s.replace(/\D/g, "");

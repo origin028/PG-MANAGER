@@ -54,7 +54,8 @@
         {
           "cameraPermission": "Scan resident meal passes and take photos of documents."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "scheme": "originliving",
     "backgroundColor": "#fbf8f1"

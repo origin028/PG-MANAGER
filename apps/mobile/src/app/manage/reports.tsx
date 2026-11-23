@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Platform, Share, View } from "react-native";
+import { View } from "react-native";
 import { Export } from "phosphor-react-native";
 import { Divider, Header } from "@/components/kit";
 import { Body, Button, Card, ErrorBox, H2, LoadingCards, Row, Screen, Segmented } from "@/components/ui";
-import { API_URL, tokenStore } from "@/lib/api";
+import { downloadProtected } from "@/lib/download";
 import { useProperties } from "@/lib/owner";
 import { color, rupees, space } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
@@ -11,27 +11,12 @@ import { useData } from "@/lib/use-data";
 type Occ = { total_beds: number; occupied_beds: number; available_beds: number; occupancy_rate_percent: number };
 type Fin = { gross_collections: number; total_expenses: number; net_operating_profit: number; pending_rent: number; collections_by_mode: Record<string, number>; payment_count: number; expense_count: number };
 
-async function exportCsv(path: string, filename: string) {
-  const t = await tokenStore.get();
-  const res = await fetch(`${API_URL}/api/v1${path}`, { headers: t ? { Authorization: `Bearer ${t.access}` } : {} });
-  if (!res.ok) throw new Error("Export failed.");
-  const text = await res.text();
-  if (Platform.OS === "web") {
-    const url = URL.createObjectURL(new Blob([text], { type: "text/csv" }));
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-  } else {
-    await Share.share({ title: filename, message: text });
-  }
-}
-
 export default function Reports() {
   const { props, current, setCurrent } = useProperties();
   const occ = useData<Occ>(current ? `/reports/occupancy?property_id=${current}` : null);
   const fin = useData<Fin>("/reports/financial");
   const [error, setError] = useState<string | null>(null);
-  const run = (p: string, f: string) => exportCsv(p, f).catch((e) => setError((e as Error).message));
+  const run = (p: string, f: string) => downloadProtected(p, f, "text/csv").catch((e) => setError((e as Error).message));
 
   return (
     <Screen onRefresh={() => { occ.reload(); fin.reload(); }} refreshing={fin.refreshing}>

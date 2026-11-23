@@ -19,6 +19,7 @@ import {
   type ViewStyle,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { CONTENT_MAX, useWide } from "@/lib/layout";
 import { color, radius, space, type } from "@/lib/theme";
 
 export const tap = () => {
@@ -31,14 +32,22 @@ export function Screen({
   refreshing = false,
   scroll = true,
   padded = true,
+  narrow = false,
 }: {
   children: ReactNode;
   onRefresh?: () => void;
   refreshing?: boolean;
   scroll?: boolean;
   padded?: boolean;
+  /** Forms (sign-in, sign-up): a centred column on desktop instead of full width. */
+  narrow?: boolean;
 }) {
-  const body = padded ? { paddingHorizontal: space(5), paddingBottom: space(10) } : undefined;
+  const wide = useWide();
+  const body = padded
+    ? wide
+      ? { width: "100%" as const, maxWidth: narrow ? 520 : CONTENT_MAX, alignSelf: "center" as const, paddingHorizontal: space(10), paddingTop: narrow ? space(16) : space(6), paddingBottom: space(16) }
+      : { paddingHorizontal: space(5), paddingBottom: space(10) }
+    : undefined;
   return (
     <SafeAreaView style={s.safe} edges={["top"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -80,8 +89,11 @@ export function Card({ children, style, onPress, tone = "white" }: { children: R
   const bg = tone === "black" ? color.ink : tone === "cream" ? color.cream : color.card;
   const inner = <View style={[s.card, { backgroundColor: bg }, style]}>{children}</View>;
   if (!onPress) return inner;
+  // Layout props (flex/width) belong on the touchable wrapper, otherwise the card won't stretch in a row.
+  const flat = (StyleSheet.flatten(style) ?? {}) as ViewStyle;
+  const outer: ViewStyle = { flex: flat.flex, width: flat.width, alignSelf: flat.alignSelf };
   return (
-    <Pressable onPress={() => { tap(); onPress(); }} style={({ pressed }) => ({ transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+    <Pressable onPress={() => { tap(); onPress(); }} style={({ pressed }) => [outer, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
       {inner}
     </Pressable>
   );

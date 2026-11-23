@@ -1,10 +1,11 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import { ChartLineUp, Plus, Trash, Wallet } from "phosphor-react-native";
+import { ChartLineUp, FilePdf, Plus, Trash, Wallet } from "phosphor-react-native";
 import { Divider, Header, ListRow, SmallButton, confirmAction, digits, nice } from "@/components/kit";
 import { Badge, Body, Button, Card, Empty, ErrorBox, Field, H2, LoadingCards, Row, Screen, Segmented, statusTone } from "@/components/ui";
 import { api } from "@/lib/api";
+import { downloadProtected } from "@/lib/download";
 import { fmtDate, monthName } from "@/lib/dates";
 import { listOf, useProperties } from "@/lib/owner";
 import { color, rupees, space, type } from "@/lib/theme";
@@ -139,6 +140,36 @@ function Dues({ propertyId }: { propertyId: string }) {
   );
 }
 
+type Hist = { id: string; resident_name?: string; invoice_number?: string; billing_month?: string; amount: number; payment_mode: string; status: string; paid_at?: string; created_at: string; receipt_id?: string | null; receipt_number?: string | null };
+
+function History() {
+  const h = useData<Hist[]>("/payments/history");
+  const [q, setQ] = useState("ALL");
+  const [error, setError] = useState<string | null>(null);
+  const rows = (h.data ?? []).filter((p) => q === "ALL" || p.payment_mode === q);
+  const receipt = (p: Hist) => downloadProtected(`/receipts/${p.receipt_id}/pdf`, `${p.receipt_number ?? "receipt"}.pdf`, "application/pdf").catch((e) => setError((e as Error).message));
+  return (
+    <>
+      <Segmented value={q} onChange={setQ} options={[{ value: "ALL", label: "All" }, { value: "UPI", label: "UPI" }, { value: "CASH", label: "Cash" }, { value: "BANK_TRANSFER", label: "Bank" }]} />
+      <View style={{ height: space(3) }} />
+      {error ? <ErrorBox message={error} /> : null}
+      {h.loading ? <LoadingCards /> : rows.length ? (
+        <Card style={{ paddingVertical: space(1) }}>
+          {rows.map((p) => (
+            <ListRow key={p.id} title={`${rupees(p.amount)} · ${p.resident_name ?? "Resident"}`}
+              sub={`${nice(p.payment_mode)} · ${fmtDate(p.paid_at ?? p.created_at)}${p.billing_month ? ` · ${monthName(p.billing_month)}` : ""}`}
+              right={
+                <View style={{ flexDirection: "row", alignItems: "center", gap: space(3) }}>
+                  <Badge label={nice(p.status)} tone={statusTone(p.status)} />
+                  {p.receipt_id ? <Pressable onPress={() => receipt(p)} hitSlop={10} accessibilityLabel="Download receipt"><FilePdf size={22} color={color.ink} /></Pressable> : null}
+                </View>} />
+          ))}
+        </Card>
+      ) : <Body muted>No payments yet.</Body>}
+    </>
+  );
+}
+
 function Expenses({ propertyId }: { propertyId: string }) {
   const exp = useData<{ expenses: Expense[] }>("/expenses");
   const [f, setF] = useState<null | { title: string; amount: string; category: string; method: string }>(null);
@@ -183,7 +214,7 @@ function Expenses({ propertyId }: { propertyId: string }) {
 
 export default function MoneyTab() {
   const { props, current, setCurrent } = useProperties();
-  const [tab, setTab] = useState<"overview" | "dues" | "expenses">("overview");
+  const [tab, setTab] = useState<"overview" | "dues" | "history" | "expenses">("overview");
   const [key, setKey] = useState(0);
   useFocusEffect(useCallback(() => { setKey((k) => k + 1); }, []));
   return (
@@ -194,9 +225,9 @@ export default function MoneyTab() {
         <Card onPress={() => router.push("/manage/reports")} style={{ flex: 1, gap: space(2) }}><ChartLineUp size={22} color={color.ink} /><Text style={[type.label, { color: color.ink }]}>Reports</Text></Card>
       </View>
       {props.length > 1 ? <View style={{ marginBottom: space(3) }}><Segmented value={current ?? ""} onChange={setCurrent} options={props.map((p) => ({ value: p.id, label: p.name }))} /></View> : null}
-      <Segmented value={tab} onChange={setTab} options={[{ value: "overview", label: "Overview" }, { value: "dues", label: "Dues" }, { value: "expenses", label: "Expenses" }]} />
+      <Segmented value={tab} onChange={setTab} options={[{ value: "overview", label: "Overview" }, { value: "dues", label: "Dues" }, { value: "history", label: "History" }, { value: "expenses", label: "Expenses" }]} />
       <View style={{ height: space(4) }} key={`spacer-${key}`} />
-      {tab === "overview" ? <Overview key={key} /> : !current ? <LoadingCards /> : tab === "dues" ? <Dues key={key} propertyId={current} /> : <Expenses key={key} propertyId={current} />}
+      {tab === "overview" ? <Overview key={key} /> : tab === "history" ? <History key={key} /> : !current ? <LoadingCards /> : tab === "dues" ? <Dues key={key} propertyId={current} /> : <Expenses key={key} propertyId={current} />}
     </Screen>
   );
 }

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui/brand";
+import { APP_URL } from "@/lib/config";
 
 const links = [
   { href: "#story", label: "Life here" },
@@ -20,6 +21,7 @@ export function Nav() {
             <li key={l.href}><a href={l.href} className="transition-colors hover:text-black">{l.label}</a></li>
           ))}
         </ul>
+        <a href={`${APP_URL}/welcome`} className="hidden px-3 text-[14px] text-ink-2 hover:text-black sm:inline">Sign in</a>
         <a href="#visit" className="inline-flex h-10 items-center rounded-full bg-black px-5 text-[14px] font-medium text-[#faf7f0] transition-transform active:scale-[0.97]">
           Book a visit
         </a>

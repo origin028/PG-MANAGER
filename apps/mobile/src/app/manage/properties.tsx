@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { Buildings, Plus } from "phosphor-react-native";
-import { Header, ListRow, SmallButton, digits, nice } from "@/components/kit";
+import { Header, ListRow, SmallButton, confirmAction, digits, nice } from "@/components/kit";
 import { Badge, Button, Card, Empty, ErrorBox, Field, LoadingCards, Screen, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";
 import { color, space, type } from "@/lib/theme";
@@ -57,6 +57,12 @@ export default function Properties() {
           <Field label="Contact email" value={f.contact_email} onChangeText={set("contact_email")} autoCapitalize="none" keyboardType="email-address" />
           {error ? <ErrorBox message={error} /> : null}
           <Button title={f.id ? "Save changes" : "Create property"} onPress={save} loading={busy} disabled={!f.name.trim() || !f.code.trim() || !f.address_line1.trim() || f.pincode.length !== 6} />
+          {f.id ? (
+            <Button title="Deactivate property" variant="danger" style={{ marginTop: space(2) }} onPress={() => confirmAction("Deactivate this property?", "Only possible when nobody lives there. Its records are kept.", "Deactivate", async () => {
+              setBusy(true); setError(null);
+              try { await api(`/properties/${f.id}`, { method: "DELETE" }); setF(null); list.reload(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+            })} />
+          ) : null}
           <Button title="Cancel" variant="ghost" onPress={() => setF(null)} />
         </Card>
       ) : null}

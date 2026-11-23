@@ -91,7 +91,7 @@ export default function Join() {
 
   if (done) {
     return (
-      <Screen>
+      <Screen narrow>
         <View style={{ alignItems: "center", marginTop: space(20), gap: space(3) }}>
           <Clock size={56} color={color.ink} weight="light" />
           <Text style={[type.h1, { color: color.ink, textAlign: "center" }]}>You're in the queue</Text>
@@ -103,7 +103,7 @@ export default function Join() {
   }
 
   return (
-    <Screen>
+    <Screen narrow>
       <Pressable onPress={() => (step > 0 && step < 3 ? setStep(step - 1) : router.back())} hitSlop={12} style={{ marginTop: space(3) }} accessibilityLabel="Back">
         <ArrowLeft size={24} color={color.ink} />
       </Pressable>

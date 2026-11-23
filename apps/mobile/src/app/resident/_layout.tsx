@@ -1,15 +1,17 @@
 import { Tabs } from "expo-router";
 import { ChatCircleDots, ForkKnife, House, User, Wallet } from "phosphor-react-native";
+import { useWide } from "@/lib/layout";
 import { color } from "@/lib/theme";
 
 export default function ResidentTabs() {
+  const wide = useWide();
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: color.ink,
         tabBarInactiveTintColor: color.ink3,
-        tabBarStyle: { backgroundColor: color.card, borderTopColor: color.line, height: 84, paddingTop: 8 },
+        tabBarStyle: wide ? { display: "none" } : { backgroundColor: color.card, borderTopColor: color.line, height: 84, paddingTop: 8 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         sceneStyle: { backgroundColor: color.bg },
       }}

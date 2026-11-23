@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppState, Platform, Text, View } from "react-native";
 import { Bed, DotsThreeOutline, House, LockSimple, Users, Wallet } from "phosphor-react-native";
 import { Button } from "@/components/ui";
+import { useWide } from "@/lib/layout";
 import { color, space, type } from "@/lib/theme";
 
 /** Face ID / fingerprint lock: the owner's phone holds every resident's data. Re-locks after backgrounding. */
@@ -37,6 +38,7 @@ function icon(I: typeof House) {
 
 export default function OwnerTabs() {
   const { locked, unlock } = useBiometricLock();
+  const wide = useWide();
   if (locked) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: space(4), backgroundColor: color.bg, padding: space(8) }}>
@@ -52,7 +54,7 @@ export default function OwnerTabs() {
         headerShown: false,
         tabBarActiveTintColor: color.ink,
         tabBarInactiveTintColor: color.ink3,
-        tabBarStyle: { backgroundColor: color.card, borderTopColor: color.line, height: 84, paddingTop: 8 },
+        tabBarStyle: wide ? { display: "none" } : { backgroundColor: color.card, borderTopColor: color.line, height: 84, paddingTop: 8 },
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         sceneStyle: { backgroundColor: color.bg },
       }}

@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "react-native";
 import { Bed, Plus } from "phosphor-react-native";
 import { Header, SmallButton } from "@/components/kit";
 import { Body, Card, Empty, ErrorBox, LoadingCards, Screen, Segmented, tap } from "@/components/ui";
+import { useWide } from "@/lib/layout";
 import { useProperties } from "@/lib/owner";
 import { roomTypeLabel } from "@/lib/rooms";
 import { color, radius, rupees, space, type } from "@/lib/theme";
@@ -24,6 +25,7 @@ function BedDots({ total, occupied }: { total: number; occupied: number }) {
 }
 
 export default function RoomsTab() {
+  const wide = useWide();
   const { props, current, setCurrent } = useProperties();
   const fw = useData<{ floors: Floor[] }>(current ? `/rooms/floor-wise?property_id=${current}` : null);
   const cap = useData<Capacity>("/company/bed-capacity");
@@ -51,7 +53,7 @@ export default function RoomsTab() {
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3) }}>
               {f.rooms.map((r) => (
                 <Pressable key={r.id} onPress={() => { tap(); router.push({ pathname: "/manage/room/[id]", params: { id: r.id } }); }}
-                  style={({ pressed }) => ({ width: "47.8%", backgroundColor: color.card, borderRadius: radius.lg, padding: space(4), gap: space(3), opacity: r.is_active ? 1 : 0.5, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+                  style={({ pressed }) => ({ width: wide ? 230 : "47.8%", backgroundColor: color.card, borderRadius: radius.lg, padding: space(4), gap: space(3), opacity: r.is_active ? 1 : 0.5, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
                     <Text style={{ fontSize: 24, fontWeight: "700", letterSpacing: -0.6, color: color.ink }}>{r.room_number}</Text>
                     <Body muted>{r.available_beds ? `${r.available_beds} free` : "Full"}</Body>

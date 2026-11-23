@@ -64,6 +64,7 @@ export default function Leads() {
               <Body muted>{nice(l.source ?? "")} · {fmtDate(l.created_at)}</Body>
               <View style={{ flexDirection: "row", gap: space(2), marginTop: space(1) }}>
                 <SmallButton label="Call" tone="light" icon={<Phone size={16} color={color.ink} />} onPress={() => Linking.openURL(`tel:${l.phone}`)} />
+                <SmallButton label="Delete" tone="danger" onPress={() => confirmAction("Delete lead?", l.name, "Delete", () => run(() => api(`/leads/${l.id}`, { method: "DELETE" })))} />
                 {!["BOOKED", "LOST"].includes(l.status) ? <SmallButton label="Make resident" onPress={() => setConvert({ lead: l, bed: null, rent: "", deposit: "" })} /> : null}
               </View>
               {!["BOOKED", "LOST"].includes(l.status) ? (

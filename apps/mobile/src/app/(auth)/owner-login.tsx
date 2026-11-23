@@ -26,7 +26,7 @@ export default function OwnerLogin() {
   }
 
   return (
-    <Screen>
+    <Screen narrow>
       <Pressable onPress={() => router.back()} hitSlop={12} style={{ marginTop: space(3) }} accessibilityLabel="Back">
         <ArrowLeft size={24} color={color.ink} />
       </Pressable>

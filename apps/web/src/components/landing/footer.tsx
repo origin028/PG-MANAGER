@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Reveal } from "@/components/ui/reveal";
-import Link from "next/link";
 import { Logo } from "@/components/ui/brand";
+import { APP_URL } from "@/lib/config";
 import { IMG } from "@/lib/photos";
 import { VisitForm } from "./visit-form";
 
@@ -29,8 +29,8 @@ export function Footer() {
           <p className="mt-3 max-w-[30ch] text-ink-3">Co-living and women-only homes.</p>
         </div>
         <nav className="flex flex-wrap gap-x-8 gap-y-3 text-[15px] text-ink-2">
-          <Link href="/app" className="hover:text-black">Resident login</Link>
-          <Link href="/owner/login" className="hover:text-black">Owner login</Link>
+          <a href={`${APP_URL}/resident-login`} className="hover:text-black">Resident login</a>
+          <a href={`${APP_URL}/owner-login`} className="hover:text-black">Owner login</a>
           <a href="#rooms" className="hover:text-black">Rooms</a>
           <a href="#visit" className="hover:text-black">Book a visit</a>
         </nav>

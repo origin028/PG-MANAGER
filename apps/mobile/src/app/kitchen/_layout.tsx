@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { ChartBar, ForkKnife, Scan } from "phosphor-react-native";
+import { useWide } from "@/lib/layout";
 import { color } from "@/lib/theme";
 
 function icon(I: typeof Scan) {
@@ -10,12 +11,13 @@ function icon(I: typeof Scan) {
 }
 
 export default function KitchenTabs() {
+  const wide = useWide();
   return (
     <Tabs screenOptions={{
       headerShown: false,
       tabBarActiveTintColor: color.ink,
       tabBarInactiveTintColor: color.ink3,
-      tabBarStyle: { backgroundColor: color.card, borderTopColor: color.line, height: 84, paddingTop: 8 },
+      tabBarStyle: wide ? { display: "none" } : { backgroundColor: color.card, borderTopColor: color.line, height: 84, paddingTop: 8 },
       tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
       sceneStyle: { backgroundColor: color.bg },
     }}>

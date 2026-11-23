@@ -3,12 +3,15 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { WebShell } from "@/components/web-shell";
+import { useWide } from "@/lib/layout";
 import { SessionProvider, useSession } from "@/lib/session";
 import { color } from "@/lib/theme";
 
 /** Sends people to the right place: signed-out -> welcome, resident -> resident tabs, owner -> owner tabs. */
 function Gate() {
   const { ready, mode } = useSession();
+  const wide = useWide();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -33,7 +36,7 @@ function Gate() {
       </View>
     );
   }
-  return (
+  const stack = (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg }, animation: "fade" }}>
       <Stack.Screen name="new-complaint" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="approve/[id]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
@@ -41,6 +44,8 @@ function Gate() {
 
     </Stack>
   );
+  // Desktop browsers get a sidebar dashboard; phones keep the app layout.
+  return wide && mode ? <WebShell mode={mode}>{stack}</WebShell> : stack;
 }
 
 export default function RootLayout() {
