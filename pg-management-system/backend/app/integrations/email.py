@@ -173,22 +173,22 @@ class SMTPEmailProvider(EmailProvider):
         except (TimeoutError, socket.timeout) as exc:
             masked = mask_email(to_email)
             logger.error(f"[SMTPEmailProvider] Connection timed out delivering to {masked}: {exc}. Cloud hosting may block outbound SMTP ports (25, 465, 587).")
-            raise EmailDeliveryError("SMTP connection timed out. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
+            raise EmailDeliveryError(f"SMTP connection timed out: {exc}. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
         except smtplib.SMTPAuthenticationError as exc:
             masked = mask_email(to_email)
             logger.error(f"[SMTPEmailProvider] SMTP authentication error delivering to {masked}: {exc}")
-            raise EmailDeliveryError("Failed to send verification email: SMTP authentication failed. Please check server credentials.") from exc
+            raise EmailDeliveryError(f"Failed to send verification email: SMTP authentication failed: {exc}") from exc
         except smtplib.SMTPRecipientsRefused as exc:
             masked = mask_email(to_email)
             logger.error(f"[SMTPEmailProvider] SMTP recipient refused {masked}: {exc}")
-            raise BadRequestError("Invalid email address. The recipient was refused by mail server.") from exc
+            raise BadRequestError(f"Invalid email address. The recipient was refused by mail server: {exc}") from exc
         except (smtplib.SMTPException, OSError) as exc:
             masked = mask_email(to_email)
             logger.error(f"[SMTPEmailProvider] Failed to deliver email to {masked}: {exc}")
             err_msg = str(exc)
             if "timed out" in err_msg.lower() or "timeout" in err_msg.lower():
-                raise EmailDeliveryError("SMTP connection timed out. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
-            raise EmailDeliveryError("Failed to send verification email. Please try again later.") from exc
+                raise EmailDeliveryError(f"SMTP connection timed out: {exc}. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
+            raise EmailDeliveryError(f"Failed to send verification email. SMTP delivery error: {exc}") from exc
 
 
 class ResendEmailProvider(EmailProvider):
