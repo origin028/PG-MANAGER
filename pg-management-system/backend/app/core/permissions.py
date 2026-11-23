@@ -62,6 +62,34 @@ ROLE_PERMISSIONS = {
 }
 
 
+SYSTEM_ROLES_DATA = [
+    {
+        "name": RoleEnum.SUPER_ADMIN.value,
+        "display_name": "Super Administrator / Owner",
+        "description": "Full platform management access across all modules",
+        "permissions": ROLE_PERMISSIONS[RoleEnum.SUPER_ADMIN],
+    },
+    {
+        "name": RoleEnum.PROPERTY_MANAGER.value,
+        "display_name": "Property Manager",
+        "description": "Property management, resident onboarding, invoicing, complaints",
+        "permissions": ROLE_PERMISSIONS[RoleEnum.PROPERTY_MANAGER],
+    },
+    {
+        "name": RoleEnum.STAFF.value,
+        "display_name": "Staff / Warden",
+        "description": "Day-to-day operations, bed inspections, and complaints handling",
+        "permissions": ROLE_PERMISSIONS[RoleEnum.STAFF],
+    },
+    {
+        "name": RoleEnum.RESIDENT.value,
+        "display_name": "Resident",
+        "description": "Resident mobile portal access: stay details, rent payments, complaints",
+        "permissions": ROLE_PERMISSIONS[RoleEnum.RESIDENT],
+    },
+]
+
+
 def is_role_allowed(user_role: str, allowed_roles: List[str]) -> bool:
     """Checks whether the user's role is in the list of allowed roles."""
     return user_role in allowed_roles

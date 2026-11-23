@@ -50,11 +50,21 @@ async def lifespan(app: FastAPI):
                         conn.execute(sa.text("SELECT pg_advisory_xact_lock(849201948)"))
                         logger.info("Verifying and applying pending Alembic database migrations...")
                         command.upgrade(alembic_cfg, "head")
-                        logger.info("Alembic database migrations applied successfully (head: b8c9d0e1f2a3).")
+                        logger.info("Alembic database migrations applied successfully.")
             else:
                 logger.info("Verifying and applying pending Alembic database migrations...")
                 command.upgrade(alembic_cfg, "head")
                 logger.info("Alembic database migrations applied successfully.")
+
+        # 3. Automated idempotent system role verification and initialization
+        try:
+            from app.db.session import SessionLocal
+            from app.services.role_service import ensure_system_roles_exist
+            with SessionLocal() as db:
+                ensure_system_roles_exist(db)
+            logger.info("System roles verified and active.")
+        except Exception as exc:
+            logger.error(f"Error ensuring system roles on startup: {exc}", exc_info=True)
     except Exception as exc:
         logger.error(f"Fatal error during database schema migration: {exc}", exc_info=True)
         # Fail-fast: do not serve traffic with an incomplete or uninitialized database schema

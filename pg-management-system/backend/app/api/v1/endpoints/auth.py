@@ -14,8 +14,10 @@ from app.core.exceptions import (
     PermissionDeniedError,
     TooManyRequestsError,
 )
+from app.core.permissions import RoleEnum
 from app.core.security import get_password_hash
 from app.dependencies import get_current_user, get_db
+from app.services.role_service import get_or_create_system_role
 from app.models.otp_verification import OTPVerification
 from app.models.pending_registration import PendingResidentRegistration
 from app.models.property import Company, Property
@@ -690,9 +692,7 @@ def verify_resident_registration_otp(
     if not prop or not prop.is_active:
         raise NotFoundError("The specified PG property does not exist or is currently inactive.")
 
-    resident_role = db.scalar(sa.select(Role).where(Role.name == "RESIDENT"))
-    if not resident_role:
-        raise NotFoundError("System role 'RESIDENT' is not configured.")
+    resident_role = get_or_create_system_role(db, RoleEnum.RESIDENT)
 
     # 3. Duplicate checks
     if db.scalar(sa.select(User).where(User.phone == norm_phone)):
@@ -894,9 +894,7 @@ def register_resident(
     if not prop or not prop.is_active:
         raise NotFoundError("The specified PG property does not exist or is currently inactive.")
 
-    resident_role = db.scalar(sa.select(Role).where(Role.name == "RESIDENT"))
-    if not resident_role:
-        raise NotFoundError("System role 'RESIDENT' is not configured.")
+    resident_role = get_or_create_system_role(db, RoleEnum.RESIDENT)
 
     password_hash = get_password_hash(payload.password) if payload.password else f"!RESIDENT_NO_PASSWORD_{secrets.token_hex(16)}"
     user = User(
