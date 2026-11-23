@@ -42,13 +42,13 @@ class PropertyRepository:
             ).all())
             if props:
                 return props
-            origin_co = self.db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
-            if origin_co:
-                return list(self.db.scalars(
-                    sa.select(Property)
-                    .where(Property.company_id == origin_co.id, Property.is_active == True)
-                    .order_by(Property.name.asc())
-                ).all())
+            default_props = list(self.db.scalars(
+                sa.select(Property)
+                .where(Property.is_active == True, Property.code.like("OG-%"))
+                .order_by(Property.name.asc())
+            ).all())
+            if default_props:
+                return default_props
             return []
 
         query = (
@@ -68,8 +68,7 @@ class PropertyRepository:
             return True
 
         if prop.company_id != user.company_id:
-            origin_co = self.db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
-            if origin_co and prop.company_id == origin_co.id:
+            if prop.code and prop.code.startswith("OG-"):
                 user_props_count = self.db.scalar(
                     sa.select(sa.func.count(Property.id)).where(Property.company_id == user.company_id)
                 ) or 0

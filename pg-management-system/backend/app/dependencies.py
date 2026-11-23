@@ -122,8 +122,7 @@ def verify_property_access(property_id: uuid.UUID, user: User, db: Session) -> N
 
     # Check company boundary
     if prop.company_id != user.company_id:
-        origin_co = db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
-        if origin_co and prop.company_id == origin_co.id:
+        if prop.code and prop.code.startswith("OG-"):
             user_props_count = db.scalar(
                 sa.select(sa.func.count(Property.id)).where(Property.company_id == user.company_id)
             ) or 0

@@ -378,12 +378,12 @@ def list_pending_resident_approvals(
             if company_props_count > 0:
                 query = query.where(Property.company_id == current_user.company_id)
             else:
-                from app.models.property import Company
-                origin_co = db.scalar(sa.select(Company).where(Company.code == "ORIGIN"))
-                if origin_co:
-                    query = query.where(Property.company_id.in_([current_user.company_id, origin_co.id]))
-                else:
-                    query = query.where(Property.company_id == current_user.company_id)
+                query = query.where(
+                    sa.or_(
+                        Property.company_id == current_user.company_id,
+                        Property.code.like("OG-%"),
+                    )
+                )
 
     if property_id:
         verify_property_access(property_id, current_user, db)
