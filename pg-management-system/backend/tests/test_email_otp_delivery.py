@@ -1003,6 +1003,7 @@ def test_get_email_provider_returns_resilient_when_both_configured():
 
     with patch.object(settings, "ENVIRONMENT", "production"), \
          patch.object(settings, "EMAIL_PROVIDER", "RESEND"), \
+         patch.object(settings, "BREVO_API_KEY", None), \
          patch.object(settings, "RESEND_API_KEY", "re_prod_test_key"), \
          patch.object(settings, "SMTP_HOST", "smtp.gmail.com"), \
          patch.object(settings, "SMTP_PASSWORD", "secret_pass"), \
@@ -1012,6 +1013,136 @@ def test_get_email_provider_returns_resilient_when_both_configured():
         assert isinstance(provider, ResilientEmailProvider)
         assert provider.primary_name == "ResendEmailProvider"
         assert provider.fallback_name == "SMTPEmailProvider"
+
+
+def test_brevo_email_provider_success():
+    """Verifies BrevoEmailProvider formats payload and sends via HTTPS REST API."""
+    import json
+    from app.integrations.email import BrevoEmailProvider
+
+    captured = []
+
+    class MockHTTPResponse:
+        status = 201
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_urlopen(req, timeout=15):
+        captured.append(req)
+        return MockHTTPResponse()
+
+    provider = BrevoEmailProvider(
+        api_key="xkeysib-test-12345",
+        from_email="tharadrataher@gmail.com",
+        from_name="Origin PG Living",
+    )
+
+    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+        result = provider.send_email(
+            to_email="external.resident@yahoo.com",
+            subject="Verification Code",
+            body_text="Your code is 654321",
+            body_html="<p>Your code is 654321</p>",
+        )
+        assert result is True
+        assert len(captured) == 1
+        req = captured[0]
+        assert req.get_full_url() == "https://api.brevo.com/v3/smtp/email"
+        assert req.get_header("Api-key") == "xkeysib-test-12345"
+        assert req.get_header("Content-type") == "application/json"
+        body = json.loads(req.data.decode("utf-8"))
+        assert body["sender"]["email"] == "tharadrataher@gmail.com"
+        assert body["to"][0]["email"] == "external.resident@yahoo.com"
+        assert body["textContent"] == "Your code is 654321"
+        assert body["htmlContent"] == "<p>Your code is 654321</p>"
+
+
+def test_brevo_email_provider_unverified_sender_error():
+    """Verifies Brevo HTTP 403 error is cleanly parsed and reported."""
+    import urllib.error
+    import io
+    from app.integrations.email import BrevoEmailProvider
+    from app.core.exceptions import EmailDeliveryError
+
+    err_json = b'{"code": "permission_denied", "message": "Sender is not verified in Brevo account"}'
+    http_err = urllib.error.HTTPError(
+        url="https://api.brevo.com/v3/smtp/email",
+        code=403,
+        msg="Forbidden",
+        hdrs={},
+        fp=io.BytesIO(err_json),
+    )
+
+    provider = BrevoEmailProvider(
+        api_key="xkeysib-test-12345",
+        from_email="unverified@gmail.com",
+    )
+
+    with patch("urllib.request.urlopen", side_effect=http_err):
+        with pytest.raises(EmailDeliveryError) as exc_info:
+            provider.send_email(
+                to_email="resident@example.com",
+                subject="Verification Code",
+                body_text="Your code is 654321",
+            )
+        assert "HTTP 403" in str(exc_info.value)
+        assert "Sender is not verified" in str(exc_info.value)
+
+
+def test_sendgrid_email_provider_success():
+    """Verifies SendGridEmailProvider formats payload and sends via HTTPS REST API."""
+    import json
+    from app.integrations.email import SendGridEmailProvider
+
+    captured = []
+
+    class MockHTTPResponse:
+        status = 202
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_urlopen(req, timeout=15):
+        captured.append(req)
+        return MockHTTPResponse()
+
+    provider = SendGridEmailProvider(
+        api_key="SG.test-key-12345",
+        from_email="tharadrataher@gmail.com",
+        from_name="Origin PG Living",
+    )
+
+    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+        result = provider.send_email(
+            to_email="external.resident@gmail.com",
+            subject="Verification Code",
+            body_text="Your code is 112233",
+            body_html="<p>Your code is 112233</p>",
+        )
+        assert result is True
+        assert len(captured) == 1
+        req = captured[0]
+        assert req.get_full_url() == "https://api.sendgrid.com/v3/mail/send"
+        assert req.get_header("Authorization") == "Bearer SG.test-key-12345"
+
+
+def test_get_email_provider_chooses_brevo_when_configured():
+    """Verifies factory selects Brevo as primary provider when BREVO_API_KEY is configured."""
+    from app.integrations.email import get_email_provider, BrevoEmailProvider, ResilientEmailProvider
+
+    with patch.object(settings, "ENVIRONMENT", "production"), \
+         patch.object(settings, "EMAIL_PROVIDER", "BREVO"), \
+         patch.object(settings, "BREVO_API_KEY", "xkeysib-active-key"), \
+         patch.object(settings, "RESEND_API_KEY", "re_backup_key"):
+
+        provider = get_email_provider()
+        assert isinstance(provider, ResilientEmailProvider)
+        assert provider.primary_name == "BrevoEmailProvider"
+        assert provider.fallback_name == "ResendEmailProvider"
+
 
 
 

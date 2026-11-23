@@ -48,8 +48,10 @@ def health_check(db: Session = Depends(get_db)):
         "version": settings.VERSION,
         "email_provider": getattr(settings, "EMAIL_PROVIDER", "MOCK"),
         "active_email_provider": get_email_provider().__class__.__name__,
-        "smtp_configured": bool(getattr(settings, "SMTP_PASSWORD", "") and getattr(settings, "SMTP_HOST", "") not in ("localhost", "")),
+        "brevo_configured": bool(getattr(settings, "BREVO_API_KEY", "")),
+        "sendgrid_configured": bool(getattr(settings, "SENDGRID_API_KEY", "")),
         "resend_configured": bool(getattr(settings, "RESEND_API_KEY", "")),
+        "smtp_configured": bool(getattr(settings, "SMTP_PASSWORD", "") and getattr(settings, "SMTP_HOST", "") not in ("localhost", "")),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return APIResponse(

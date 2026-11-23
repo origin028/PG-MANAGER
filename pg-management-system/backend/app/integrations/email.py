@@ -200,6 +200,183 @@ class SMTPEmailProvider(EmailProvider):
         raise EmailDeliveryError(f"Failed to send verification email. SMTP delivery error: {last_exc}") from last_exc
 
 
+class BrevoEmailProvider(EmailProvider):
+    """
+    HTTPS API email delivery provider using Brevo (formerly Sendinblue - https://brevo.com).
+    Operates over port 443 (HTTPS), avoiding cloud firewall blocks on SMTP ports 25/465/587.
+
+    Free Tier Features:
+    - 300 free transactional emails per day forever.
+    - Zero cost, zero credit card required.
+    - Allows sending to ANY external recipient email address (Gmail, Yahoo, Outlook, custom).
+    - Requires ONLY a single verified sender email address (e.g. tharadrataher@gmail.com verified via OTP link).
+    - DOES NOT REQUIRE PURCHASING OR OWNING A CUSTOM DOMAIN.
+    - Zero external pip dependencies (uses Python standard library urllib.request).
+    """
+    is_mock: bool = False
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+    ):
+        self.api_key = (api_key or getattr(settings, "BREVO_API_KEY", "") or "").strip()
+        self.from_email = (
+            from_email
+            or getattr(settings, "BREVO_FROM_EMAIL", None)
+            or settings.SMTP_FROM_EMAIL
+            or "tharadrataher@gmail.com"
+        ).strip()
+        self.from_name = (from_name or settings.SMTP_FROM_NAME or "Origin PG Living").strip()
+
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        body_text: str,
+        body_html: Optional[str] = None,
+    ) -> bool:
+        if not self.api_key:
+            logger.error("[BrevoEmailProvider] BREVO_API_KEY is not configured on the server.")
+            raise EmailDeliveryError("BREVO_API_KEY is not configured on the server.")
+
+        payload = {
+            "sender": {
+                "name": self.from_name,
+                "email": self.from_email,
+            },
+            "to": [
+                {
+                    "email": to_email.strip(),
+                }
+            ],
+            "subject": subject,
+            "textContent": body_text,
+        }
+        if body_html:
+            payload["htmlContent"] = body_html
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.brevo.com/v3/smtp/email",
+            data=data,
+            headers={
+                "api-key": self.api_key,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "OriginPG-Living/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if 200 <= resp.status < 300:
+                    masked = mask_email(to_email)
+                    logger.info(f"[BrevoEmailProvider] Email delivered successfully to {masked} | Subject: '{subject}'")
+                    return True
+        except urllib.error.HTTPError as exc:
+            err_body = exc.read().decode("utf-8", errors="replace")
+            masked = mask_email(to_email)
+            logger.error(f"[BrevoEmailProvider] HTTP {exc.code} delivering to {masked}: {err_body}")
+
+            err_msg = ""
+            try:
+                parsed = json.loads(err_body)
+                err_msg = parsed.get("message") or parsed.get("code") or ""
+            except Exception:
+                err_msg = err_body[:200]
+
+            if exc.code == 401:
+                reason = "Brevo HTTPS delivery unauthorized (HTTP 401): invalid or expired BREVO_API_KEY."
+            elif exc.code == 403:
+                reason = f"Brevo HTTPS delivery forbidden (HTTP 403): {err_msg or 'sender address not verified in Brevo dashboard'}"
+            elif exc.code == 400:
+                reason = f"Brevo HTTPS delivery rejected (HTTP 400): {err_msg}"
+            elif exc.code == 429:
+                reason = f"Brevo daily sending limit reached (HTTP 429): {err_msg}"
+            else:
+                reason = f"Brevo HTTPS delivery failed with HTTP {exc.code}: {err_msg}"
+
+            raise EmailDeliveryError(reason) from exc
+        except Exception as exc:
+            masked = mask_email(to_email)
+            logger.error(f"[BrevoEmailProvider] Failed to deliver email to {masked}: {exc}")
+            raise EmailDeliveryError(f"Failed to deliver verification email via HTTPS: {exc}") from exc
+
+
+class SendGridEmailProvider(EmailProvider):
+    """
+    HTTPS API email delivery provider using SendGrid (https://sendgrid.com).
+    Operates over port 443 (HTTPS), avoiding cloud firewall blocks on SMTP ports.
+    Supports Single Sender Verification without purchasing a domain.
+    Free tier allows 100 emails/day forever.
+    """
+    is_mock: bool = False
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+    ):
+        self.api_key = (api_key or getattr(settings, "SENDGRID_API_KEY", "") or "").strip()
+        self.from_email = (
+            from_email
+            or getattr(settings, "SENDGRID_FROM_EMAIL", None)
+            or settings.SMTP_FROM_EMAIL
+            or "tharadrataher@gmail.com"
+        ).strip()
+        self.from_name = (from_name or settings.SMTP_FROM_NAME or "Origin PG Living").strip()
+
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        body_text: str,
+        body_html: Optional[str] = None,
+    ) -> bool:
+        if not self.api_key:
+            logger.error("[SendGridEmailProvider] SENDGRID_API_KEY is not configured on the server.")
+            raise EmailDeliveryError("SENDGRID_API_KEY is not configured on the server.")
+
+        content = [{"type": "text/plain", "value": body_text}]
+        if body_html:
+            content.append({"type": "text/html", "value": body_html})
+
+        payload = {
+            "personalizations": [{"to": [{"email": to_email.strip()}]}],
+            "from": {"email": self.from_email, "name": self.from_name},
+            "subject": subject,
+            "content": content,
+        }
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.sendgrid.com/v3/mail/send",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "OriginPG-Living/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if 200 <= resp.status < 300:
+                    masked = mask_email(to_email)
+                    logger.info(f"[SendGridEmailProvider] Email delivered successfully to {masked} | Subject: '{subject}'")
+                    return True
+        except urllib.error.HTTPError as exc:
+            err_body = exc.read().decode("utf-8", errors="replace")
+            masked = mask_email(to_email)
+            logger.error(f"[SendGridEmailProvider] HTTP {exc.code} delivering to {masked}: {err_body}")
+            raise EmailDeliveryError(f"SendGrid HTTPS delivery failed (HTTP {exc.code}): {err_body[:200]}") from exc
+        except Exception as exc:
+            masked = mask_email(to_email)
+            logger.error(f"[SendGridEmailProvider] Failed to deliver email to {masked}: {exc}")
+            raise EmailDeliveryError(f"Failed to deliver verification email via HTTPS: {exc}") from exc
+
+
 class ResendEmailProvider(EmailProvider):
     """
     HTTPS API email delivery provider using Resend (https://resend.com).
@@ -380,10 +557,14 @@ class ResilientEmailProvider(EmailProvider):
 def get_email_provider() -> EmailProvider:
     """
     Factory returning active EmailProvider based on configuration and environment.
-    Supports single providers (MOCK, SMTP, RESEND) and resilient multi-provider fallback.
+    Supports Brevo (free external recipient delivery without domain), SendGrid, Resend, and SMTP.
+    Configurable via EMAIL_PROVIDER: "BREVO", "SENDGRID", "RESEND", "SMTP", "AUTO", or "MOCK".
     """
     provider_name = getattr(settings, "EMAIL_PROVIDER", "").strip().upper()
     env = getattr(settings, "ENVIRONMENT", "").strip().lower()
+
+    has_brevo_key = bool(getattr(settings, "BREVO_API_KEY", None))
+    has_sendgrid_key = bool(getattr(settings, "SENDGRID_API_KEY", None))
     has_resend_key = bool(getattr(settings, "RESEND_API_KEY", None))
     has_smtp_creds = bool(
         settings.SMTP_HOST
@@ -392,53 +573,51 @@ def get_email_provider() -> EmailProvider:
     )
 
     if provider_name == "MOCK" or (
-        env in ("development", "test", "testing") and not has_resend_key and not has_smtp_creds
+        env in ("development", "test", "testing")
+        and not has_brevo_key
+        and not has_sendgrid_key
+        and not has_resend_key
+        and not has_smtp_creds
     ):
         return DevMockEmailProvider()
 
-    # If both Resend and SMTP are configured, build a ResilientEmailProvider!
-    if has_resend_key and has_smtp_creds:
-        from_email = (getattr(settings, "SMTP_FROM_EMAIL", "") or "").strip().lower()
-        is_webmail = any(
-            from_email.endswith(d)
-            for d in ("@gmail.com", "@yahoo.com", "@outlook.com", "@hotmail.com")
-        )
+    # Explicit provider selection
+    if provider_name == "BREVO" or (has_brevo_key and provider_name not in ("RESEND", "SENDGRID", "SMTP")):
+        primary = BrevoEmailProvider()
+        fallback = None
+        if has_resend_key:
+            fallback = ResendEmailProvider()
+        elif has_smtp_creds:
+            fallback = SMTPEmailProvider()
+        return ResilientEmailProvider(primary=primary, fallback=fallback) if fallback else primary
 
+    if provider_name == "SENDGRID" or (has_sendgrid_key and provider_name not in ("RESEND", "BREVO", "SMTP")):
+        primary = SendGridEmailProvider()
+        fallback = BrevoEmailProvider() if has_brevo_key else (ResendEmailProvider() if has_resend_key else None)
+        return ResilientEmailProvider(primary=primary, fallback=fallback) if fallback else primary
+
+    # Multi-provider Resilient chaining
+    configured_providers = []
+    if has_brevo_key:
+        configured_providers.append(BrevoEmailProvider())
+    if has_sendgrid_key:
+        configured_providers.append(SendGridEmailProvider())
+    if has_resend_key:
+        configured_providers.append(ResendEmailProvider())
+    if has_smtp_creds:
+        configured_providers.append(SMTPEmailProvider())
+
+    if len(configured_providers) >= 2:
         if provider_name == "RESEND":
-            # Resend primary, SMTP fallback
-            return ResilientEmailProvider(
-                primary=ResendEmailProvider(),
-                fallback=SMTPEmailProvider(),
-                primary_name="ResendEmailProvider",
-                fallback_name="SMTPEmailProvider",
-            )
+            fallback = BrevoEmailProvider() if has_brevo_key else SMTPEmailProvider()
+            return ResilientEmailProvider(primary=ResendEmailProvider(), fallback=fallback)
         elif provider_name == "SMTP":
-            # SMTP primary, Resend fallback
-            return ResilientEmailProvider(
-                primary=SMTPEmailProvider(),
-                fallback=ResendEmailProvider(),
-                primary_name="SMTPEmailProvider",
-                fallback_name="ResendEmailProvider",
-            )
+            fallback = BrevoEmailProvider() if has_brevo_key else ResendEmailProvider()
+            return ResilientEmailProvider(primary=SMTPEmailProvider(), fallback=fallback)
         else:
-            # Auto-detection: If webmail is configured as sender, prioritize SMTP (since Resend strictly rejects webmail)
-            if is_webmail:
-                return ResilientEmailProvider(
-                    primary=SMTPEmailProvider(),
-                    fallback=ResendEmailProvider(),
-                    primary_name="SMTPEmailProvider",
-                    fallback_name="ResendEmailProvider",
-                )
-            return ResilientEmailProvider(
-                primary=ResendEmailProvider(),
-                fallback=SMTPEmailProvider(),
-                primary_name="ResendEmailProvider",
-                fallback_name="SMTPEmailProvider",
-            )
+            return ResilientEmailProvider(primary=configured_providers[0], fallback=configured_providers[1])
 
-    if has_resend_key or provider_name == "RESEND":
-        return ResendEmailProvider()
-    elif has_smtp_creds or provider_name == "SMTP":
-        return SMTPEmailProvider()
+    if configured_providers:
+        return configured_providers[0]
 
     return DevMockEmailProvider()
