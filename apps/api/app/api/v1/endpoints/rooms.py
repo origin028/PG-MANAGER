@@ -167,7 +167,7 @@ def list_rooms(
 
     summaries = []
     for r in rooms:
-        beds = db.query(Bed).filter(Bed.room_id == r.id, Bed.is_deleted == False).all()
+        beds = db.query(Bed).filter(Bed.room_id == r.id, Bed.is_deleted == False, Bed.is_active == True).all()
         total_beds = len(beds)
         occupied_beds = sum(1 for b in beds if b.status == "OCCUPIED")
         available_beds = max(0, total_beds - occupied_beds)
@@ -215,7 +215,7 @@ def get_rooms_floor_wise(
 
     floor_groups = defaultdict(list)
     for r in rooms:
-        beds = db.query(Bed).filter(Bed.room_id == r.id, Bed.is_deleted == False).all()
+        beds = db.query(Bed).filter(Bed.room_id == r.id, Bed.is_deleted == False, Bed.is_active == True).all()
         total_b = len(beds)
         occ_b = sum(1 for b in beds if b.status == "OCCUPIED")
         floor_groups[r.floor_number].append(
@@ -437,6 +437,7 @@ def delete_room(
         for b in beds:
             b.is_deleted = True
             b.is_active = False
+            b.is_deleted = True  # retired with the room: no longer counted anywhere
             b.deleted_at = datetime.now(timezone.utc)
         db.commit()
         return APIResponse(

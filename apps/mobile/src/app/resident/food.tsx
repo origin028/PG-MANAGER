@@ -2,12 +2,13 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { ForkKnife, QrCode } from "phosphor-react-native";
+import { MealPhoto } from "@/components/meal-photo";
 import { Body, Button, Card, Empty, ErrorBox, LoadingCards, Screen, Segmented, Title } from "@/components/ui";
 import { todayKey } from "@/lib/dates";
 import { color, space, type } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
 
-type Meal = { meal_type: string; dishes: string[]; start_time?: string; end_time?: string };
+type Meal = { id: string; meal_type: string; dishes: string[]; start_time?: string; end_time?: string; has_image?: boolean };
 type Menu = { menu_by_day: Record<string, Meal[]> };
 const ORDER = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 const MEAL_ORDER = ["BREAKFAST", "LUNCH", "SNACKS", "DINNER"];
@@ -27,6 +28,7 @@ export default function Food() {
         <View style={{ gap: space(3) }}>
           {meals.map((m) => (
             <Card key={m.meal_type} style={{ gap: space(2) }}>
+              {m.has_image ? <MealPhoto menuId={m.id} height={180} /> : null}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
                 <Text style={[type.h2, { color: color.ink }]}>{m.meal_type.charAt(0) + m.meal_type.slice(1).toLowerCase()}</Text>
                 {m.start_time ? <Body muted>{m.start_time}{m.end_time ? ` - ${m.end_time}` : ""}</Body> : null}

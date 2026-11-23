@@ -22,6 +22,9 @@ from app.models.room import Room
 from app.models.user import User
 from app.schemas.common import APIResponse
 
+# Beds that exist today: not removed, not in an archived room. Used by every occupancy figure.
+LIVE_BED = (Bed.is_deleted == False, Bed.is_active == True, Room.is_active == True)  # noqa: E712
+
 router = APIRouter()
 
 
@@ -51,7 +54,7 @@ def get_dashboard_summary(
     total_properties = db.scalar(props_query) or 0
 
     # Rooms & Beds
-    bed_query = sa.select(sa.func.count(Bed.id)).select_from(Bed).join(Room, Bed.room_id == Room.id)
+    bed_query = sa.select(sa.func.count(Bed.id)).select_from(Bed).join(Room, Bed.room_id == Room.id).where(*LIVE_BED)
     if property_id:
         bed_query = bed_query.where(Room.property_id == property_id)
     elif prop_filter:
@@ -63,6 +66,7 @@ def get_dashboard_summary(
         sa.select(sa.func.count(sa.distinct(Bed.id)))
         .select_from(Bed)
         .join(Room, Bed.room_id == Room.id)
+        .where(*LIVE_BED)
         .join(Resident, Resident.bed_id == Bed.id)
         .where(
             Resident.status.in_(("ACTIVE", "NOTICE_PERIOD")),
@@ -362,6 +366,7 @@ def get_occupancy_report(
         sa.select(sa.func.count(Bed.id))
         .select_from(Bed)
         .join(Room, Bed.room_id == Room.id)
+        .where(*LIVE_BED)
         .where(Room.property_id == property_id)
     ) or 0
 
@@ -369,6 +374,7 @@ def get_occupancy_report(
         sa.select(sa.func.count(sa.distinct(Bed.id)))
         .select_from(Bed)
         .join(Room, Bed.room_id == Room.id)
+        .where(*LIVE_BED)
         .join(Resident, Resident.bed_id == Bed.id)
         .where(
             Room.property_id == property_id,
@@ -409,6 +415,7 @@ def export_occupancy_csv(
         db.scalars(
             sa.select(Bed)
             .join(Room, Bed.room_id == Room.id)
+        .where(*LIVE_BED)
             .where(Room.property_id == property_id)
             .order_by(Room.room_number.asc(), Bed.bed_number.asc())
         )

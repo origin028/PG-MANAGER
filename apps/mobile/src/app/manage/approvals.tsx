@@ -2,9 +2,10 @@ import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { Text, View } from "react-native";
 import { CaretRight, UserCheck } from "phosphor-react-native";
-import { Body, Card, Empty, ErrorBox, LoadingCards, Screen, Title } from "@/components/ui";
+import { Body, Card, Empty, ErrorBox, LoadingCards, Screen } from "@/components/ui";
 import { fmtDate } from "@/lib/dates";
 import { listOf } from "@/lib/owner";
+import { Header } from "@/components/kit";
 import { color, space, type } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
 
@@ -17,7 +18,7 @@ export default function Approvals() {
 
   return (
     <Screen onRefresh={reload} refreshing={refreshing}>
-      <Title sub="New residents who signed up online.">Approvals</Title>
+      <Header title="Approvals" sub="New residents who signed up online." />
       {loading ? <LoadingCards n={2} /> : error ? <ErrorBox message={error} onRetry={reload} /> : items.length ? (
         <View style={{ gap: space(3) }}>
           {items.map((p) => (

@@ -19,7 +19,7 @@ function Gate() {
       signedOut: ["/welcome", "/resident-login", "/owner-login", "/join"],
       resident: ["/resident", "/new-complaint", "/meal-pass"],
       kitchen: ["/kitchen"],
-      owner: ["/owner", "/approve", "/announce", "/manage"],
+      owner: ["/owner", "/approve", "/manage"],
     };
     const ok = (list: string[]) => list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (!mode) { if (!ok(allowed.signedOut)) router.replace("/welcome"); }
@@ -37,7 +37,6 @@ function Gate() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: color.bg }, animation: "fade" }}>
       <Stack.Screen name="new-complaint" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="approve/[id]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
-      <Stack.Screen name="announce" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="meal-pass" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
 
     </Stack>

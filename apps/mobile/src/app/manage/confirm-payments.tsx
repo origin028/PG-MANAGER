@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { CheckCircle } from "phosphor-react-native";
-import { Badge, Body, Button, Card, Empty, ErrorBox, Field, LoadingCards, Screen, Segmented, Title, pretty, statusTone } from "@/components/ui";
+import { Badge, Body, Button, Card, Empty, ErrorBox, Field, LoadingCards, Screen, Segmented, pretty, statusTone } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmtDate } from "@/lib/dates";
 import { listOf, useProperties } from "@/lib/owner";
+import { Header } from "@/components/kit";
 import { color, rupees, space, type } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
 
@@ -34,7 +35,7 @@ export default function Payments() {
 
   return (
     <Screen onRefresh={reload} refreshing={refreshing}>
-      <Title sub="Check your bank app, then confirm each payment with its UTR number.">Payments</Title>
+      <Header title="Confirm UPI payments" sub="Check your bank app, then confirm each payment with its UTR number." />
       {props.length > 1 ? <View style={{ marginBottom: space(4) }}><Segmented value={current ?? ""} onChange={setCurrent} options={props.map((p) => ({ value: p.id, label: p.name }))} /></View> : null}
       {loading && current ? <LoadingCards n={2} /> : error ? <ErrorBox message={error} onRetry={reload} /> : (
         <>

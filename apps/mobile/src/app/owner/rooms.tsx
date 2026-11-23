@@ -31,7 +31,9 @@ export default function RoomsTab() {
   const reloadCap = cap.reload;
   useFocusEffect(useCallback(() => { reload(); reloadCap(); }, [reload, reloadCap]));
 
-  const floors = fw.data?.floors ?? [];
+  // Archived rooms (deleted with history) are kept for records but not shown on the floor plan.
+  const floors = (fw.data?.floors ?? []).map((f) => ({ ...f, rooms: f.rooms.filter((r) => r.is_active) })).filter((f) => f.rooms.length)
+    .map((f) => ({ ...f, total_beds: f.rooms.reduce((a, r) => a + r.total_beds, 0), occupied_beds: f.rooms.reduce((a, r) => a + r.occupied_beds, 0), available_beds: f.rooms.reduce((a, r) => a + r.available_beds, 0) }));
   const totals = floors.reduce((a, f) => ({ beds: a.beds + f.total_beds, occ: a.occ + f.occupied_beds }), { beds: 0, occ: 0 });
 
   return (
