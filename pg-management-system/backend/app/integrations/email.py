@@ -1,7 +1,11 @@
 import abc
+import json
 import re
 import smtplib
+import socket
 import ssl
+import urllib.error
+import urllib.request
 from email.message import EmailMessage
 from typing import Dict, Optional
 
@@ -166,6 +170,10 @@ class SMTPEmailProvider(EmailProvider):
             masked = mask_email(to_email)
             logger.info(f"[SMTPEmailProvider] Email delivered successfully to {masked} | Subject: '{subject}'")
             return True
+        except (TimeoutError, socket.timeout) as exc:
+            masked = mask_email(to_email)
+            logger.error(f"[SMTPEmailProvider] Connection timed out delivering to {masked}: {exc}. Cloud hosting may block outbound SMTP ports (25, 465, 587).")
+            raise EmailDeliveryError("SMTP connection timed out. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
         except smtplib.SMTPAuthenticationError as exc:
             masked = mask_email(to_email)
             logger.error(f"[SMTPEmailProvider] SMTP authentication error delivering to {masked}: {exc}")
@@ -177,18 +185,91 @@ class SMTPEmailProvider(EmailProvider):
         except (smtplib.SMTPException, OSError) as exc:
             masked = mask_email(to_email)
             logger.error(f"[SMTPEmailProvider] Failed to deliver email to {masked}: {exc}")
+            err_msg = str(exc)
+            if "timed out" in err_msg.lower() or "timeout" in err_msg.lower():
+                raise EmailDeliveryError("SMTP connection timed out. Cloud hosting may be blocking outbound SMTP ports. Configure RESEND_API_KEY for HTTPS delivery.") from exc
             raise EmailDeliveryError("Failed to send verification email. Please try again later.") from exc
+
+
+class ResendEmailProvider(EmailProvider):
+    """
+    HTTPS API email delivery provider using Resend (https://resend.com).
+    Operates over port 443 (HTTPS), avoiding cloud firewall blocks on SMTP ports 25/465/587 (e.g., Render Free tier).
+    Requires zero external pip dependencies (uses Python standard library urllib.request).
+    """
+    is_mock: bool = False
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        from_email: Optional[str] = None,
+        from_name: Optional[str] = None,
+    ):
+        self.api_key = (api_key or getattr(settings, "RESEND_API_KEY", "") or "").strip()
+        self.from_email = (from_email or settings.SMTP_FROM_EMAIL or "onboarding@resend.dev").strip()
+        self.from_name = (from_name or settings.SMTP_FROM_NAME or "Origin PG Living").strip()
+
+    def send_email(
+        self,
+        to_email: str,
+        subject: str,
+        body_text: str,
+        body_html: Optional[str] = None,
+    ) -> bool:
+        if not self.api_key:
+            logger.error("[ResendEmailProvider] RESEND_API_KEY is not configured on the server.")
+            raise EmailDeliveryError("RESEND_API_KEY is not configured on the server.")
+
+        from_header = f"{self.from_name} <{self.from_email}>" if self.from_name else self.from_email
+        payload = {
+            "from": from_header,
+            "to": [to_email.strip()],
+            "subject": subject,
+            "text": body_text,
+        }
+        if body_html:
+            payload["html"] = body_html
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=data,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+                "User-Agent": "OriginPG-Living/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if 200 <= resp.status < 300:
+                    masked = mask_email(to_email)
+                    logger.info(f"[ResendEmailProvider] Email delivered successfully to {masked} | Subject: '{subject}'")
+                    return True
+        except urllib.error.HTTPError as exc:
+            err_body = exc.read().decode("utf-8", errors="replace")
+            masked = mask_email(to_email)
+            logger.error(f"[ResendEmailProvider] HTTP {exc.code} delivering to {masked}: {err_body}")
+            raise EmailDeliveryError(f"Failed to send verification email via HTTPS: HTTP {exc.code}") from exc
+        except Exception as exc:
+            masked = mask_email(to_email)
+            logger.error(f"[ResendEmailProvider] Failed to deliver email to {masked}: {exc}")
+            raise EmailDeliveryError("Failed to deliver verification email via HTTPS.") from exc
 
 
 def get_email_provider() -> EmailProvider:
     """Factory returning active EmailProvider based on configuration and environment."""
     provider_name = getattr(settings, "EMAIL_PROVIDER", "MOCK").strip().upper()
     env = getattr(settings, "ENVIRONMENT", "").strip().lower()
+    has_resend_key = bool(getattr(settings, "RESEND_API_KEY", None))
     has_smtp_creds = bool(
         settings.SMTP_HOST
         and settings.SMTP_HOST != "localhost"
         and (settings.SMTP_PASSWORD or settings.SMTP_USERNAME or settings.SMTP_USER)
     )
-    if provider_name == "SMTP" or (env == "production" and has_smtp_creds):
+
+    if provider_name == "RESEND" or (has_resend_key and provider_name != "MOCK"):
+        return ResendEmailProvider()
+    elif provider_name == "SMTP" or (env == "production" and has_smtp_creds):
         return SMTPEmailProvider()
     return DevMockEmailProvider()

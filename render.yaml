@@ -36,3 +36,5 @@ services:
         value: "Origin PG Living"
       - key: SMTP_USE_TLS
         value: "true"
+      - key: RESEND_API_KEY
+        sync: false

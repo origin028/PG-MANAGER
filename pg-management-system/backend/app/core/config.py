@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Origin PG Management System API"
-    VERSION: str = "1.0.3"
+    VERSION: str = "1.0.4"
     API_V1_STR: str = "/api/v1"
     ENVIRONMENT: str = "development"
     DEBUG: bool = True
@@ -67,7 +67,8 @@ class Settings(BaseSettings):
     UPI_BANK_API_KEY: str = ""
 
     # Email & SMTP Configuration (for resident OTP delivery)
-    EMAIL_PROVIDER: str = "MOCK"  # "MOCK" or "SMTP"
+    EMAIL_PROVIDER: str = "MOCK"  # "MOCK", "SMTP", or "RESEND"
+    RESEND_API_KEY: Optional[str] = None
     SMTP_HOST: str = "localhost"
     SMTP_PORT: int = 587
     SMTP_USER: str = ""

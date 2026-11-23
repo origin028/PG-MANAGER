@@ -119,10 +119,12 @@ class _RegisterScreenState extends State<RegisterScreen>
   late final AnimationController _shakeController;
   DateTime? _selectedDob;
 
-  // Property Selection
-  List<Map<String, dynamic>> _properties = [];
-  String? _selectedPropertyId;
-  String? _selectedPropertyName;
+  // Property Selection (pre-populated with fallback to prevent blank dropdown on cold-start)
+  List<Map<String, dynamic>> _properties = List.from(
+    ResidentAuthService.fallbackProperties,
+  );
+  String? _selectedPropertyId = '8d7f97b3-e1a0-46eb-9097-00cdeaddac49';
+  String? _selectedPropertyName = 'Origin Comfort PG - Electronic City';
   bool _isLoadingProperties = false;
   String? _propertiesError;
 

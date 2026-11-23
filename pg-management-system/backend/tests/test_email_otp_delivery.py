@@ -812,3 +812,41 @@ def test_production_mode_mock_otp_request_raises_email_delivery_error(client: Te
         assert "Email delivery service is not configured" in resp.text
 
 
+def test_resend_email_provider_success():
+    """Verifies that ResendEmailProvider sends via HTTPS API and returns True."""
+    from app.integrations.email import ResendEmailProvider
+
+    captured_requests = []
+
+    class MockHTTPResponse:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def mock_urlopen(req, timeout=15):
+        captured_requests.append(req)
+        return MockHTTPResponse()
+
+    provider = ResendEmailProvider(
+        api_key="re_test_key_12345",
+        from_email="onboarding@resend.dev",
+        from_name="Origin Living",
+    )
+
+    with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+        result = provider.send_email(
+            to_email="resident@example.com",
+            subject="Verification Code",
+            body_text="Your OTP is 123456",
+            body_html="<p>Your OTP is 123456</p>",
+        )
+        assert result is True
+        assert len(captured_requests) == 1
+        req = captured_requests[0]
+        assert req.get_full_url() == "https://api.resend.com/emails"
+        assert req.get_header("Authorization") == "Bearer re_test_key_12345"
+
+
+

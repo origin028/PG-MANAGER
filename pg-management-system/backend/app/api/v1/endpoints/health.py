@@ -47,6 +47,7 @@ def health_check(db: Session = Depends(get_db)):
         "version": settings.VERSION,
         "email_provider": getattr(settings, "EMAIL_PROVIDER", "MOCK"),
         "smtp_configured": bool(getattr(settings, "SMTP_PASSWORD", "") and getattr(settings, "SMTP_HOST", "") not in ("localhost", "")),
+        "resend_configured": bool(getattr(settings, "RESEND_API_KEY", "")),
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
     return APIResponse(

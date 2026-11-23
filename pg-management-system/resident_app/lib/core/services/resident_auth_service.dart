@@ -4,6 +4,35 @@ import '../network/api_client.dart';
 import '../network/token_storage.dart';
 
 class ResidentAuthService {
+  /// Known active PG properties for instant cold-start fallback and offline resilience
+  static const List<Map<String, dynamic>> fallbackProperties = [
+    {
+      'id': '8d7f97b3-e1a0-46eb-9097-00cdeaddac49',
+      'name': 'Origin Comfort PG - Electronic City',
+      'city': 'Bengaluru',
+    },
+    {
+      'id': '2a3ccf32-4b08-4f20-93ad-7e043ed98723',
+      'name': 'Origin Elite PG - Indiranagar',
+      'city': 'Bengaluru',
+    },
+    {
+      'id': '24917794-b488-4f93-9f8a-5d7389623b32',
+      'name': 'Origin Grand PG - Koramangala',
+      'city': 'Bengaluru',
+    },
+    {
+      'id': '94abf8b8-88f7-42a0-9603-69ff7049fb9d',
+      'name': 'Origin Luxury PG - HSR Layout',
+      'city': 'Bengaluru',
+    },
+    {
+      'id': '2b2e55b3-c731-453f-ab71-133870dc296d',
+      'name': 'Origin Prime PG - Bellandur',
+      'city': 'Bengaluru',
+    },
+  ];
+
   /// Fetches active PG properties for prospective resident onboarding
   static Future<List<Map<String, dynamic>>> getAvailableProperties() async {
     try {
@@ -24,33 +53,7 @@ class ResidentAuthService {
     } catch (_) {
       // Offline unit test or temporary network fallback
     }
-    return [
-      {
-        'id': '8d7f97b3-e1a0-46eb-9097-00cdeaddac49',
-        'name': 'Origin Comfort PG - Electronic City',
-        'city': 'Bengaluru',
-      },
-      {
-        'id': '2a3ccf32-4b08-4f20-93ad-7e043ed98723',
-        'name': 'Origin Elite PG - Indiranagar',
-        'city': 'Bengaluru',
-      },
-      {
-        'id': '24917794-b488-4f93-9f8a-5d7389623b32',
-        'name': 'Origin Grand PG - Koramangala',
-        'city': 'Bengaluru',
-      },
-      {
-        'id': '94abf8b8-88f7-42a0-9603-69ff7049fb9d',
-        'name': 'Origin Luxury PG - HSR Layout',
-        'city': 'Bengaluru',
-      },
-      {
-        'id': '2b2e55b3-c731-453f-ab71-133870dc296d',
-        'name': 'Origin Prime PG - Bellandur',
-        'city': 'Bengaluru',
-      },
-    ];
+    return fallbackProperties;
   }
 
   /// Request registration OTP with full multipart form data and real KYC files

@@ -278,6 +278,61 @@ class _LoginScreenState extends State<LoginScreen>
               ],
             ),
           );
+        } else if (e.code == 'NOT_FOUND') {
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: palette.line),
+              ),
+              backgroundColor: palette.card,
+              title: Row(
+                children: [
+                  Icon(Icons.person_search_rounded, color: palette.teal),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Account Not Found',
+                      style: HomeThemeTokens.manrope(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: palette.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'No registered resident found with mobile number $phone. Please create a new registration first.',
+                style: HomeThemeTokens.manrope(
+                  fontSize: 14,
+                  height: 1.45,
+                  color: palette.mute,
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text('Cancel', style: TextStyle(color: palette.mute)),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    setState(() => _isRegisterMode = true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: palette.teal,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Register Now'),
+                ),
+              ],
+            ),
+          );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
