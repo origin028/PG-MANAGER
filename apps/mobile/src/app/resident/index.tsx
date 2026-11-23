@@ -18,6 +18,7 @@ export default function Home() {
   const dash = useData<Dashboard>("/resident/dashboard");
   const menu = useData<Menu>("/resident/food-menu");
   const news = useData<Announcement[]>("/announcements/resident");
+  const pass = useData<{ enabled?: boolean }>("/resident/meal-pass");
   const reload = () => { dash.reload(); menu.reload(); news.reload(); };
 
   const d = dash.data;
@@ -52,6 +53,7 @@ export default function Home() {
         </>
       )}
 
+      {pass.data?.enabled ? (
       <Card onPress={() => router.push("/meal-pass")} style={{ marginTop: space(3), flexDirection: "row", alignItems: "center", gap: space(4) }}>
         <QrCode size={30} color={color.ink} weight="light" />
         <View style={{ flex: 1 }}>
@@ -59,6 +61,7 @@ export default function Home() {
           <Body muted>Show this QR at the kitchen</Body>
         </View>
       </Card>
+      ) : null}
 
       <H2>Today's meals</H2>
       {today.length ? (

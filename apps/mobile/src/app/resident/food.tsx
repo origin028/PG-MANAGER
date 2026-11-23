@@ -16,12 +16,13 @@ const MEAL_ORDER = ["BREAKFAST", "LUNCH", "SNACKS", "DINNER"];
 export default function Food() {
   const { data, error, loading, refreshing, reload } = useData<Menu>("/resident/food-menu");
   const [day, setDay] = useState<string>(todayKey());
+  const pass = useData<{ enabled?: boolean }>("/resident/meal-pass");
   const meals = [...(data?.menu_by_day?.[day] ?? [])].sort((a, b) => MEAL_ORDER.indexOf(a.meal_type) - MEAL_ORDER.indexOf(b.meal_type));
 
   return (
     <Screen onRefresh={reload} refreshing={refreshing}>
       <Title sub="The fixed weekly menu for your home.">This week's food</Title>
-      <Button title="Show my meal pass" icon={<QrCode size={20} color={color.bg} />} onPress={() => router.push("/meal-pass")} style={{ marginBottom: space(5) }} />
+      {pass.data?.enabled ? <Button title="Show my meal pass" icon={<QrCode size={20} color={color.bg} />} onPress={() => router.push("/meal-pass")} style={{ marginBottom: space(5) }} /> : null}
       <Segmented value={day} onChange={setDay} options={ORDER.map((d) => ({ value: d, label: d === todayKey() ? "Today" : d.slice(0, 3).charAt(0) + d.slice(1, 3).toLowerCase() }))} />
       <View style={{ height: space(4) }} />
       {loading ? <LoadingCards /> : error ? <ErrorBox message={error} onRetry={reload} /> : meals.length ? (

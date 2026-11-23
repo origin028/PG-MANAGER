@@ -7,7 +7,7 @@ import { Body, ErrorBox, Screen, Skeleton } from "@/components/ui";
 import { api } from "@/lib/api";
 import { color, radius, space, type } from "@/lib/theme";
 
-type Pass = { meal: string | null; token?: string; expires_in?: number; served_at?: string | null; next?: { meal: string; starts_at: string } | null };
+type Pass = { enabled?: boolean; meal: string | null; token?: string; expires_in?: number; served_at?: string | null; next?: { meal: string; starts_at: string } | null };
 const nice = (m?: string | null) => (m ? m.charAt(0) + m.slice(1).toLowerCase() : "");
 const clock = (iso: string) => new Date(iso).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
 
@@ -68,8 +68,8 @@ export default function MealPass() {
       ) : (
         <View style={{ alignItems: "center", marginTop: space(16), gap: space(3) }}>
           <Clock size={56} color={color.ink} weight="light" />
-          <Text style={[type.h2, { color: color.ink }]}>No meal being served</Text>
-          <Body muted style={{ textAlign: "center" }}>{pass.next ? `${nice(pass.next.meal)} starts at ${clock(pass.next.starts_at)}.` : "Kitchen is closed for today."}</Body>
+          <Text style={[type.h2, { color: color.ink }]}>{pass.enabled === false ? "Meal passes are not in use" : "No meal being served"}</Text>
+          <Body muted style={{ textAlign: "center" }}>{pass.enabled === false ? "Your PG does not use meal passes right now." : pass.next ? `${nice(pass.next.meal)} starts at ${clock(pass.next.starts_at)}.` : "Kitchen is closed for today."}</Body>
         </View>
       )}
     </Screen>

@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query, Response, status
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError, PermissionDeniedError
+from app.core.exceptions import BadRequestError, NotFoundError, PermissionDeniedError
 from app.dependencies import get_db, require_roles, verify_property_access
 from app.models.bed import Bed
 from app.models.complaint import Complaint
@@ -467,17 +467,21 @@ def export_occupancy_csv(
 def get_monthly_finance(
     month: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}$", description="YYYY-MM, defaults to this month"),
     property_id: Optional[uuid.UUID] = Query(None, description="Optional: one property"),
+    months: int = Query(6, ge=3, le=12, description="How many months of trend to return"),
     current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER")),
     db: Session = Depends(get_db),
 ):
-    """Month vs previous month: money, billing, residents, occupancy, deposits, plus a 6-month trend."""
+    """Month vs previous month: money, billing, residents, occupancy, deposits, plus a 3-12 month trend."""
     from datetime import datetime as _dt
 
     from app.services.finance_service import finance_report, scope_for
     from app.services.meal_service import tz
 
-    m = _dt.strptime(month, "%Y-%m").date() if month else _dt.now(tz()).date().replace(day=1)
+    try:
+        m = _dt.strptime(month, "%Y-%m").date() if month else _dt.now(tz()).date().replace(day=1)
+    except ValueError:
+        raise BadRequestError("month must be a real month, like 2026-11.")
     if property_id:
         verify_property_access(property_id, current_user, db)
-    data = finance_report(db, scope_for(db, current_user.company_id, property_id), m)
+    data = finance_report(db, scope_for(db, current_user.company_id, property_id), m, months_of_trend=months)
     return APIResponse(success=True, message="Monthly finance.", data=data)

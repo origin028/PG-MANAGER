@@ -173,12 +173,18 @@ def compare(cur: dict, prev: dict) -> dict:
     return out
 
 
+TREND_FIELDS = (
+    "month", "collected", "spent", "profit", "margin_percent", "residents", "joined", "left",
+    "occupancy_percent", "collection_rate_percent", "unpaid_now", "spent_by_category",
+)
+
+
 def finance_report(db: Session, scope: Scope, month: date, months_of_trend: int = 6, today: Optional[date] = None) -> dict:
     cur = month_summary(db, scope, month, today)
     prev = month_summary(db, scope, previous_month(month), today)
     trend, m = [], month.replace(day=1)
     for _ in range(months_of_trend):
         s = cur if m == month.replace(day=1) else prev if m == previous_month(month) else month_summary(db, scope, m, today)
-        trend.append({k: s[k] for k in ("month", "collected", "spent", "profit", "residents", "joined", "left")})
+        trend.append({k: s[k] for k in TREND_FIELDS})
         m = previous_month(m)
     return {"current": cur, "previous": prev, "change": compare(cur, prev), "trend": list(reversed(trend))}

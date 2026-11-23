@@ -95,3 +95,15 @@ def test_finance_endpoint_permissions(client: TestClient):
     assert ok.status_code == 200 and set(ok.json()["data"]) == {"current", "previous", "change", "trend"}
     assert client.get("/api/v1/reports/finance", headers={"Authorization": f"Bearer {tokens['res1']}"}).status_code == 403
     assert client.get("/api/v1/reports/finance?month=2026-4", headers={"Authorization": f"Bearer {tokens['admin']}"}).status_code == 422
+
+
+def test_finance_rejects_impossible_month_and_bad_range(client: TestClient):
+    tokens, _ = setup_test_context(client.app.state.testing_session)
+    admin_headers = {"Authorization": f"Bearer {tokens['admin']}"}
+    assert client.get("/api/v1/reports/finance?month=2026-13", headers=admin_headers).status_code in (400, 422)
+    assert client.get("/api/v1/reports/finance?months=48", headers=admin_headers).status_code == 422
+    r = client.get("/api/v1/reports/finance?months=12", headers=admin_headers)
+    assert r.status_code == 200
+    trend = r.json()["data"]["trend"]
+    assert len(trend) == 12
+    assert {"occupancy_percent", "collection_rate_percent", "spent_by_category"} <= set(trend[0])

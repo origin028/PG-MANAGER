@@ -103,9 +103,9 @@ def main() -> None:
     if not db.scalar(sa.select(Expense.id).where(Expense.company_id == prop.company_id)):
         first = today.replace(day=1)
         for cat, title, amt, method, d in [
-            ("GROCERIES", "Vegetables and groceries", 18450, "UPI", 2), ("SALARIES", "Cook and housekeeping salaries", 42000, "BANK_TRANSFER", 1),
-            ("UTILITIES", "Electricity bill", 13780, "UPI", 6), ("UTILITIES", "Internet bill", 2950, "UPI", 8),
-            ("MAINTENANCE", "Plumber visit", 1200, "CASH", 10), ("SUPPLIES", "Cleaning supplies", 2340, "UPI", 12),
+            ("GROCERIES", "Vegetables and groceries", 6850, "UPI", 2), ("SALARIES", "Cook and housekeeping salaries", 8000, "BANK_TRANSFER", 1),
+            ("UTILITIES", "Electricity bill", 3180, "UPI", 6), ("UTILITIES", "Internet bill", 1499, "UPI", 8),
+            ("MAINTENANCE", "Plumber visit", 1200, "CASH", 10), ("SUPPLIES", "Cleaning supplies", 940, "UPI", 12),
         ]:
             db.add(Expense(company_id=prop.company_id, property_id=prop.id, created_by_id=owner.id if owner else None,
                            category=cat, title=title, amount=Decimal(amt), method=method, date=min(today, first + timedelta(days=d - 1))))
@@ -124,6 +124,39 @@ def main() -> None:
         db.add(Payment(property_id=prop.id, invoice_id=inv.id, resident_id=r.id, payment_number=f"PAY-{ym.replace('-', '')}-DEMO{i:02d}",
                        amount=Decimal(str(r.monthly_rent)), payment_mode="UPI", status="SUCCESS",
                        paid_at=datetime.combine(last.replace(day=3), time(10, 30), tzinfo=timezone.utc)))
+
+    # Earlier months (1-9 months back): rent paid and running costs, so the Finance charts have a real trend.
+    # Costs are sized for this small demo home; amounts vary month to month like a real PG.
+    for back in range(1, 10):
+        m = today.replace(day=1)
+        for _ in range(back):
+            m = (m - timedelta(days=1)).replace(day=1)
+        ym = m.strftime("%Y-%m")
+        for i, r in enumerate(residents):
+            if r.check_in_date and r.check_in_date > m:
+                continue
+            number = f"INV-{ym.replace('-', '')}-DEMO{i:02d}"
+            if db.scalar(sa.select(Invoice.id).where(Invoice.invoice_number == number)):
+                continue
+            rent = Decimal(str(r.monthly_rent))
+            inv = Invoice(property_id=prop.id, resident_id=r.id, invoice_number=number, billing_month=ym, invoice_type="RENT",
+                          amount=rent, paid_amount=rent, due_date=m.replace(day=5), status="PAID", notes="Demo rent")
+            db.add(inv)
+            db.flush()
+            db.add(Payment(property_id=prop.id, invoice_id=inv.id, resident_id=r.id, payment_number=f"PAY-{ym.replace('-', '')}-DEMO{i:02d}",
+                           amount=rent, payment_mode="CASH" if (back + i) % 4 == 0 else "UPI", status="SUCCESS",
+                           paid_at=datetime.combine(m.replace(day=2 + (back + i) % 5), time(10, 30), tzinfo=timezone.utc)))
+        marker = f"(demo {ym})"
+        if not db.scalar(sa.select(Expense.id).where(Expense.title.like(f"%{marker}"))):
+            season = [100, 0, 400, 900, 1500, 1800, 1200, 600, 200][back - 1]  # summer electricity peak
+            for cat, title, amt, method, day in [
+                ("SALARIES", "Part-time cook", 8000, "BANK_TRANSFER", 1),
+                ("GROCERIES", "Vegetables and groceries", 6200 + (back * 370) % 1600, "UPI", 3),
+                ("UTILITIES", "Electricity bill", 2900 + season, "UPI", 7),
+                ("UTILITIES", "Internet bill", 1499, "UPI", 9),
+            ] + ([("MAINTENANCE", "Repairs", 1800 + back * 150, "CASH", 14)] if back % 3 == 0 else []):
+                db.add(Expense(company_id=prop.company_id, property_id=prop.id, created_by_id=owner.id if owner else None,
+                               category=cat, title=f"{title} {marker}", amount=Decimal(amt), method=method, date=m.replace(day=day)))
 
     # Deposits on the ledger
     svc = DepositService(db)
