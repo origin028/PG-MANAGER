@@ -19,6 +19,33 @@ from app.dependencies import get_db
 from app.main import app
 
 
+@pytest.fixture(scope="session", autouse=True)
+def migrated_test_database():
+    """Rebuilds the Postgres *test* database from the Alembic chain once per session.
+
+    Refuses to touch any database whose name does not end in ``_test``.
+    """
+    import sqlalchemy as sa
+    from alembic import command
+    from alembic.config import Config
+    from pathlib import Path
+
+    from app.core.config import settings
+
+    db_name = settings.DATABASE_URL.rsplit("/", 1)[-1].split("?")[0]
+    assert db_name.endswith("_test"), f"Refusing to reset non-test database '{db_name}'"
+    engine = sa.create_engine(settings.DATABASE_URL)
+    with engine.begin() as conn:
+        conn.execute(sa.text("DROP SCHEMA public CASCADE"))
+        conn.execute(sa.text("CREATE SCHEMA public"))
+    engine.dispose()
+    root = Path(__file__).resolve().parent.parent
+    cfg = Config(str(root / "alembic.ini"))
+    cfg.set_main_option("script_location", str(root / "migrations"))
+    command.upgrade(cfg, "head")
+    yield cfg
+
+
 @pytest.fixture(autouse=True)
 def default_mock_email_provider(monkeypatch):
     """Ensures test suite defaults to MOCK email provider unless overridden."""
