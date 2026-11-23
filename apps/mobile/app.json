@@ -48,7 +48,13 @@
       ],
       "expo-status-bar",
       "expo-image",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scan resident meal passes and take photos of documents."
+        }
+      ]
     ],
     "scheme": "originliving",
     "backgroundColor": "#fbf8f1"

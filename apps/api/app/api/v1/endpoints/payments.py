@@ -710,7 +710,7 @@ def list_payments(
     property_id: uuid.UUID = Query(..., description="Property ID filter"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER", "STAFF")),
     db: Session = Depends(get_db),
 ):
     """Lists payments recorded for a property."""

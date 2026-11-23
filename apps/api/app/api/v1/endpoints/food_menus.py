@@ -19,7 +19,7 @@ router = APIRouter()
 @router.post("", response_model=APIResponse[FoodMenuRead], status_code=status.HTTP_201_CREATED)
 def create_food_menu_item(
     payload: FoodMenuCreate,
-    current_user: User = Depends(require_roles("SUPER_ADMIN", "ADMIN", "OWNER", "PROPERTY_MANAGER")),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "ADMIN", "OWNER", "PROPERTY_MANAGER", "KITCHEN")),
     db: Session = Depends(get_db),
 ):
     """Creates a weekly food menu item for a property."""
@@ -202,7 +202,7 @@ def get_weekly_food_menu_by_property_alias(
 def update_food_menu_item(
     menu_id: uuid.UUID,
     payload: FoodMenuUpdate,
-    current_user: User = Depends(require_roles("SUPER_ADMIN", "ADMIN", "OWNER", "PROPERTY_MANAGER")),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "ADMIN", "OWNER", "PROPERTY_MANAGER", "KITCHEN")),
     db: Session = Depends(get_db),
 ):
     """Updates a food menu entry."""
@@ -280,7 +280,7 @@ def update_food_menu_item(
 @router.delete("/{menu_id}", status_code=status.HTTP_200_OK)
 def delete_food_menu_item(
     menu_id: uuid.UUID,
-    current_user: User = Depends(require_roles("SUPER_ADMIN", "ADMIN", "OWNER", "PROPERTY_MANAGER")),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "ADMIN", "OWNER", "PROPERTY_MANAGER", "KITCHEN")),
     db: Session = Depends(get_db),
 ):
     """Deletes a food menu entry."""

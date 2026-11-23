@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Text, View } from "react-native";
-import { Bed, Megaphone } from "phosphor-react-native";
+import { Bed, Megaphone, QrCode } from "phosphor-react-native";
 import { Badge, Body, Button, Card, ErrorBox, H2, LoadingCards, Screen } from "@/components/ui";
 import { fmtDate, greeting, todayKey } from "@/lib/dates";
 import { color, rupees, space, type } from "@/lib/theme";
@@ -51,6 +51,14 @@ export default function Home() {
           </Card>
         </>
       )}
+
+      <Card onPress={() => router.push("/meal-pass")} style={{ marginTop: space(3), flexDirection: "row", alignItems: "center", gap: space(4) }}>
+        <QrCode size={30} color={color.ink} weight="light" />
+        <View style={{ flex: 1 }}>
+          <Text style={[type.label, { color: color.ink, fontSize: 16 }]}>Meal pass</Text>
+          <Body muted>Show this QR at the kitchen</Body>
+        </View>
+      </Card>
 
       <H2>Today's meals</H2>
       {today.length ? (

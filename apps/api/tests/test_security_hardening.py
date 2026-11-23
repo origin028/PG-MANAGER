@@ -107,6 +107,7 @@ def test_production_config_valid(monkeypatch):
         {"ENCRYPTION_KEY": ""},
         {"ADMIN_REGISTRATION_SUPER_KEY": ""},
         {"SMTP_PASSWORD": ""},
+        {"MEAL_DEMO_OPEN": "true"},
     ],
 )
 def test_production_refuses_insecure_config(monkeypatch, override):

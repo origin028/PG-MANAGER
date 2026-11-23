@@ -167,7 +167,7 @@ def list_beds(
     room_id: Optional[uuid.UUID] = Query(None, description="Filter by room ID"),
     property_id: Optional[uuid.UUID] = Query(None, description="Filter by property ID"),
     bed_status: Optional[str] = Query(None, alias="status", description="Filter by bed status (AVAILABLE, OCCUPIED, MAINTENANCE)"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER", "STAFF")),
     db: Session = Depends(get_db),
 ):
     """Lists beds with optional filters by room, property, and occupancy status (excluding deleted beds)."""

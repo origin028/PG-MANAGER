@@ -1,6 +1,6 @@
 import uuid
 from typing import Callable, Optional
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 import sqlalchemy as sa
@@ -17,7 +17,13 @@ from app.models.user import User, UserPropertyAccess
 security = HTTPBearer(auto_error=False)
 
 
+# Kitchen staff only ever need these areas; everything else is refused centrally, so a
+# forgotten role check on some endpoint can never expose resident or financial data to them.
+KITCHEN_ALLOWED_PREFIXES = ("/api/v1/kitchen", "/api/v1/food-menus", "/api/v1/auth/", "/api/v1/properties")
+
+
 def get_current_user(
+    request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db),
 ) -> User:
@@ -52,6 +58,9 @@ def get_current_user(
 
     if not user.is_active or getattr(user, "approval_status", "APPROVED") == "REJECTED":
         raise AuthenticationError("Account has been deactivated or rejected. Please contact administrator.")
+
+    if user.role and user.role.name == "KITCHEN" and not request.url.path.startswith(KITCHEN_ALLOWED_PREFIXES):
+        raise PermissionDeniedError("Kitchen accounts can only use the kitchen and menu screens.")
 
     return user
 

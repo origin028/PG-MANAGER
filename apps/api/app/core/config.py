@@ -98,7 +98,11 @@ class Settings(BaseSettings):
     # ---- Business rules ----------------------------------------------------
     DEPOSIT_REFUND_PERCENT: int = 50
     ATTENDANCE_DEVICE_KEY: str = ""  # shared secret the fingerprint bridge sends as X-Device-Key
-    RENT_DUE_DAY: int = 5  # rent is due on this day of the billing month
+    RENT_DUE_DAY: int = 5
+    PG_TIMEZONE: str = "Asia/Kolkata"  # meal times and 'today' are evaluated in this zone
+    MEAL_PASS_TTL_SECONDS: int = 90  # resident QR rotates; a screenshot expires quickly
+    MEAL_GRACE_MINUTES: int = 30
+    MEAL_DEMO_OPEN: bool = False  # development only: some meal is always "being served" so scanning can be demoed at any hour  # scanning allowed this long before/after the menu's serving window  # rent is due on this day of the billing month
 
     LOG_LEVEL: str = "INFO"
 
@@ -179,6 +183,8 @@ class Settings(BaseSettings):
             problems.append("EMAIL_PROVIDER must be SMTP in production")
         elif not (self.SMTP_USERNAME and self.SMTP_PASSWORD and self.SMTP_FROM_EMAIL):
             problems.append("SMTP_USERNAME, SMTP_PASSWORD and SMTP_FROM_EMAIL are required")
+        if self.MEAL_DEMO_OPEN:
+            problems.append("MEAL_DEMO_OPEN must be false in production")
         if not (self.ADMIN_REGISTRATION_SUPER_KEY or self.ADMIN_REGISTRATION_SUPER_KEY_HASH):
             problems.append("ADMIN_REGISTRATION_SUPER_KEY or its hash must be set")
         if problems:

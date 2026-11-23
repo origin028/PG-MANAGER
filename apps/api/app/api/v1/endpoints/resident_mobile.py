@@ -381,3 +381,33 @@ def get_my_deposit(
             "refund_on_exit": float(preview.refund),
         },
     )
+
+
+@router.get("/meal-pass", status_code=status.HTTP_200_OK, summary="My Meal Pass (rotating QR)")
+def get_my_meal_pass(
+    active_resident: Resident = Depends(get_current_active_resident),
+    db: Session = Depends(get_db),
+):
+    """Short-lived signed QR token for the meal being served now. The app refreshes it before it expires."""
+    from datetime import datetime, timezone
+
+    import sqlalchemy as sa
+
+    from app.models.meal_serving import MealServing
+    from app.services.meal_service import current_meal, issue_pass, tz
+
+    now = datetime.now(timezone.utc)
+    current, upcoming = current_meal(db, active_resident.property_id, now)
+    nxt = {"meal": upcoming.meal, "starts_at": upcoming.start.isoformat()} if upcoming else None
+    if current is None:
+        return APIResponse(success=True, message="No meal is being served right now.", data={"meal": None, "next": nxt})
+    day = now.astimezone(tz()).date()
+    served = db.scalar(sa.select(MealServing.served_at).where(
+        MealServing.resident_id == active_resident.id, MealServing.meal_date == day, MealServing.meal_type == current.meal))
+    token, ttl = issue_pass(active_resident, current.meal, day, now)
+    return APIResponse(
+        success=True,
+        message="Meal pass issued.",
+        data={"meal": current.meal, "token": token, "expires_in": ttl, "served_at": served.isoformat() if served else None,
+              "window_ends_at": current.end.isoformat(), "next": nxt},
+    )

@@ -27,7 +27,7 @@ export default function Welcome() {
         <View style={{ gap: space(3) }}>
           <Button title="I live here" onPress={() => router.push("/resident-login")} />
           <Button title="Join a home" variant="secondary" onPress={() => router.push("/join")} />
-          <Button title="Owner login" variant="ghost" onPress={() => router.push("/owner-login")} />
+          <Button title="Owner or kitchen login" variant="ghost" onPress={() => router.push("/owner-login")} />
         </View>
       </View>
     </SafeAreaView>

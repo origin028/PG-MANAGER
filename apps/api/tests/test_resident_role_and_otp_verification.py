@@ -28,7 +28,7 @@ def test_system_roles_idempotency(client: TestClient):
     with db_session_factory() as db:
         # First call seeds roles
         roles_first = ensure_system_roles_exist(db)
-        assert len(roles_first) == 4
+        assert len(roles_first) == 5  # SUPER_ADMIN, PROPERTY_MANAGER, STAFF, KITCHEN, RESIDENT
         assert "RESIDENT" in roles_first
         assert "PROPERTY_MANAGER" in roles_first
         assert "STAFF" in roles_first
@@ -38,12 +38,12 @@ def test_system_roles_idempotency(client: TestClient):
 
         # Second call must be idempotent and return identical IDs
         roles_second = ensure_system_roles_exist(db)
-        assert len(roles_second) == 4
+        assert len(roles_second) == 5
         assert roles_second["RESIDENT"].id == first_resident_id
 
         # Total count in DB must remain 4
         all_roles = db.query(Role).all()
-        assert len(all_roles) == 4
+        assert len(all_roles) == 5
 
 
 def test_get_or_create_system_role_all_roles(client: TestClient):

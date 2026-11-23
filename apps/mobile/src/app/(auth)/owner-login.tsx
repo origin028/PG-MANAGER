@@ -30,7 +30,7 @@ export default function OwnerLogin() {
       <Pressable onPress={() => router.back()} hitSlop={12} style={{ marginTop: space(3) }} accessibilityLabel="Back">
         <ArrowLeft size={24} color={color.ink} />
       </Pressable>
-      <Title sub="Manage your homes, residents and rent.">Owner login</Title>
+      <Title sub="Owners and kitchen staff sign in here.">Staff login</Title>
       <Field label="Email or mobile" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="username" />
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={submit} />
       {error ? <ErrorBox message={error} /> : null}

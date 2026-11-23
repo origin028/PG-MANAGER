@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, setSessionExpiredHandler, tokenStore } from "./api";
 
-export type Role = "resident" | "owner";
+export type Role = "resident" | "owner" | "kitchen";
 export type Me = { id: string; full_name: string; email?: string; phone?: string; role: { name: string; display_name?: string } };
 
 type Session = {
@@ -13,7 +13,8 @@ type Session = {
 };
 
 const Ctx = createContext<Session | null>(null);
-export const modeOf = (me: Me | null): Role | null => (!me ? null : me.role?.name === "RESIDENT" ? "resident" : "owner");
+export const modeOf = (me: Me | null): Role | null =>
+  !me ? null : me.role?.name === "RESIDENT" ? "resident" : me.role?.name === "KITCHEN" ? "kitchen" : "owner";
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);

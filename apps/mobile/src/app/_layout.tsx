@@ -17,12 +17,13 @@ function Gate() {
     // Paths each mode may visit; anything else redirects to that mode's home.
     const allowed: Record<string, string[]> = {
       signedOut: ["/welcome", "/resident-login", "/owner-login", "/join"],
-      resident: ["/resident", "/new-complaint"],
+      resident: ["/resident", "/new-complaint", "/meal-pass"],
+      kitchen: ["/kitchen"],
       owner: ["/owner", "/approve", "/announce", "/manage"],
     };
     const ok = (list: string[]) => list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (!mode) { if (!ok(allowed.signedOut)) router.replace("/welcome"); }
-    else if (!ok(allowed[mode])) router.replace(mode === "resident" ? "/resident" : "/owner");
+    else if (!ok(allowed[mode])) router.replace(mode === "resident" ? "/resident" : mode === "kitchen" ? "/kitchen" : "/owner");
   }, [ready, mode, pathname, router]);
 
   if (!ready) {
@@ -37,6 +38,7 @@ function Gate() {
       <Stack.Screen name="new-complaint" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="approve/[id]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="announce" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+      <Stack.Screen name="meal-pass" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="manage/money" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="manage/residents" options={{ animation: "slide_from_right" }} />
     </Stack>

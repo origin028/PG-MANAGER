@@ -1,7 +1,8 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { ForkKnife } from "phosphor-react-native";
-import { Body, Card, Empty, ErrorBox, LoadingCards, Screen, Segmented, Title } from "@/components/ui";
+import { ForkKnife, QrCode } from "phosphor-react-native";
+import { Body, Button, Card, Empty, ErrorBox, LoadingCards, Screen, Segmented, Title } from "@/components/ui";
 import { todayKey } from "@/lib/dates";
 import { color, space, type } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
@@ -19,6 +20,7 @@ export default function Food() {
   return (
     <Screen onRefresh={reload} refreshing={refreshing}>
       <Title sub="The fixed weekly menu for your home.">This week's food</Title>
+      <Button title="Show my meal pass" icon={<QrCode size={20} color={color.bg} />} onPress={() => router.push("/meal-pass")} style={{ marginBottom: space(5) }} />
       <Segmented value={day} onChange={setDay} options={ORDER.map((d) => ({ value: d, label: d === todayKey() ? "Today" : d.slice(0, 3).charAt(0) + d.slice(1, 3).toLowerCase() }))} />
       <View style={{ height: space(4) }} />
       {loading ? <LoadingCards /> : error ? <ErrorBox message={error} onRetry={reload} /> : meals.length ? (

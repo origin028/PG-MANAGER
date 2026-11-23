@@ -143,7 +143,7 @@ def list_rooms(
     floor_number: Optional[int] = Query(None, description="Filter by floor number"),
     room_type: Optional[str] = Query(None, description="Filter by room type"),
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER", "STAFF")),
     db: Session = Depends(get_db),
 ):
     """Lists rooms property-wise or across accessible properties."""

@@ -6,6 +6,7 @@ class RoleEnum(str, Enum):
     SUPER_ADMIN = "SUPER_ADMIN"
     PROPERTY_MANAGER = "PROPERTY_MANAGER"
     STAFF = "STAFF"
+    KITCHEN = "KITCHEN"
     RESIDENT = "RESIDENT"
 
 
@@ -51,6 +52,12 @@ ROLE_PERMISSIONS = {
         "complaints:update",
         "notices:read",
     ],
+    RoleEnum.KITCHEN: [
+        "properties:read",
+        "food_menu:read",
+        "food_menu:write",
+        "meals:scan",
+    ],
     RoleEnum.RESIDENT: [
         "profile:self",
         "bed:self",
@@ -80,6 +87,12 @@ SYSTEM_ROLES_DATA = [
         "display_name": "Staff / Warden",
         "description": "Day-to-day operations, bed inspections, and complaints handling",
         "permissions": ROLE_PERMISSIONS[RoleEnum.STAFF],
+    },
+    {
+        "name": RoleEnum.KITCHEN.value,
+        "display_name": "Kitchen Staff",
+        "description": "Scans resident meal passes and manages the weekly menu",
+        "permissions": ROLE_PERMISSIONS[RoleEnum.KITCHEN],
     },
     {
         "name": RoleEnum.RESIDENT.value,

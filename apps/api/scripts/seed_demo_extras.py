@@ -27,6 +27,7 @@ from app.models.lead import Lead  # noqa: E402
 from app.models.payment import Payment  # noqa: E402
 from app.models.property import Property  # noqa: E402
 from app.models.resident import Resident  # noqa: E402
+from app.models.role import Role  # noqa: E402
 from app.models.user import User  # noqa: E402
 from app.services.deposit_service import DepositService  # noqa: E402
 
@@ -61,9 +62,14 @@ def main() -> None:
     # Easy demo logins (development only; this script refuses to run in production):
     #   owner    -> admin / admin
     #   resident -> 0000000000 / 0000000000
+    #   kitchen  -> kitchen / kitchen
     if owner and not db.scalar(sa.select(User.id).where(User.email == "admin")):
         db.add(User(company_id=owner.company_id, role_id=owner.role_id, email="admin", phone="0000000009",
                     full_name="Demo Owner", password_hash=get_password_hash("admin"), is_active=True, approval_status="APPROVED"))
+    kitchen_role = db.scalar(sa.select(Role).where(Role.name == "KITCHEN"))
+    if owner and kitchen_role and not db.scalar(sa.select(User.id).where(User.email == "kitchen")):
+        db.add(User(company_id=owner.company_id, role_id=kitchen_role.id, email="kitchen", phone="0000000008",
+                    full_name="Kitchen Staff", password_hash=get_password_hash("kitchen"), is_active=True, approval_status="APPROVED"))
     demo = next((r for r in residents if r.user and r.user.phone in ("9876543210", "0000000000")), residents[0] if residents else None)
     if demo and demo.user:
         demo.user.phone = "0000000000"
