@@ -656,7 +656,8 @@ def test_resident_checkout_and_bed_release(client: TestClient):
     assert co_data["bed_released"] is True
     assert co_data["security_deposit"] == 10000.00
     assert co_data["damage_charges"] == 500.00
-    assert co_data["deposit_refund_amount"] == 9500.00
+    # 50% of 10000 refundable (5000) minus 500 damage
+    assert co_data["deposit_refund_amount"] == 4500.00
 
     # Verify bed status transitioned to AVAILABLE in DB
     db = client.app.state.testing_session()

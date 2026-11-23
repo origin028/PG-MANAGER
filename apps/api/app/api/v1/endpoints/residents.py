@@ -10,6 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
 from app.services.file_service import FileService
+from app.services.deposit_service import DepositService, compute_exit_settlement, money
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, PermissionDeniedError
 from app.core.security import get_password_hash
 from app.dependencies import get_current_user, get_db, require_roles, verify_property_access
@@ -777,20 +778,24 @@ def checkout_resident(
             Invoice.status.in_(("PENDING", "PARTIALLY_PAID")),
         )
     ).all()
-    unpaid_dues = sum(Decimal(str(inv.amount)) - Decimal(str(inv.paid_amount)) for inv in unpaid_invoices)
+    unpaid_dues = sum((Decimal(str(inv.amount)) - Decimal(str(inv.paid_amount)) for inv in unpaid_invoices), Decimal("0.00"))
     damage_charges = payload.damage_charges or Decimal("0.00")
-    total_deductions = unpaid_dues + damage_charges
-    deposit = Decimal(str(resident.security_deposit or 0.00))
 
-    if total_deductions > deposit and not payload.force_checkout:
-        net_payable = total_deductions - deposit
+    # Owner policy: a fixed share (default 50%) of the deposit is refundable regardless of stay length;
+    # unpaid dues and damages come out of that refundable share.
+    deposit_service = DepositService(db)
+    held = deposit_service.balance(resident.id) or money(resident.security_deposit)
+    preview = compute_exit_settlement(held, unpaid_dues, damage_charges)
+    if preview.net_payable_by_resident > 0 and not payload.force_checkout:
         raise ConflictError(
-            f"Resident has outstanding balance of INR {float(net_payable):,.2f} exceeding security deposit. "
-            f"Please collect outstanding dues or enable force_checkout=true."
+            f"Resident has outstanding balance of INR {float(preview.net_payable_by_resident):,.2f} exceeding the "
+            f"refundable deposit. Please collect outstanding dues or enable force_checkout=true."
         )
-
-    refund_amount = max(Decimal("0.00"), deposit - total_deductions)
-    net_payable_by_resident = max(Decimal("0.00"), total_deductions - deposit)
+    settlement = deposit_service.settle_exit(resident, current_user.company_id, unpaid_dues, damage_charges, current_user.id)
+    deposit = settlement.deposit_held
+    total_deductions = settlement.deductions
+    refund_amount = settlement.refund
+    net_payable_by_resident = settlement.net_payable_by_resident
 
     # 2. Release allocated bed
     bed_released = False
@@ -839,6 +844,7 @@ def checkout_resident(
             "damage_charges": float(damage_charges),
             "unpaid_dues": float(unpaid_dues),
             "refund_amount": float(refund_amount),
+            "forfeited_by_policy": float(settlement.forfeited),
             "net_payable_by_resident": float(net_payable_by_resident),
         },
     )

@@ -527,8 +527,8 @@ def test_complete_phase4_end_to_end_workflow(client: TestClient, e2e_env):
     assert chk["status"] == "CHECKED_OUT"
     assert chk["bed_released"] is True
     assert chk["damage_charges"] == 1500.0
-    # Deposit was 17000.0, damage 1500.0, refund must be 15500.0
-    assert chk["deposit_refund_amount"] == 15500.0
+    # Owner policy: 50% of the 17000 deposit is refundable (8500); damage 1500 comes out of it -> 7000
+    assert chk["deposit_refund_amount"] == 7000.0
 
     # Verify Bed 102-A is now free
     resp = client.get(f"/api/v1/beds/{bed_102_a_id}", headers=admin_headers)
