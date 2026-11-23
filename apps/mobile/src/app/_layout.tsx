@@ -39,8 +39,7 @@ function Gate() {
       <Stack.Screen name="approve/[id]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="announce" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="meal-pass" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
-      <Stack.Screen name="manage/money" options={{ animation: "slide_from_right" }} />
-      <Stack.Screen name="manage/residents" options={{ animation: "slide_from_right" }} />
+
     </Stack>
   );
 }
