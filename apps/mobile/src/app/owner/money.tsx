@@ -222,7 +222,7 @@ export default function MoneyTab() {
       <Header back={false} title="Money" />
       <View style={{ flexDirection: "row", gap: space(3), marginBottom: space(4) }}>
         <Card onPress={() => router.push("/manage/confirm-payments")} style={{ flex: 1, gap: space(2) }}><Wallet size={22} color={color.ink} /><Text style={[type.label, { color: color.ink }]}>Confirm UPI</Text></Card>
-        <Card onPress={() => router.push("/manage/reports")} style={{ flex: 1, gap: space(2) }}><ChartLineUp size={22} color={color.ink} /><Text style={[type.label, { color: color.ink }]}>Reports</Text></Card>
+        <Card onPress={() => router.push("/manage/finance")} style={{ flex: 1, gap: space(2) }}><ChartLineUp size={22} color={color.ink} /><Text style={[type.label, { color: color.ink }]}>Finance</Text></Card>
       </View>
       {props.length > 1 ? <View style={{ marginBottom: space(3) }}><Segmented value={current ?? ""} onChange={setCurrent} options={props.map((p) => ({ value: p.id, label: p.name }))} /></View> : null}
       <Segmented value={tab} onChange={setTab} options={[{ value: "overview", label: "Overview" }, { value: "dues", label: "Dues" }, { value: "history", label: "History" }, { value: "expenses", label: "Expenses" }]} />

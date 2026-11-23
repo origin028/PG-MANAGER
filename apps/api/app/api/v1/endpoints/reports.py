@@ -203,7 +203,7 @@ def get_financial_report(
     net_operating_profit = gross_collections - total_expenses
 
     # Invoices (Pending Rent)
-    inv_query = sa.select(Invoice).where(Invoice.status.in_(("PENDING", "PARTIALLY_PAID")))
+    inv_query = sa.select(Invoice).where(Invoice.status.in_(("PENDING", "PARTIALLY_PAID", "OVERDUE")))
     if property_id:
         inv_query = inv_query.where(Invoice.property_id == property_id)
     if date_from:
@@ -461,3 +461,23 @@ def export_occupancy_csv(
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="occupancy_{prop.code or "property"}.csv"'},
     )
+
+
+@router.get("/finance", status_code=status.HTTP_200_OK, summary="Monthly finance with comparison to last month")
+def get_monthly_finance(
+    month: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}$", description="YYYY-MM, defaults to this month"),
+    property_id: Optional[uuid.UUID] = Query(None, description="Optional: one property"),
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER")),
+    db: Session = Depends(get_db),
+):
+    """Month vs previous month: money, billing, residents, occupancy, deposits, plus a 6-month trend."""
+    from datetime import datetime as _dt
+
+    from app.services.finance_service import finance_report, scope_for
+    from app.services.meal_service import tz
+
+    m = _dt.strptime(month, "%Y-%m").date() if month else _dt.now(tz()).date().replace(day=1)
+    if property_id:
+        verify_property_access(property_id, current_user, db)
+    data = finance_report(db, scope_for(db, current_user.company_id, property_id), m)
+    return APIResponse(success=True, message="Monthly finance.", data=data)

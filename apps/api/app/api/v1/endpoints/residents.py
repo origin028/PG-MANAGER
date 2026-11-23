@@ -813,6 +813,7 @@ def checkout_resident(
     checkout_dt = payload.check_out_date or payload.expected_check_out_date or date.today()
     resident.status = "CHECKED_OUT"
     resident.expected_check_out_date = checkout_dt
+    resident.actual_check_out_date = checkout_dt
 
     user = db.get(User, resident.user_id)
     if user:

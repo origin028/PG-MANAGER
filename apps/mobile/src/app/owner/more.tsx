@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { View } from "react-native";
-import { Buildings, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, IdentificationBadge, Megaphone, UserPlus } from "phosphor-react-native";
+import { Buildings, ChartBar, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, IdentificationBadge, Megaphone, UserPlus } from "phosphor-react-native";
 import { Divider, Header, ListRow } from "@/components/kit";
 import { Card, H2, Screen } from "@/components/ui";
 import { color } from "@/lib/theme";
@@ -19,6 +19,7 @@ const groups: { title: string; items: { icon: React.ReactNode; title: string; su
     { icon: <Fingerprint {...ICON} />, title: "Attendance", sub: "Who is in and out today", href: "/manage/attendance" },
   ] },
   { title: "Business", items: [
+    { icon: <ChartBar {...ICON} />, title: "Finance", sub: "This month vs last month, 6-month trend", href: "/manage/finance" },
     { icon: <ChartLineUp {...ICON} />, title: "Reports", sub: "Occupancy, collections, exports", href: "/manage/reports" },
     { icon: <CookingPot {...ICON} />, title: "Kitchen & meal passes", sub: "Turn on, kitchen logins", href: "/manage/kitchen" },
     { icon: <Gear {...ICON} />, title: "Settings", sub: "Company details, password, sign out", href: "/manage/settings" },

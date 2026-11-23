@@ -2,7 +2,7 @@ import { router, usePathname } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import {
-  Bed, Buildings, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, House, IdentificationBadge,
+  Bed, Buildings, ChartBar, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, House, IdentificationBadge,
   Megaphone, QrCode, SignOut, User, UserPlus, Users, Wallet,
 } from "phosphor-react-native";
 import { confirmAction } from "@/components/kit";
@@ -29,6 +29,7 @@ const OWNER: { group?: string; items: Item[] }[] = [
     { href: "/manage/attendance", label: "Attendance", icon: Fingerprint },
   ] },
   { group: "Business", items: [
+    { href: "/manage/finance", label: "Finance", icon: ChartBar },
     { href: "/manage/reports", label: "Reports", icon: ChartLineUp },
     { href: "/manage/kitchen", label: "Kitchen & meal passes", icon: CookingPot },
     { href: "/manage/settings", label: "Settings", icon: Gear },
