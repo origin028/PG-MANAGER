@@ -18,7 +18,7 @@ function Gate() {
     const allowed: Record<string, string[]> = {
       signedOut: ["/welcome", "/resident-login", "/owner-login", "/join"],
       resident: ["/resident", "/new-complaint"],
-      owner: ["/owner", "/approve", "/announce"],
+      owner: ["/owner", "/approve", "/announce", "/manage"],
     };
     const ok = (list: string[]) => list.some((p) => pathname === p || pathname.startsWith(`${p}/`));
     if (!mode) { if (!ok(allowed.signedOut)) router.replace("/welcome"); }
@@ -37,6 +37,8 @@ function Gate() {
       <Stack.Screen name="new-complaint" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="approve/[id]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
       <Stack.Screen name="announce" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+      <Stack.Screen name="manage/money" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="manage/residents" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }

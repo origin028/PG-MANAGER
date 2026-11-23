@@ -28,5 +28,7 @@ export const type = {
   label: { fontSize: 14, lineHeight: 18, fontWeight: "600" },
 } as const;
 
-export const rupees = (n: number | null | undefined) =>
-  `₹${Number(n ?? 0).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+export const rupees = (n: number | null | undefined) => {
+  const v = Number(n ?? 0);
+  return `${v < 0 ? "-" : ""}₹${Math.abs(v).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+};

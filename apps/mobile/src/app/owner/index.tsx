@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { Text, View } from "react-native";
-import { Bed, ChatCircleDots, CurrencyInr, UserCheck } from "phosphor-react-native";
+import { Bed, CaretRight, ChartBar, ChatCircleDots, CurrencyInr, UserCheck } from "phosphor-react-native";
 import { Body, Card, ErrorBox, H2, LoadingCards, Screen } from "@/components/ui";
 import { greeting } from "@/lib/dates";
 import { listOf } from "@/lib/owner";
@@ -55,11 +55,25 @@ export default function Today() {
             <View style={{ flex: 1 }}><Stat icon={<UserCheck size={24} color={color.ink} />} label="To approve" value={String(waiting)} onPress={() => router.push("/owner/approvals")} /></View>
             <View style={{ flex: 1 }}><Stat icon={<ChatCircleDots size={24} color={color.ink} />} label="Open issues" value={String(d.open_complaints)} onPress={() => router.push("/owner/complaints")} /></View>
           </View>
-          <H2>Residents</H2>
-          <Card style={{ flexDirection: "row", alignItems: "center", gap: space(4) }}>
-            <Bed size={28} color={color.ink} weight="light" />
-            <Body style={{ flex: 1 }}>{d.active_residents} people living with you right now.</Body>
-          </Card>
+          <H2>Manage</H2>
+          <View style={{ gap: space(3) }}>
+            <Card onPress={() => router.push("/manage/money")} style={{ flexDirection: "row", alignItems: "center", gap: space(4) }}>
+              <ChartBar size={28} color={color.ink} weight="light" />
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { color: color.ink, fontSize: 16 }]}>Money</Text>
+                <Body muted>Collections, expenses and profit</Body>
+              </View>
+              <CaretRight size={20} color={color.ink3} />
+            </Card>
+            <Card onPress={() => router.push("/manage/residents")} style={{ flexDirection: "row", alignItems: "center", gap: space(4) }}>
+              <Bed size={28} color={color.ink} weight="light" />
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { color: color.ink, fontSize: 16 }]}>Residents</Text>
+                <Body muted>{d.active_residents} living with you now</Body>
+              </View>
+              <CaretRight size={20} color={color.ink3} />
+            </Card>
+          </View>
         </>
       )}
     </Screen>

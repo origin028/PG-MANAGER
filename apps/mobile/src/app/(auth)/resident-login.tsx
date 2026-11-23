@@ -12,7 +12,8 @@ export default function ResidentLogin() {
   const { signInWithTokens } = useSession();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "password">("phone");
+  const [password, setPassword] = useState("");
   const [sentTo, setSentTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +26,14 @@ export default function ResidentLogin() {
       const d = await api<{ email_masked?: string }>("/auth/resident/login/otp/request", { method: "POST", json: { phone: digits }, auth: false });
       setSentTo(d.email_masked ?? "your email");
       setStep("otp");
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
+
+  async function passwordLogin() {
+    setBusy(true); setError(null);
+    try {
+      const d = await api<{ access_token: string; refresh_token: string }>("/auth/login", { method: "POST", json: { identifier: digits, password, client_type: "resident_mobile" }, auth: false });
+      await signInWithTokens(d.access_token, d.refresh_token, "resident_mobile");
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -47,6 +56,20 @@ export default function ResidentLogin() {
           <Field label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" maxLength={14} autoFocus />
           {error ? <ErrorBox message={error} /> : null}
           <Button title="Send code" onPress={requestCode} loading={busy} disabled={digits.length !== 10} style={{ marginTop: space(2) }} />
+          <Pressable onPress={() => { setError(null); setStep("password"); }} style={{ marginTop: space(5), alignSelf: "center" }}>
+            <Text style={[type.label, { color: color.ink }]}>Use password instead</Text>
+          </Pressable>
+        </>
+      ) : step === "password" ? (
+        <>
+          <Title sub="Sign in with your mobile number and password.">Welcome back</Title>
+          <Field label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" maxLength={14} />
+          <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={passwordLogin} />
+          {error ? <ErrorBox message={error} /> : null}
+          <Button title="Sign in" onPress={passwordLogin} loading={busy} disabled={digits.length !== 10 || password.length < 4} style={{ marginTop: space(2) }} />
+          <Pressable onPress={() => { setError(null); setStep("phone"); }} style={{ marginTop: space(5), alignSelf: "center" }}>
+            <Text style={[type.label, { color: color.ink }]}>Use a code instead</Text>
+          </Pressable>
         </>
       ) : (
         <>
