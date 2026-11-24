@@ -1,24 +1,15 @@
-import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, Platform, Pressable, Text, View } from "react-native";
-import { ArrowLeft, Camera, CheckCircle, Clock } from "phosphor-react-native";
-import { Body, Button, ErrorBox, Field, Screen, Segmented, Title, tap } from "@/components/ui";
+import { Pressable, Text, View } from "react-native";
+import { ArrowLeft, Clock } from "phosphor-react-native";
+import { KycDocPicker, appendDocs, neededDocs, type Docs, type Method } from "@/components/kyc-docs";
+import { Body, Button, ErrorBox, Field, Screen, Segmented, Title } from "@/components/ui";
 import { api } from "@/lib/api";
-import { appendFile, pickImage, type Picked } from "@/lib/upload";
-import { color, radius, space, type } from "@/lib/theme";
+import { color, space, type } from "@/lib/theme";
 
 type Home = { id: string; name: string; city?: string };
-type Docs = Partial<Record<"aadhaar_front_file" | "aadhaar_back_file" | "pan_card_file" | "passport_file" | "resident_selfie_file", Picked>>;
 
 const STEPS = ["About you", "Address", "Documents", "Verify"] as const;
-const DOC_LABEL: Record<keyof Docs, string> = {
-  aadhaar_front_file: "Aadhaar front",
-  aadhaar_back_file: "Aadhaar back",
-  pan_card_file: "PAN card",
-  passport_file: "Passport photo page",
-  resident_selfie_file: "Your selfie",
-};
 
 export default function Join() {
   const [step, setStep] = useState(0);
@@ -27,7 +18,7 @@ export default function Join() {
     full_name: "", date_of_birth: "", gender: "Female", occupation: "", primary_phone: "", email: "", emergency_contact: "",
     house_flat_no: "", street: "", landmark: "", city: "", state: "", pincode: "", property_id: "",
   });
-  const [method, setMethod] = useState<"Aadhaar + PAN" | "Passport Only">("Aadhaar + PAN");
+  const [method, setMethod] = useState<Method>("Aadhaar + PAN");
   const [docs, setDocs] = useState<Docs>({});
   const [otp, setOtp] = useState("");
   const [sentTo, setSentTo] = useState("");
@@ -43,9 +34,7 @@ export default function Join() {
   }, []);
 
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
-  const needed: (keyof Docs)[] = method === "Aadhaar + PAN"
-    ? ["aadhaar_front_file", "aadhaar_back_file", "pan_card_file", "resident_selfie_file"]
-    : ["passport_file", "resident_selfie_file"];
+  const needed = neededDocs(method);
 
   const valid = [
     f.full_name.trim().length > 1 && /^\d{4}-\d{2}-\d{2}$/.test(f.date_of_birth) && f.primary_phone.replace(/\D/g, "").length >= 10 && /\S+@\S+\.\S+/.test(f.email) && f.emergency_contact.trim().length > 3 && f.occupation.trim().length > 1,
@@ -53,28 +42,12 @@ export default function Join() {
     needed.every((k) => docs[k]),
   ];
 
-  async function choose(key: keyof Docs) {
-    const selfie = key === "resident_selfie_file";
-    const go = async (src: "camera" | "library") => {
-      try {
-        const p = await pickImage(src, selfie);
-        if (p) setDocs((d) => ({ ...d, [key]: p }));
-      } catch (e) { setError((e as Error).message); }
-    };
-    if (Platform.OS === "web") return go("library");
-    Alert.alert(DOC_LABEL[key], undefined, [
-      { text: "Take photo", onPress: () => go("camera") },
-      { text: "Choose from photos", onPress: () => go("library") },
-      { text: "Cancel", style: "cancel" },
-    ]);
-  }
-
   async function submit() {
     setBusy(true); setError(null);
     try {
       const form = new FormData();
       Object.entries({ ...f, primary_phone: f.primary_phone.replace(/\D/g, "").slice(-10), verification_method: method }).forEach(([k, v]) => form.append(k, v));
-      for (const k of needed) await appendFile(form, k, docs[k]!);
+      await appendDocs(form, method, docs);
       const d = await api<{ email_masked?: string }>("/auth/resident/register/otp/request", { method: "POST", body: form, auth: false });
       setSentTo(d.email_masked ?? f.email);
       setStep(3);
@@ -147,24 +120,7 @@ export default function Join() {
       {step === 2 && (
         <>
           <Title sub="Clear photos, all four corners visible. Stored encrypted; only the owner can see them.">Your ID</Title>
-          <Segmented value={method} onChange={(v) => { setMethod(v); setDocs({}); }} options={[{ value: "Aadhaar + PAN", label: "Aadhaar + PAN" }, { value: "Passport Only", label: "Passport" }]} />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space(3), marginTop: space(5) }}>
-            {needed.map((k) => (
-              <Pressable key={k} onPress={() => { tap(); choose(k); }} style={{ width: "47.5%", aspectRatio: 1.25, borderRadius: radius.md, overflow: "hidden", backgroundColor: color.card, borderWidth: 1, borderColor: docs[k] ? color.ink : color.line, borderStyle: docs[k] ? "solid" : "dashed" }}>
-                {docs[k] ? (
-                  <>
-                    <Image source={docs[k]!.uri} style={{ flex: 1 }} contentFit="cover" />
-                    <View style={{ position: "absolute", top: 8, right: 8, backgroundColor: color.card, borderRadius: 99 }}><CheckCircle size={24} weight="fill" color={color.ok} /></View>
-                  </>
-                ) : (
-                  <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: space(2) }}>
-                    <Camera size={26} color={color.ink} weight="light" />
-                    <Text style={[type.label, { color: color.ink }]}>{DOC_LABEL[k]}</Text>
-                  </View>
-                )}
-              </Pressable>
-            ))}
-          </View>
+          <KycDocPicker method={method} onMethod={setMethod} docs={docs} onDocs={setDocs} onError={setError} />
           {error ? <View style={{ marginTop: space(4) }}><ErrorBox message={error} /></View> : null}
           <Button title="Submit and verify email" onPress={submit} loading={busy} disabled={!valid[2]} style={{ marginTop: space(6) }} />
         </>

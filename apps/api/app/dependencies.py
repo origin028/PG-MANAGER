@@ -66,6 +66,18 @@ def get_current_user(
 
         require_kitchen_enabled(db, user.company_id)
 
+    if user.role and user.role.name == "RESIDENT" and user.resident_profile is not None:
+        from app.core.exceptions import PortalOffError
+        from app.services import portal_service
+
+        resident = user.resident_profile
+        portal_service.enforce(db, resident)
+        if not resident.portal_enabled and not request.url.path.startswith(portal_service.LOCKED_ALLOWED):
+            raise PortalOffError(
+                "Your app access is paused until your KYC is verified." if resident.portal_reason == portal_service.KYC_OVERDUE
+                else "Your app access has been paused by your PG. Please contact them."
+            )
+
     return user
 
 

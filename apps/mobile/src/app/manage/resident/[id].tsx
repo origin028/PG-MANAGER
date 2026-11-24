@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { ScrollView, Switch, Text, View } from "react-native";
 import { BedPicker, type FreeBed } from "@/components/bed-picker";
 import { Divider, Header, confirmAction, digits, nice } from "@/components/kit";
 import { Badge, Body, Button, Card, ErrorBox, Field, H2, LoadingCards, Row, Screen, Segmented, statusTone } from "@/components/ui";
@@ -14,6 +14,7 @@ type Detail = {
   id: string; full_name: string; phone: string; email?: string; property_id: string; property_name?: string;
   room_number?: string; bed_number?: string; check_in_date?: string; monthly_rent: number; status: string; kyc_status?: string;
   occupation?: string; emergency_contact_name?: string; emergency_contact_phone?: string; date_of_birth?: string; gender?: string;
+  portal_enabled: boolean; portal_reason?: string | null; kyc_days_left?: number | null; kyc_submitted?: boolean; address?: string;
 };
 type Deposit = { deposit_held: string; refund_if_moving_out_today: string; retained_by_policy: string; entries: { type: string; amount: string; note?: string; at: string }[] };
 type Panel = null | "edit" | "move" | "deposit" | "checkout" | "reject";
@@ -27,7 +28,7 @@ export default function ResidentDetail() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(
-    invite === "sent" ? "Resident added. We emailed them a code to set their password." :
+    invite === "sent" ? "Resident added. We emailed them a code to set their password; they'll fill in their details and KYC themselves." :
     invite === "failed" ? "Resident added, but the login email could not be sent. Use \"Send login invite\" below." :
     invite === "none" ? "Resident added. Add their email (Edit) and send a login invite so they can sign in." : null,
   );
@@ -60,6 +61,10 @@ export default function ResidentDetail() {
   const verify = () => run(() => api(`/residents/${id}/kyc/verify`, { method: "POST", json: {} }), "KYC verified.");
   const reject = () => run(() => api(`/residents/${id}/kyc/reject`, { method: "POST", json: { notes: reason.trim() } }), "KYC rejected.");
   const invite_ = () => run(() => api(`/residents/${id}/send-invite`, { method: "POST" }), `Login invite sent to ${r.data?.email}. The code works for 48 hours.`);
+  const setAccess = (on: boolean) => run(async () => {
+    const res = await api<{ kyc_days_left?: number | null }>(`/residents/${id}/access`, { method: "POST", json: { enabled: on } });
+    return res;
+  }, on ? "App access turned on." : "App access turned off. They can still sign in to see why and contact you.");
 
   async function checkout(force = false) {
     setBusy(true); setError(null);
@@ -88,14 +93,14 @@ export default function ResidentDetail() {
           <Card style={{ paddingVertical: space(2) }}>
             <Row label="Room / bed" value={d.room_number ? `${d.room_number} / ${d.bed_number}` : "Not assigned"} />
             <Divider />
-            <Row label="Monthly rent" value={rupees(d.monthly_rent)} />
+            <Row label="Monthly rent" value={d.room_number || d.monthly_rent ? rupees(d.monthly_rent) : "Set when you assign a bed"} />
             <Divider />
             <Row label="Living here since" value={fmtDate(d.check_in_date)} />
           </Card>
           {active ? (
             <View style={{ flexDirection: "row", gap: space(2), marginTop: space(3) }}>
               <Button title="Edit" variant="secondary" onPress={() => open("edit")} style={{ flex: 1, paddingHorizontal: 0 }} />
-              <Button title="Move bed" variant="secondary" onPress={() => open("move")} style={{ flex: 1, paddingHorizontal: 0 }} />
+              <Button title={d.room_number ? "Move bed" : "Assign bed"} variant="secondary" onPress={() => open("move")} style={{ flex: 1, paddingHorizontal: 0 }} />
               <Button title="Check out" variant="danger" onPress={() => open("checkout")} style={{ flex: 1, paddingHorizontal: 0 }} />
             </View>
           ) : null}
@@ -115,7 +120,7 @@ export default function ResidentDetail() {
 
           {panel === "move" ? (
             <Card style={{ marginTop: space(3), gap: space(3) }}>
-              <Text style={[type.label, { color: color.ink }]}>Move to a free bed</Text>
+              <Text style={[type.label, { color: color.ink }]}>{d.room_number ? "Move to a free bed" : "Pick a bed (rent bills start from the next monthly run)"}</Text>
               <BedPicker propertyId={d.property_id} value={bed?.id ?? ""} onChange={setBed} />
               {bed?.monthly_rent ? <Body muted>Rent will change to {rupees(bed.monthly_rent)} (that bed's rent).</Body> : null}
               <Button title="Move resident" onPress={move} loading={busy} disabled={!bed} />
@@ -153,10 +158,12 @@ export default function ResidentDetail() {
           </Card>
 
           <H2>ID documents</H2>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(3) }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), marginBottom: space(3), flexWrap: "wrap" }}>
             <Body>KYC status</Body>
-            <Badge label={nice(d.kyc_status ?? "PENDING")} tone={statusTone(d.kyc_status)} />
+            <Badge label={d.kyc_status === "SUBMITTED" ? "Ready to check" : nice(d.kyc_status ?? "PENDING")} tone={statusTone(d.kyc_status)} />
+            {d.kyc_days_left != null ? <Badge label={d.kyc_days_left > 0 ? `${d.kyc_days_left} day${d.kyc_days_left === 1 ? "" : "s"} left` : "Deadline passed"} tone={d.kyc_days_left <= 2 ? (d.kyc_days_left > 0 ? "warn" : "bad") : "neutral"} /> : null}
           </View>
+          {d.kyc_status === "PENDING" && !d.kyc_submitted ? <Body muted style={{ marginBottom: space(3), fontSize: 14 }}>Waiting for {d.full_name.split(" ")[0]} to add their details and ID photos in the app.</Body> : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space(3) }}>
             {DOCS.map(([doc, label]) => <KycDoc key={doc} residentId={d.id} doc={doc} label={label} onMissing={onMissing} />)}
           </ScrollView>
@@ -182,10 +189,22 @@ export default function ResidentDetail() {
             {d.date_of_birth ? <Row label="Born" value={fmtDate(d.date_of_birth)} /> : null}
           </Card>
           {active ? (
-            <Card tone="cream" style={{ marginTop: space(3), gap: space(2) }}>
-              <Text style={[type.label, { color: color.ink }]}>App login</Text>
+            <Card style={{ marginTop: space(3), gap: space(3) }}>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space(3) }}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[type.label, { color: color.ink, fontSize: 16 }]}>App access</Text>
+                  <Body muted style={{ fontSize: 14 }}>
+                    {d.portal_enabled
+                      ? d.kyc_days_left != null ? `On. KYC must be verified within ${d.kyc_days_left} day${d.kyc_days_left === 1 ? "" : "s"}, or access pauses automatically.` : "On."
+                      : d.portal_reason === "KYC_OVERDUE" ? "Paused automatically: KYC wasn't verified in time." : "Paused by you."}
+                  </Body>
+                </View>
+                <Switch value={d.portal_enabled} onValueChange={setAccess} disabled={busy} trackColor={{ true: color.ok, false: color.line }} thumbColor={color.card} accessibilityLabel="App access" />
+              </View>
+              {!d.portal_enabled && d.portal_reason === "KYC_OVERDUE" ? <Body muted style={{ fontSize: 13 }}>Turning it on gives them a fresh deadline. Verifying their KYC also turns it back on.</Body> : null}
+              <Divider />
               <Body muted style={{ fontSize: 14 }}>
-                {d.email ? `They sign in with ${d.email} or ${d.phone}. Send a code if they haven't set a password or forgot it.` : "Add their email (Edit) so they can set a password and sign in."}
+                {d.email ? `Sign-in: ${d.email} or ${d.phone}. Send a code if they haven't set a password or forgot it.` : "Add their email (Edit) so they can set a password and sign in."}
               </Body>
               {d.email ? <Button title="Send login invite" variant="secondary" onPress={invite_} loading={busy} /> : null}
             </Card>

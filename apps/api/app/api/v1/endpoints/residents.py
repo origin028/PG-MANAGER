@@ -13,6 +13,9 @@ from app.services.file_service import FileService
 from app.services.deposit_service import DepositService, compute_exit_settlement, money
 from app.core.exceptions import BadRequestError, ConflictError, NotFoundError, PermissionDeniedError
 from app.core.security import get_password_hash
+from pydantic import BaseModel
+
+from app.services.audit_service import record_audit_log
 from app.dependencies import accessible_property_ids, get_current_user, get_db, require_roles, verify_property_access
 from app.models.bed import Bed
 from app.models.invoice import Invoice
@@ -67,7 +70,7 @@ def _build_resident_detail(resident: Resident, db: Session) -> ResidentDetailRea
     ]
     perm_addr = ", ".join(p for p in addr_parts if p) or None
 
-    return ResidentDetailRead(
+    detail = ResidentDetailRead(
         id=resident.id,
         user_id=resident.user_id,
         full_name=resident.full_name or (user.full_name if user else None),
@@ -101,6 +104,14 @@ def _build_resident_detail(resident: Resident, db: Session) -> ResidentDetailRea
         created_at=resident.created_at,
         updated_at=resident.updated_at,
     )
+    from app.services import portal_service
+
+    detail.portal_enabled = resident.portal_enabled
+    detail.portal_reason = resident.portal_reason
+    detail.kyc_due_at = resident.kyc_due_at if resident.kyc_status != "VERIFIED" else None
+    detail.kyc_days_left = portal_service.days_left(resident)
+    detail.kyc_submitted = portal_service.kyc_submitted(resident)
+    return detail
 
 router = APIRouter()
 
@@ -251,6 +262,10 @@ def onboard_resident(
         id_proof_number_masked=masked_doc,
     )
     db.add(resident)
+    db.flush()
+    from app.services import portal_service
+
+    portal_service.start_deadline(db, resident)
     db.commit()
     db.refresh(resident)
 
@@ -265,6 +280,43 @@ def onboard_resident(
            " The login email could not be sent right now: use 'Send login invite' to try again."),
         data=data,
     )
+
+
+def _days_left(r: Resident):
+    from app.services import portal_service
+
+    return portal_service.days_left(r)
+
+
+class AccessSwitch(BaseModel):
+    enabled: bool
+
+
+@router.post("/{resident_id}/access", status_code=status.HTTP_200_OK, summary="Turn a resident's app access on or off")
+def set_resident_access(
+    resident_id: uuid.UUID,
+    payload: AccessSwitch,
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER")),
+    db: Session = Depends(get_db),
+):
+    """Owner's on/off switch. Turning on a resident past their KYC deadline gives them a fresh deadline."""
+    from app.services import portal_service
+
+    resident = db.get(Resident, resident_id)
+    if not resident:
+        raise NotFoundError("Resident not found.")
+    verify_property_access(resident.property_id, current_user, db)
+    portal_service.set_access(db, resident, payload.enabled)
+    record_audit_log(
+        db=db, action="RESIDENT_ACCESS_ON" if payload.enabled else "RESIDENT_ACCESS_OFF", resource_type="residents",
+        user_id=current_user.id, user_email=current_user.email, user_role=current_user.role.name if current_user.role else None,
+        property_id=resident.property_id, resource_id=str(resident.id), details={"kyc_due_at": str(resident.kyc_due_at)},
+    )
+    db.commit()
+    db.refresh(resident)
+    left = portal_service.days_left(resident)
+    msg = ("App access turned on." + (f" They have {left} days to finish KYC." if left is not None else "")) if payload.enabled else "App access turned off."
+    return APIResponse(success=True, message=msg, data=_build_resident_detail(resident, db))
 
 
 def _send_invite(db: Session, user: User, resident: Resident) -> bool:
@@ -358,6 +410,8 @@ def list_residents(
                 kyc_status=r.kyc_status or "PENDING",
                 status=r.status,
                 approval_status=user.approval_status if user else "APPROVED",
+                portal_enabled=r.portal_enabled,
+                kyc_days_left=_days_left(r),
             )
         )
 
@@ -1112,6 +1166,9 @@ def verify_resident_kyc(
     resident.kyc_status = "VERIFIED"
     resident.verified_at = datetime.now(timezone.utc)
     resident.verified_by_id = current_user.id
+    from app.services import portal_service
+
+    portal_service.on_kyc_verified(resident)
     if payload.notes:
         resident.kyc_notes = payload.notes.strip()
 

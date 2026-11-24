@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { Text, View } from "react-native";
-import { ChatCircleDots, CurrencyInr, Megaphone, Receipt, UserCheck, UserPlus, Wallet } from "phosphor-react-native";
+import { ChatCircleDots, CurrencyInr, IdentificationCard, LockKey, Megaphone, Receipt, UserCheck, UserPlus, Wallet } from "phosphor-react-native";
 import { Divider, ListRow } from "@/components/kit";
 import { Body, Card, ErrorBox, H2, LoadingCards, Screen } from "@/components/ui";
 import { greeting } from "@/lib/dates";
@@ -10,7 +10,7 @@ import { useSession } from "@/lib/session";
 import { color, rupees, space, type } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
 
-type Dash = { total_beds: number; occupied_beds: number; vacant_beds: number; occupancy_rate_percent: number; gross_collections: number; pending_rent: number; open_complaints: number; active_residents: number };
+type Dash = { total_beds: number; occupied_beds: number; vacant_beds: number; occupancy_rate_percent: number; gross_collections: number; pending_rent: number; open_complaints: number; active_residents: number; kyc_to_verify?: number; access_paused?: number };
 type Pay = { status: string; is_settled?: boolean };
 const DONE = ["SUCCESS", "SETTLED", "PAID", "COMPLETED", "FAILED", "CANCELLED", "REFUNDED"];
 
@@ -37,6 +37,8 @@ export default function Home() {
   const toConfirm = listOf<Pay>(pays.data as never).filter((p) => !p.is_settled && !DONE.includes((p.status ?? "").toUpperCase())).length;
   const attention = [
     waiting ? { icon: <UserCheck size={24} color={color.ink} />, title: `${waiting} new ${waiting === 1 ? "sign-up" : "sign-ups"} to approve`, href: "/manage/approvals" } : null,
+    d?.kyc_to_verify ? { icon: <IdentificationCard size={24} color={color.ink} />, title: `${d.kyc_to_verify} KYC ${d.kyc_to_verify === 1 ? "is" : "are"} ready to check`, href: "/owner/residents" } : null,
+    d?.access_paused ? { icon: <LockKey size={24} color={color.ink} />, title: `${d.access_paused} ${d.access_paused === 1 ? "resident's" : "residents'"} app access paused`, href: "/owner/residents" } : null,
     toConfirm ? { icon: <Wallet size={24} color={color.ink} />, title: `${toConfirm} UPI ${toConfirm === 1 ? "payment" : "payments"} to confirm`, href: "/manage/confirm-payments" } : null,
     d && d.pending_rent > 0 ? { icon: <CurrencyInr size={24} color={color.ink} />, title: `${rupees(d.pending_rent)} rent due`, href: "/owner/money" } : null,
     d && d.open_complaints ? { icon: <ChatCircleDots size={24} color={color.ink} />, title: `${d.open_complaints} open ${d.open_complaints === 1 ? "complaint" : "complaints"}`, href: "/manage/complaints" } : null,

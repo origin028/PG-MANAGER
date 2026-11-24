@@ -103,7 +103,12 @@ class ResidentRead(ResidentBase):
 
 
 class ResidentDetailRead(BaseModel):
-    invite_sent: Optional[bool] = None  # set when the owner adds a resident: was the "set your password" email sent?
+    invite_sent: Optional[bool] = None
+    portal_enabled: bool = True  # app access on/off
+    portal_reason: Optional[str] = None  # KYC_OVERDUE | OWNER
+    kyc_due_at: Optional[datetime] = None
+    kyc_days_left: Optional[int] = None
+    kyc_submitted: bool = False  # set when the owner adds a resident: was the "set your password" email sent?
     id: uuid.UUID
     user_id: Optional[uuid.UUID] = None
     full_name: Optional[str] = None
@@ -152,6 +157,8 @@ class ResidentSummary(BaseModel):
     kyc_status: Optional[str] = "PENDING"
     status: str
     approval_status: str = "APPROVED"
+    portal_enabled: bool = True
+    kyc_days_left: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 

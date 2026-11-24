@@ -400,6 +400,9 @@ def convert_lead(
         details={"lead_name": lead.name, "resident_id": str(resident.id), "user_id": str(user.id)},
     )
 
+    from app.services import portal_service
+
+    portal_service.start_deadline(db, resident)
     db.commit()
 
     from app.services.otp_service import OTPService

@@ -9,6 +9,8 @@ from app.db.base import Base, TimestampMixin, UUIDMixin
 
 class Resident(Base, UUIDMixin, TimestampMixin):
     __tablename__ = "residents"
+    # The daily KYC-deadline job only looks at residents whose access is still on.
+    __table_args__ = (sa.Index("ix_residents_kyc_due_open", "kyc_due_at", postgresql_where=sa.text("portal_enabled")),)
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         sa.Uuid(as_uuid=True),
@@ -86,6 +88,14 @@ class Resident(Base, UUIDMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(
         sa.String(50), default="ACTIVE", nullable=False, index=True
     )  # ACTIVE, NOTICE_PERIOD, CHECKED_OUT
+
+    # App access ("portal"). kyc_due_at = when KYC must be verified by; NULL means no deadline.
+    # Past the deadline without verified KYC, access turns off automatically (portal_reason KYC_OVERDUE).
+    kyc_due_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    portal_enabled: Mapped[bool] = mapped_column(sa.Boolean, default=True, server_default=sa.true(), nullable=False)
+    portal_reason: Mapped[Optional[str]] = mapped_column(sa.String(40), nullable=True)  # KYC_OVERDUE | OWNER
+    portal_changed_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    kyc_reminder_sent_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
 
     @property
     def full_name(self) -> Optional[str]:

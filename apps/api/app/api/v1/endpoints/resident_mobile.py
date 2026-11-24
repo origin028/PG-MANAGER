@@ -1,6 +1,6 @@
 import uuid
 from typing import List, Optional
-from fastapi import APIRouter, Depends, File, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import BadRequestError
@@ -418,3 +418,101 @@ def get_my_meal_pass(
         data={"enabled": True, "meal": current.meal, "token": token, "expires_in": ttl, "served_at": served.isoformat() if served else None,
               "window_ends_at": current.end.isoformat(), "next": nxt},
     )
+
+
+# ---------------------------------------------------------------------------
+# App access + resident-completed KYC (owner adds name/phone/email, resident does the rest)
+# ---------------------------------------------------------------------------
+def _own_resident(user: User, db: Session) -> Resident:
+    import sqlalchemy as sa
+
+    from app.core.exceptions import PermissionDeniedError
+
+    if not user.role or user.role.name != "RESIDENT":
+        raise PermissionDeniedError("Only residents can use this.")
+    r = db.scalar(sa.select(Resident).where(Resident.user_id == user.id))
+    if not r or r.status not in ("ACTIVE", "NOTICE_PERIOD"):
+        raise PermissionDeniedError("Your resident account is not active.")
+    return r
+
+
+@router.get("/portal", status_code=status.HTTP_200_OK, summary="My app access and KYC deadline")
+def my_portal(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.services import portal_service
+
+    return APIResponse(success=True, message="Access status.", data=portal_service.state(_own_resident(current_user, db)))
+
+
+@router.get("/kyc", status_code=status.HTTP_200_OK, summary="My details for the KYC form")
+def my_kyc(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.services import portal_service
+
+    r = _own_resident(current_user, db)
+    return APIResponse(success=True, message="KYC details.", data={
+        "full_name": r.full_name, "phone": r.phone, "email": r.email,
+        "date_of_birth": r.date_of_birth.isoformat() if r.date_of_birth else "", "gender": r.gender or "",
+        "occupation": r.occupation or "", "emergency_contact_name": r.emergency_contact_name or "",
+        "emergency_contact_phone": r.emergency_contact_phone or "", "house_flat_no": r.house_flat_no or "",
+        "street": r.street or "", "landmark": r.landmark or "", "city": r.city or "", "state": r.state or "",
+        "pincode": r.pincode or "", **portal_service.state(r),
+    })
+
+
+@router.post("/kyc", status_code=status.HTTP_200_OK, summary="Submit my details and ID documents")
+async def submit_my_kyc(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Multipart form: personal + address fields, verification_method ('Aadhaar + PAN' | 'Passport Only') and the photos.
+    Files are checked by content, encrypted and stored exactly like at sign-up. The owner then verifies or rejects."""
+    import re
+    from datetime import date as _date
+
+    from app.core.exceptions import ConflictError
+    from app.services.audit_service import record_audit_log
+    from app.services.file_service import FileService
+    from app.services.otp_service import normalize_phone
+
+    r = _own_resident(current_user, db)
+    if r.kyc_status == "VERIFIED":
+        raise ConflictError("Your KYC is already verified.")
+    form = await request.form()
+    g = lambda k: (str(form.get(k) or "")).strip()  # noqa: E731
+    required = ["date_of_birth", "gender", "occupation", "emergency_contact_name", "emergency_contact_phone",
+                "house_flat_no", "street", "city", "state", "pincode", "verification_method"]
+    missing = [k for k in required if not g(k)]
+    if missing:
+        raise BadRequestError(f"Please fill in: {', '.join(m.replace('_', ' ') for m in missing)}.")
+    try:
+        dob = _date.fromisoformat(g("date_of_birth"))
+    except ValueError:
+        raise BadRequestError("Date of birth must look like 1999-08-14.")
+    if not (_date(1940, 1, 1) <= dob <= _date.today().replace(year=_date.today().year - 15)):
+        raise BadRequestError("Please check your date of birth.")
+    if not re.fullmatch(r"\d{6}", g("pincode")):
+        raise BadRequestError("PIN code must be 6 digits.")
+    names = ["aadhaar_front_file", "aadhaar_back_file", "pan_card_file", "passport_file", "resident_selfie_file"]
+    files = {k: form.get(k) for k in names}
+    present = {k: hasattr(v, "filename") and bool(v.filename) for k, v in files.items()}
+    method = FileService.validate_kyc_method_and_files(g("verification_method"), present)
+    saved = {k: await FileService.validate_and_save_upload(files[k], k) for k in names if present[k]}
+
+    r.date_of_birth = dob
+    r.gender = g("gender")
+    r.occupation = g("occupation")
+    r.emergency_contact_name = g("emergency_contact_name")
+    r.emergency_contact_phone = normalize_phone(g("emergency_contact_phone"))
+    for k in ("house_flat_no", "street", "city", "state", "pincode"):
+        setattr(r, k, g(k))
+    r.landmark = g("landmark") or None
+    r.verification_method = method
+    r.id_proof_type = "PASSPORT" if method == "PASSPORT" else "AADHAAR"
+    r.aadhaar_front_path = saved.get("aadhaar_front_file")
+    r.aadhaar_back_path = saved.get("aadhaar_back_file")
+    r.pan_card_path = saved.get("pan_card_file")
+    r.passport_path = saved.get("passport_file")
+    r.resident_selfie_path = saved.get("resident_selfie_file")
+    r.kyc_status = "SUBMITTED"
+    record_audit_log(db=db, action="RESIDENT_KYC_SUBMITTED", resource_type="residents", user_id=current_user.id,
+                     user_email=current_user.email, user_role="RESIDENT", property_id=r.property_id, resource_id=str(r.id),
+                     details={"method": method})
+    db.commit()
+    return APIResponse(success=True, message="Thanks! Your details were sent to the PG for verification.",
+                       data={"kyc_status": r.kyc_status})

@@ -129,6 +129,15 @@ def get_dashboard_summary(
         comp_query = comp_query.where(Complaint.property_id.in_(sa.select(Property.id).where(*prop_filter)))
     open_complaints = db.scalar(comp_query) or 0
 
+    # KYC follow-up for the owner's "needs attention" list.
+    res_scope = [Resident.status.in_(("ACTIVE", "NOTICE_PERIOD"))]
+    if property_id:
+        res_scope.append(Resident.property_id == property_id)
+    elif prop_filter:
+        res_scope.append(Resident.property_id.in_(sa.select(Property.id).where(*prop_filter)))
+    kyc_to_verify = db.scalar(sa.select(sa.func.count(Resident.id)).where(*res_scope, Resident.kyc_status == "SUBMITTED")) or 0
+    access_paused = db.scalar(sa.select(sa.func.count(Resident.id)).where(*res_scope, Resident.portal_enabled.is_(False))) or 0
+
     data = {
         "total_properties": total_properties,
         "total_residents": total_residents,
@@ -142,6 +151,8 @@ def get_dashboard_summary(
         "net_operating_profit": net_operating_profit,
         "pending_rent": pending_rent,
         "open_complaints": open_complaints,
+        "kyc_to_verify": kyc_to_verify,
+        "access_paused": access_paused,
     }
     return APIResponse(
         success=True,

@@ -17,6 +17,19 @@ class EmailService:
         validity: str = "Valid for 10 minutes only",
     ) -> str:
         """Renders responsive branded HTML email template for SMART GROUP PG'S OTP delivery."""
+        # The code box and the warning only appear when there is a code / warning (plain notices have neither).
+        code_box = f"""              <div style="background-color: #f8fafc; border: 2px dashed #93c5fd; border-radius: 8px; padding: 24px 16px; text-align: center; margin: 0 0 24px 0;">
+                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;">Your Verification Code</div>
+                <div style="font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #1e3a8a; font-family: 'Courier New', Courier, monospace;">{otp}</div>
+                <div style="margin-top: 10px; font-size: 13px; font-weight: 600; color: #dc2626;">⏱ {validity}</div>
+              </div>
+""" if otp else ""
+        warn_box = f"""              <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px; padding: 14px 16px; margin: 0 0 24px 0;">
+                <p style="margin: 0; color: #991b1b; font-size: 13px; line-height: 1.5; font-weight: 500;">
+                  <strong>⚠️ Security Warning:</strong> {security_warning}
+                </p>
+              </div>
+""" if security_warning else ""
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,17 +53,7 @@ class EmailService:
               <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 18px; font-weight: 600;">{title}</h2>
               <p style="margin: 0 0 14px 0; color: #334155; font-size: 15px; line-height: 1.5;">{greeting}</p>
               <p style="margin: 0 0 24px 0; color: #475569; font-size: 14px; line-height: 1.6;">{purpose_desc}</p>
-              <div style="background-color: #f8fafc; border: 2px dashed #93c5fd; border-radius: 8px; padding: 24px 16px; text-align: center; margin: 0 0 24px 0;">
-                <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;">Your Verification Code</div>
-                <div style="font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #1e3a8a; font-family: 'Courier New', Courier, monospace;">{otp}</div>
-                <div style="margin-top: 10px; font-size: 13px; font-weight: 600; color: #dc2626;">⏱ {validity}</div>
-              </div>
-              <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px; padding: 14px 16px; margin: 0 0 24px 0;">
-                <p style="margin: 0; color: #991b1b; font-size: 13px; line-height: 1.5; font-weight: 500;">
-                  <strong>⚠️ Security Warning:</strong> {security_warning}
-                </p>
-              </div>
-              <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.5;">{footer_note}</p>
+{code_box}{warn_box}              <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.5;">{footer_note}</p>
             </td>
           </tr>
           <tr>
@@ -396,6 +399,14 @@ class EmailService:
             body_text=body_text,
             body_html=body_html,
         )
+
+    def send_notice(self, to_email: str, subject: str, title: str, name: Optional[str], message: str, footer_note: str = "") -> bool:
+        """Plain notice (no code): reminders, access changes."""
+        greeting = f"Hello {name}," if name else "Hello,"
+        body_text = f"{title}\n\n{greeting}\n\n{message}\n\n{footer_note}\n"
+        body_html = self._render_email_html(title=title, greeting=greeting, purpose_desc=message, otp="",
+                                            security_warning="", footer_note=footer_note)
+        return self.provider.send_email(to_email=to_email, subject=subject, body_text=body_text, body_html=body_html)
 
     def send_account_invite(
         self,

@@ -7,7 +7,7 @@ import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import { color, space } from "@/lib/theme";
 
-type Company = { name: string; email?: string; phone?: string; address?: string; tax_id?: string };
+type Company = { name: string; email?: string; phone?: string; address?: string; tax_id?: string; kyc_deadline_days?: number };
 
 export default function Settings() {
   const { me, signOut } = useSession();
@@ -39,7 +39,9 @@ export default function Settings() {
           <Field label="Phone" value={c.phone ?? ""} onChangeText={(t) => setC({ ...c, phone: t })} keyboardType="phone-pad" />
           <Field label="Address" value={c.address ?? ""} onChangeText={(t) => setC({ ...c, address: t })} multiline />
           <Field label="GSTIN (optional)" value={c.tax_id ?? ""} onChangeText={(t) => setC({ ...c, tax_id: t.toUpperCase() })} autoCapitalize="characters" />
-          <Button title="Save company details" onPress={saveCompany} loading={busy} disabled={!c.name?.trim()} />
+          <Field label="Days a new resident gets to finish KYC" value={String(c.kyc_deadline_days ?? "")} onChangeText={(t) => setC({ ...c, kyc_deadline_days: Number(digits(t).slice(0, 2)) || undefined })} keyboardType="number-pad"
+            hint="If their KYC isn't verified by then, their app access pauses automatically. 1 to 60 days." />
+          <Button title="Save company details" onPress={saveCompany} loading={busy} disabled={!c.name?.trim() || !c.kyc_deadline_days || c.kyc_deadline_days > 60} />
         </Card>
       ) : null}
       <H2>Change password</H2>

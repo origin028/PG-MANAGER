@@ -8,7 +8,7 @@ import { listOf } from "@/lib/owner";
 import { color, radius, space } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
 
-type R = { id: string; full_name: string; phone: string; room_number?: string; bed_number?: string; status: string; kyc_status?: string };
+type R = { id: string; full_name: string; phone: string; room_number?: string; bed_number?: string; status: string; kyc_status?: string; portal_enabled?: boolean; kyc_days_left?: number | null };
 
 export default function ResidentsTab() {
   const [status, setStatus] = useState("ACTIVE");
@@ -46,7 +46,10 @@ export default function ResidentsTab() {
           {items.map((r) => (
             <ListRow key={r.id} leading={<Initials name={r.full_name} />} title={r.full_name}
               sub={`${r.room_number ? `Room ${r.room_number} · Bed ${r.bed_number}` : "No bed"} · ${r.phone}`}
-              right={r.kyc_status && r.kyc_status !== "VERIFIED" ? <Badge label={`KYC ${nice(r.kyc_status).toLowerCase()}`} tone={statusTone(r.kyc_status)} /> : undefined}
+              right={r.portal_enabled === false ? <Badge label="Access paused" tone="bad" />
+                : r.kyc_status === "SUBMITTED" ? <Badge label="KYC to check" tone="warn" />
+                : r.kyc_status && r.kyc_status !== "VERIFIED" ? <Badge label={r.kyc_days_left != null ? `KYC · ${r.kyc_days_left}d left` : `KYC ${nice(r.kyc_status).toLowerCase()}`} tone={r.kyc_days_left != null && r.kyc_days_left <= 2 ? "bad" : statusTone(r.kyc_status)} />
+                : undefined}
               onPress={() => router.push({ pathname: "/manage/resident/[id]", params: { id: r.id } })} />
           ))}
         </Card>

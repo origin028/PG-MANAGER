@@ -66,8 +66,11 @@ Environment variables: `NEXT_PUBLIC_API_URL` = `https://<api>`, `NEXT_PUBLIC_APP
 
 - Put both final Vercel addresses into `CORS_ORIGINS` on Render if they changed, and redeploy the API.
 - In the app: **More → Properties** add the home(s), then **Rooms** add rooms (beds are created automatically).
-- **Adding residents:** the owner adds them with their email; they get a welcome email with a code
-  (valid 48 hours) to set their own password, then sign in with email or mobile. New people can also
+- **Adding residents:** the owner enters only name, mobile and email (bed optional). The resident gets a
+  welcome email with a code (valid 48 hours) to set their own password, signs in with email or mobile, and
+  fills in their own details and KYC. If the owner hasn't verified their KYC within the deadline
+  (Settings, default 7 days), their app access pauses automatically; the owner can switch it back on.
+  The daily `pg-kyc-deadlines` cron sends a reminder 2 days before and the "access paused" email. New people can also
   apply themselves ("Join a home" in the app, or the enquiry form on the website).
 - **More → Kitchen & meal passes** stays **off** unless the owner wants the food scan.
 

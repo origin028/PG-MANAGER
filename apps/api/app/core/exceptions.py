@@ -147,3 +147,9 @@ class BedCapacityExceededError(PGException):
             code="BED_CAPACITY_EXCEEDED",
             details=details,
         )
+
+
+class PortalOffError(PGException):
+    """The resident's app access is switched off (missing KYC, or by the owner)."""
+    def __init__(self, message: str, details: Optional[Any] = None):
+        super().__init__(status_code=status.HTTP_403_FORBIDDEN, message=message, code="PORTAL_OFF", details=details)

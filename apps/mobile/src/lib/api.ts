@@ -56,6 +56,9 @@ async function refresh(): Promise<boolean> {
   return true;
 }
 
+/** Set by the app shell: called when the server says this resident's app access is off. */
+export const onPortalOff: { current: null | (() => void) } = { current: null };
+
 function messageFrom(body: any, status: number): ApiError {
   const e = body?.error;
   const detail = Array.isArray(e?.details) && e.details.length ? String(e.details[0]).split(": ").pop() : undefined;
@@ -84,6 +87,9 @@ export async function api<T = any>(path: string, init: RequestInit & { json?: un
     throw new ApiError(0, "NETWORK", "Can't reach the server. Check your internet connection.");
   }
   const body = await res.json().catch(() => null);
-  if (!res.ok || body?.success === false) throw messageFrom(body, res.status);
+  if (!res.ok || body?.success === false) {
+    if (body?.error?.code === "PORTAL_OFF") onPortalOff.current?.();
+    throw messageFrom(body, res.status);
+  }
   return (body && "data" in body ? body.data : body) as T;
 }

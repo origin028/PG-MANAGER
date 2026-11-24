@@ -83,3 +83,21 @@ services:
       - key: EMAIL_PROVIDER
         value: SMTP
       - fromGroup: pg-secrets
+
+  - type: cron
+    name: pg-kyc-deadlines
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: ./apps/api
+    schedule: "45 3 * * *"   # 09:15 IST daily: KYC reminders (2 days before) and pause overdue access
+    dockerCommand: python -m app.tasks.run kyc-deadlines
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase: { name: pg-db, property: connectionString }
+      - key: EMAIL_PROVIDER
+        value: SMTP
+      - fromGroup: pg-secrets

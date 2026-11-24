@@ -1,7 +1,7 @@
 import uuid
 from typing import Any, Dict, Optional
 from fastapi import APIRouter, Depends, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
@@ -22,6 +22,7 @@ class CompanySettingsUpdate(BaseModel):
     email: Optional[str] = None
     address: Optional[str] = None
     tax_id: Optional[str] = None
+    kyc_deadline_days: Optional[int] = Field(None, ge=1, le=60, description="Days a new resident has to finish KYC")
 
 
 @router.get("/company", response_model=APIResponse[Dict[str, Any]], status_code=status.HTTP_200_OK)
@@ -45,6 +46,7 @@ def get_company_settings(
         "subscription_plan": getattr(company, "subscription_plan", "STANDARD"),
         "subscription_status": getattr(company, "subscription_status", "ACTIVE"),
         "is_active": company.is_active,
+        "kyc_deadline_days": company.kyc_deadline_days,
     }
     return APIResponse(
         success=True,
@@ -75,6 +77,8 @@ def update_company_settings(
         company.address = update_data["address"]
     if "tax_id" in update_data:
         company.tax_id = update_data["tax_id"]
+    if update_data.get("kyc_deadline_days"):
+        company.kyc_deadline_days = int(update_data["kyc_deadline_days"])
 
     record_audit_log(
         db=db,
@@ -102,6 +106,7 @@ def update_company_settings(
         "subscription_plan": getattr(company, "subscription_plan", "STANDARD"),
         "subscription_status": getattr(company, "subscription_status", "ACTIVE"),
         "is_active": company.is_active,
+        "kyc_deadline_days": company.kyc_deadline_days,
     }
     return APIResponse(
         success=True,

@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { WebShell } from "@/components/web-shell";
 import { useWide } from "@/lib/layout";
+import { onPortalOff } from "@/lib/api";
 import { SessionProvider, useSession } from "@/lib/session";
 import { color } from "@/lib/theme";
 
@@ -16,11 +17,15 @@ function Gate() {
   const router = useRouter();
 
   useEffect(() => {
+    onPortalOff.current = mode === "resident" ? () => { if (!pathname.startsWith("/access-paused") && !pathname.startsWith("/complete-kyc")) router.replace("/access-paused"); } : null;
+  }, [mode, pathname, router]);
+
+  useEffect(() => {
     if (!ready) return;
     // Paths each mode may visit; anything else redirects to that mode's home.
     const allowed: Record<string, string[]> = {
       signedOut: ["/welcome", "/resident-login", "/owner-login", "/join", "/set-password"],
-      resident: ["/resident", "/new-complaint", "/meal-pass"],
+      resident: ["/resident", "/new-complaint", "/meal-pass", "/complete-kyc", "/access-paused"],
       kitchen: ["/kitchen"],
       owner: ["/owner", "/approve", "/manage"],
     };
