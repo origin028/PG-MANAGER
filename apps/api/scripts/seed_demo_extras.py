@@ -43,6 +43,93 @@ MENU = {
 TIMES = {"BREAKFAST": ("07:30 AM", "09:30 AM"), "LUNCH": ("12:30 PM", "02:30 PM"), "DINNER": ("08:00 PM", "10:00 PM")}
 
 
+HOMES = [
+    # name, code, type, area, pincode, rooms: (floor, number, beds per room, rent per bed), share of beds filled
+    ("Origin Girls Residency", "OGR", "WOMEN_ONLY", "Koramangala", "560034", [(1, f"10{i}", 3, 8500) for i in range(1, 6)] + [(2, f"20{i}", 2, 10500) for i in range(1, 5)], 0.78),
+    ("Origin HSR Co-living", "OHSR", "CO_LIVING", "HSR Layout", "560102", [(1, f"1{i:02d}", 2, 9500) for i in range(1, 7)] + [(2, f"2{i:02d}", 1, 14500) for i in range(1, 5)], 0.69),
+    ("Origin Indiranagar", "OIND", "CO_LIVING", "Indiranagar", "560038", [(1, f"1{i:02d}", 2, 11000) for i in range(1, 6)], 0.5),
+]
+FIRST = ["Aarav", "Ishita", "Rahul", "Sneha", "Vikram", "Diya", "Karan", "Neha", "Arjun", "Pooja", "Rohit", "Kavya", "Sameer", "Tanvi",
+         "Nikhil", "Riya", "Aditya", "Meghna", "Varun", "Anjali", "Siddharth", "Nisha", "Harsh", "Shruti", "Yash", "Aditi", "Manav", "Simran"]
+LAST = ["Sharma", "Iyer", "Reddy", "Nair", "Gupta", "Menon", "Kulkarni", "Shetty", "Joshi", "Rao", "Kapoor", "Das", "Bhat", "Pillai"]
+WOMEN = {"Ishita", "Sneha", "Diya", "Neha", "Pooja", "Kavya", "Tanvi", "Riya", "Meghna", "Anjali", "Nisha", "Shruti", "Aditi", "Simran"}
+
+
+def _more_homes(db, first_prop, owner, today) -> None:
+    """Three more demo PGs (four in total) with rooms, residents and a few months of rent, for the multi-PG views."""
+    from app.models.bed import Bed
+    from app.models.room import Room
+
+    role = db.scalar(sa.select(Role).where(Role.name == "RESIDENT"))
+    women = sorted(WOMEN)
+    men = [n for n in FIRST if n not in WOMEN]
+    n = 0
+    for name, code, ptype, area, pin, rooms, fill in HOMES:
+        if db.scalar(sa.select(Property.id).where(Property.code == code)):
+            continue
+        home = Property(company_id=first_prop.company_id, name=name, code=code, property_type=ptype, address_line1=f"{area}, Bengaluru",
+                        city="Bengaluru", state="Karnataka", pincode=pin, total_floors=2, contact_phone=first_prop.contact_phone)
+        db.add(home)
+        db.flush()
+        beds = []
+        for floor, number, per_room, rent in rooms:
+            room = Room(property_id=home.id, floor_number=floor, room_number=number,
+                        room_type={1: "SINGLE", 2: "DOUBLE_SHARING", 3: "TRIPLE_SHARING"}[per_room],
+                        base_monthly_rent=Decimal(rent), deposit_amount=Decimal(rent), is_active=True)
+            db.add(room)
+            db.flush()
+            for b in range(per_room):
+                bed = Bed(property_id=home.id, room_id=room.id, bed_number=f"{number}-{'ABC'[b]}", status="AVAILABLE", monthly_rent=Decimal(rent), is_active=True)
+                db.add(bed)
+                beds.append((room, bed, rent))
+        db.flush()
+        for room, bed, rent in beds[: int(len(beds) * fill)]:
+            pool = women if ptype == "WOMEN_ONLY" else (women if n % 2 else men)
+            full = f"{pool[n % len(pool)]} {LAST[(n * 5) % len(LAST)]}"
+            phone = f"7{n:03d}{len(code)}{(n * 7919) % 100000:05d}"
+            months_here = 1 + (n * 7) % 8
+            start = (today.replace(day=1) - timedelta(days=31 * months_here)).replace(day=1 + n % 20)
+            user = User(company_id=first_prop.company_id, role_id=role.id, email=f"{full.lower().replace(' ', '.')}.{n}@example.com",
+                        phone=phone, full_name=full, password_hash=get_password_hash("Resident@123"), is_active=True, approval_status="APPROVED")
+            db.add(user)
+            db.flush()
+            r = Resident(property_id=home.id, room_id=room.id, bed_id=bed.id, user_id=user.id, full_name=full, phone=phone, email=user.email,
+                         gender="Female" if full.split()[0] in WOMEN else "Male", check_in_date=start, monthly_rent=Decimal(rent),
+                         security_deposit=Decimal(rent), status="NOTICE_PERIOD" if n % 13 == 5 else "ACTIVE",
+                         kyc_status="VERIFIED" if n % 9 else "SUBMITTED", occupation="Software engineer" if n % 3 else "Student")
+            db.add(r)
+            bed.status = "OCCUPIED"
+            db.flush()
+            m = start.replace(day=1)
+            while m <= today.replace(day=1):
+                ym = m.strftime("%Y-%m")
+                this_month = m == today.replace(day=1)
+                paid = not this_month or n % 4 != 0  # a quarter still owe this month's rent
+                inv = Invoice(property_id=home.id, resident_id=r.id, invoice_number=f"INV-{ym.replace('-', '')}-{code}{n:03d}", billing_month=ym,
+                              invoice_type="RENT", amount=Decimal(rent), paid_amount=Decimal(rent) if paid else Decimal(0),
+                              due_date=m.replace(day=5), status="PAID" if paid else ("OVERDUE" if today.day > 5 else "PENDING"))
+                db.add(inv)
+                db.flush()
+                if paid:
+                    db.add(Payment(property_id=home.id, invoice_id=inv.id, resident_id=r.id, payment_number=f"PAY-{ym.replace('-', '')}-{code}{n:03d}",
+                                   amount=Decimal(rent), payment_mode="CASH" if n % 5 == 0 else "UPI", status="SUCCESS",
+                                   paid_at=datetime.combine(m.replace(day=2 + n % 6), time(11, 0), tzinfo=timezone.utc)))
+                m = (m + timedelta(days=32)).replace(day=1)
+            n += 1
+        for cat, title, amt, d in [("SALARIES", "Staff salaries", 9000 + len(beds) * 600, 1), ("GROCERIES", "Groceries", 4000 + len(beds) * 350, 3),
+                                   ("UTILITIES", "Electricity", 1500 + len(beds) * 180, 7), ("UTILITIES", "Internet", 1499, 9)]:
+            for back in range(0, 4):
+                mm = today.replace(day=1)
+                for _ in range(back):
+                    mm = (mm - timedelta(days=1)).replace(day=1)
+                db.add(Expense(company_id=first_prop.company_id, property_id=home.id, created_by_id=owner.id if owner else None, category=cat,
+                               title=f"{title} ({code} {mm.strftime('%b')})", amount=Decimal(amt + back * 137 % 900), method="UPI",
+                               date=min(today, mm.replace(day=d))))
+        if code == "OGR":
+            db.add(Complaint(property_id=home.id, resident_id=r.id, category="ELECTRICAL", title="Geyser not heating", description="Room 201 geyser",
+                             priority="HIGH", status="PENDING"))
+
+
 def main() -> None:
     if settings.is_production:
         raise SystemExit("Refusing to seed demo data in production.")
@@ -179,7 +266,9 @@ def main() -> None:
         db.add(Lead(property_id=prop.id, name="Kabir Singh", phone="9900112233", status="CONTACTED", source="WEBSITE"))
 
     db.commit()
-    print(f"Demo extras ready for '{prop.name}' ({len(residents)} active residents).")
+    _more_homes(db, prop, owner, today)
+    db.commit()
+    print(f"Demo extras ready for '{prop.name}' ({len(residents)} active residents) plus {len(HOMES)} more demo PGs.")
 
 
 if __name__ == "__main__":

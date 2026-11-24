@@ -66,6 +66,13 @@ def get_current_user(
 
         require_kitchen_enabled(db, user.company_id)
 
+    if settings.LICENSE_ENFORCED and user.role and user.role.name in ("SUPER_ADMIN", "PROPERTY_MANAGER", "STAFF", "KITCHEN"):
+        # Off during testing. When on, staff screens need an active licence (the owner can still activate one).
+        if not request.url.path.startswith(("/api/v1/auth/", "/api/v1/settings/license")):
+            from app.services.license_service import require_active_license
+
+            require_active_license(db.get(Company, user.company_id))
+
     if user.role and user.role.name == "RESIDENT" and user.resident_profile is not None:
         from app.core.exceptions import PortalOffError
         from app.services import portal_service

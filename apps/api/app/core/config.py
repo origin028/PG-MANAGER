@@ -60,7 +60,12 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_SECRET: str = ""
     PAYMENT_LINK_BASE_URL: str = "http://localhost:3000/pay"
     APP_URL: str = "http://localhost:8081"  # owner/resident web app; used in emails
-    INVITE_CODE_HOURS: int = 48  # how long the "set your password" code in a welcome email stays valid
+    INVITE_CODE_HOURS: int = 48
+    # Phone alerts to owners through Expo's push service ("EXPO") or nowhere ("MOCK").
+    PUSH_PROVIDER: str = "EXPO"
+    # Licence ("super key"). Off while testing: keys can be activated and stored, nothing is blocked.
+    LICENSE_ENFORCED: bool = False
+    LICENSE_PUBLIC_KEY: str = ""  # Ed25519 public key (base64) that licence keys must be signed with  # how long the "set your password" code in a welcome email stays valid
 
     WHATSAPP_PROVIDER: str = ""
     WHATSAPP_PHONE_NUMBER_ID: str = ""

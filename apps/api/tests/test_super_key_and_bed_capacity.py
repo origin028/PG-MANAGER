@@ -17,7 +17,7 @@ from app.services.bed_capacity_service import BedCapacityService
 
 SUPER_KEY = "ORG-240-X7K9-PQ82"
 SUPER_KEY_HASH = "4a9cf98caf4de59247a8cad40229adaf500b9ef1aaedca7cad460b002fef649f"
-EXPECTED_CAPACITY_ERROR = "Your organization has reached its maximum bed capacity of 240. Please contact Origin for assistance."
+EXPECTED_CAPACITY_ERROR = "Your organization has reached its maximum bed capacity of 250. Please contact Origin for assistance."
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ def test_01_correct_super_key_accepted(client: TestClient):
     assert data["email"] == email
     assert data["role"] in ("PROPERTY_MANAGER", "SUPER_ADMIN")
     assert data["is_active"] is True
-    assert data["company"]["bed_limit"] == 240
+    assert data["company"]["bed_limit"] == 250
 
 
 def test_02_incorrect_super_key_rejected(client: TestClient):
@@ -116,7 +116,7 @@ def test_03_multiple_pg_owners_can_use_same_key(client: TestClient):
 
 
 def test_04_every_new_company_receives_exactly_240_beds_capacity(client: TestClient, db: Session):
-    """Test 4: Every new company receives exactly 240 beds capacity."""
+    """Test 4: Every new company receives exactly 250 beds capacity."""
     unique = secrets.token_hex(4)
     email = f"cap_check_{unique}@originpg.com"
     pwd = "CheckPass@12345"
@@ -136,7 +136,7 @@ def test_04_every_new_company_receives_exactly_240_beds_capacity(client: TestCli
 
     company = db.scalar(sa.select(Company).where(Company.id == uuid.UUID(str(cid))))
     assert company is not None
-    assert company.bed_limit == 240
+    assert company.bed_limit == 250
 
     # Login and check GET /api/v1/company/bed-capacity
     login_resp = client.post(
@@ -152,9 +152,9 @@ def test_04_every_new_company_receives_exactly_240_beds_capacity(client: TestCli
     )
     assert cap_resp.status_code == 200
     data = cap_resp.json()["data"]
-    assert data["total_capacity"] == 240
+    assert data["total_capacity"] == 250
     assert data["used_beds"] == 0
-    assert data["remaining_beds"] == 240
+    assert data["remaining_beds"] == 250
     assert data["usage_percentage"] == 0.0
 
 
@@ -175,7 +175,7 @@ def test_06_super_key_cannot_be_edited_or_regenerated(client: TestClient):
 
 
 def test_07_restarting_application_does_not_change_key():
-    """Test 7: The Super Key is deterministically loaded from config and contains 240."""
+    """Test 7: The Super Key is deterministically loaded from config and contains 250."""
     from app.core.config import Settings
     s = Settings()
     assert "240" in s.ADMIN_REGISTRATION_SUPER_KEY
@@ -234,13 +234,13 @@ def test_09_pg_owner_cannot_change_bed_capacity(client: TestClient, db: Session)
         headers={"Authorization": f"Bearer {token}"},
         json={"bed_limit": 500},
     )
-    # Even if settings endpoint exists, verify database company bed_limit remains 240
+    # Even if settings endpoint exists, verify database company bed_limit remains 250
     company = db.scalar(sa.select(Company).where(Company.id == uuid.UUID(str(cid))))
-    assert company.bed_limit == 240
+    assert company.bed_limit == 250
 
 
 def test_10_and_11_creating_up_to_240_succeeds_and_241st_bed_fails(client: TestClient, db: Session):
-    """Test 10 & 11: Creating 240 beds succeeds; 241st bed fails with exact error message."""
+    """Test 10 & 11: Creating 250 beds succeeds; 241st bed fails with exact error message."""
     unique = secrets.token_hex(4)
     email = f"cap_test_{unique}@originpg.com"
     pwd = "CheckPass@12345"
@@ -280,10 +280,10 @@ def test_10_and_11_creating_up_to_240_succeeds_and_241st_bed_fails(client: TestC
     assert prop_resp.status_code == 201, prop_resp.text
     prop_id = uuid.UUID(prop_resp.json()["data"]["id"])
 
-    # Create 240 rooms with max_occupancy=1 directly in DB for efficiency
+    # Create 250 rooms with max_occupancy=1 directly in DB for efficiency
     rooms = []
     beds = []
-    for i in range(1, 241):
+    for i in range(1, 251):
         r = Room(
             property_id=prop_id,
             room_number=f"R-{i:03d}",
@@ -310,10 +310,10 @@ def test_10_and_11_creating_up_to_240_succeeds_and_241st_bed_fails(client: TestC
         beds.append(b)
     db.commit()
 
-    # Verify usage is 240/240
+    # Verify usage is 250/250
     cap_resp = client.get("/api/v1/company/bed-capacity", headers=headers)
     assert cap_resp.status_code == 200
-    assert cap_resp.json()["data"]["used_beds"] == 240
+    assert cap_resp.json()["data"]["used_beds"] == 250
     assert cap_resp.json()["data"]["remaining_beds"] == 0
     assert cap_resp.json()["data"]["is_capacity_reached"] is True
 
@@ -333,7 +333,7 @@ def test_10_and_11_creating_up_to_240_succeeds_and_241st_bed_fails(client: TestC
 
 
 def test_12_bulk_bed_creation_cannot_exceed_240(client: TestClient, db: Session):
-    """Test 12: Bulk bed creation cannot exceed 240 beds."""
+    """Test 12: Bulk bed creation cannot exceed 250 beds."""
     unique = secrets.token_hex(4)
     email = f"bulk_cap_{unique}@originpg.com"
     pwd = "CheckPass@12345"
@@ -369,17 +369,17 @@ def test_12_bulk_bed_creation_cannot_exceed_240(client: TestClient, db: Session)
     )
     prop_id = uuid.UUID(prop_resp.json()["data"]["id"])
 
-    # Pre-populate 235 beds
+    # Pre-populate 245 beds
     r = Room(property_id=prop_id, room_number="R-BULK", floor_number=1, room_type="TEN_SHARING", max_occupancy=250)
     db.add(r)
     db.flush()
 
-    for i in range(1, 236):
+    for i in range(1, 246):
         b = Bed(property_id=prop_id, room_id=r.id, bed_number=f"B-{i}", status="AVAILABLE", is_deleted=False)
         db.add(b)
     db.commit()
 
-    # Attempt to bulk create 10 beds (235 + 10 = 245 > 240)
+    # Attempt to bulk create 10 beds (245 + 10 = 255 > 250)
     bulk_resp = client.post(
         "/api/v1/beds/bulk",
         headers=headers,
@@ -413,7 +413,7 @@ def test_13_multiple_properties_share_one_company_limit(client: TestClient, db: 
     login = client.post("/api/v1/auth/admin/login", json={"email": email, "password": pwd})
     headers = {"Authorization": f"Bearer {login.json()['data']['access_token']}"}
 
-    # Property A: 140 beds
+    # Property A: 150 beds
     pA = client.post("/api/v1/properties", headers=headers, json={"name": f"Prop A {unique}", "code": f"PA_{unique.upper()}", "address_line1": "A Street", "city": "Bangalore", "state": "Karnataka", "pincode": "560001"})
     pA_id = uuid.UUID(pA.json()["data"]["id"])
 
@@ -426,13 +426,13 @@ def test_13_multiple_properties_share_one_company_limit(client: TestClient, db: 
     db.add_all([rA, rB])
     db.flush()
 
-    for i in range(140):
+    for i in range(150):
         db.add(Bed(property_id=pA_id, room_id=rA.id, bed_number=f"BA-{i}", is_deleted=False))
     for i in range(100):
         db.add(Bed(property_id=pB_id, room_id=rB.id, bed_number=f"BB-{i}", is_deleted=False))
     db.commit()
 
-    # Now total across company is 240. Attempting to add 1 bed to either Property A or B must fail
+    # Now total across company is 250. Attempting to add 1 bed to either Property A or B must fail
     resp = client.post(
         "/api/v1/beds",
         headers=headers,
@@ -443,9 +443,9 @@ def test_13_multiple_properties_share_one_company_limit(client: TestClient, db: 
 
 
 def test_14_concurrent_bed_creation_cannot_bypass_limit(db: Session):
-    """Test 14: Concurrency protection prevents exceeding 240 beds."""
+    """Test 14: Concurrency protection prevents exceeding 250 beds."""
     unique = secrets.token_hex(4)
-    company = Company(name=f"Concurrent Co {unique}", code=f"CC_{unique.upper()}", bed_limit=240, is_active=True)
+    company = Company(name=f"Concurrent Co {unique}", code=f"CC_{unique.upper()}", bed_limit=250, is_active=True)
     db.add(company)
     db.flush()
 
@@ -457,12 +457,12 @@ def test_14_concurrent_bed_creation_cannot_bypass_limit(db: Session):
     db.add(room)
     db.flush()
 
-    # Pre-populate 239 beds
-    for i in range(239):
+    # Pre-populate 249 beds
+    for i in range(249):
         db.add(Bed(property_id=prop.id, room_id=room.id, bed_number=f"B-{i}", is_deleted=False))
     db.commit()
 
-    # Now exactly 1 bed can be added before reaching 240
+    # Now exactly 1 bed can be added before reaching 250
     # Two threads try to add 1 bed simultaneously
     results = []
     def add_bed():
@@ -477,7 +477,7 @@ def test_14_concurrent_bed_creation_cannot_bypass_limit(db: Session):
 
     # Next assertion must fail
     try:
-        # Simulate that 240 beds are now in DB
+        # Simulate that 250 beds are now in DB
         db.add(Bed(property_id=prop.id, room_id=room.id, bed_number="B-240", is_deleted=False))
         db.commit()
         BedCapacityService.assert_can_add_beds(company.id, 1, db)
@@ -514,13 +514,13 @@ def test_15_soft_deleted_beds_are_excluded_from_usage(client: TestClient, db: Se
     db.flush()
 
     beds = []
-    for i in range(240):
+    for i in range(250):
         b = Bed(property_id=uuid.UUID(prop["id"]), room_id=room.id, bed_number=f"B-{i}", is_deleted=False)
         db.add(b)
         beds.append(b)
     db.commit()
 
-    # At 240 beds, adding fails
+    # At 250 beds, adding fails
     resp_fail = client.post("/api/v1/beds", headers=headers, json={"room_id": str(room.id), "bed_number": "B-FAIL"})
     assert resp_fail.status_code == 400
 
@@ -529,10 +529,10 @@ def test_15_soft_deleted_beds_are_excluded_from_usage(client: TestClient, db: Se
     del_resp = client.delete(f"/api/v1/beds/{bed_to_del.id}", headers=headers)
     assert del_resp.status_code == 200
 
-    # Capacity should now report 239 used, 1 remaining
+    # Capacity should now report 249 used, 1 remaining
     cap_resp = client.get("/api/v1/company/bed-capacity", headers=headers)
     assert cap_resp.status_code == 200
-    assert cap_resp.json()["data"]["used_beds"] == 239
+    assert cap_resp.json()["data"]["used_beds"] == 249
     assert cap_resp.json()["data"]["remaining_beds"] == 1
 
     # Adding a new bed now succeeds!
@@ -618,11 +618,11 @@ def test_17_company_data_isolation(client: TestClient, db: Session):
     login_b = client.post("/api/v1/auth/admin/login", json={"email": email_b, "password": pwd})
     headers_b = {"Authorization": f"Bearer {login_b.json()['data']['access_token']}"}
 
-    # B's capacity reports 0 used, 240 remaining
+    # B's capacity reports 0 used, 250 remaining
     cap_b = client.get("/api/v1/company/bed-capacity", headers=headers_b)
     assert cap_b.status_code == 200
     assert cap_b.json()["data"]["used_beds"] == 0
-    assert cap_b.json()["data"]["remaining_beds"] == 240
+    assert cap_b.json()["data"]["remaining_beds"] == 250
 
     # B attempts to access A's property
     prop_access = client.get(f"/api/v1/properties/{prop_a['id']}", headers=headers_b)
@@ -677,22 +677,22 @@ def test_18_room_creation_with_auto_beds_enforces_capacity(client: TestClient, d
         },
     ).json()["data"]
 
-    # Prepopulate 235 beds
+    # Prepopulate 245 beds
     dummy_room = Room(
         property_id=uuid.UUID(prop["id"]),
         room_number="R-DUMMY",
         floor_number=1,
         room_type="DORM",
-        max_occupancy=240,
+        max_occupancy=250,
     )
     db.add(dummy_room)
     db.flush()
 
-    for i in range(235):
+    for i in range(245):
         db.add(Bed(property_id=uuid.UUID(prop["id"]), room_id=dummy_room.id, bed_number=f"BD-{i}", is_deleted=False))
     db.commit()
 
-    # Attempt to create room with 6 auto beds (235 + 6 = 241 > 240) -> fails 400
+    # Attempt to create room with 6 auto beds (245 + 6 = 251 > 250) -> fails 400
     res_fail = client.post(
         "/api/v1/rooms",
         headers=headers,
@@ -709,7 +709,7 @@ def test_18_room_creation_with_auto_beds_enforces_capacity(client: TestClient, d
     msg = _get_error_msg(res_fail).lower()
     assert "exceed" in msg or "capacity" in msg
 
-    # Create room with 5 auto beds (235 + 5 = 240) -> succeeds 201
+    # Create room with 5 auto beds (245 + 5 = 250) -> succeeds 201
     res_ok = client.post(
         "/api/v1/rooms",
         headers=headers,
@@ -726,7 +726,7 @@ def test_18_room_creation_with_auto_beds_enforces_capacity(client: TestClient, d
 
     cap = client.get("/api/v1/company/bed-capacity", headers=headers)
     assert cap.status_code == 200
-    assert cap.json()["data"]["used_beds"] == 240
+    assert cap.json()["data"]["used_beds"] == 250
     assert cap.json()["data"]["remaining_beds"] == 0
 
 
@@ -777,8 +777,8 @@ def test_19_room_update_with_add_beds_enforces_capacity(client: TestClient, db: 
     assert room_resp.status_code == 201
     room_id = room_resp.json()["data"]["id"]
 
-    # Prepopulate 239 beds
-    for i in range(239):
+    # Prepopulate 249 beds
+    for i in range(249):
         db.add(Bed(property_id=uuid.UUID(prop["id"]), room_id=uuid.UUID(room_id), bed_number=f"PB-BED-{i}", is_deleted=False))
     db.commit()
 
@@ -792,7 +792,7 @@ def test_19_room_update_with_add_beds_enforces_capacity(client: TestClient, db: 
     msg = _get_error_msg(fail_patch).lower()
     assert "exceed" in msg or "capacity" in msg
 
-    # Add 1 bed via patch -> succeeds 200 (reaching 240)
+    # Add 1 bed via patch -> succeeds 200 (reaching 250)
     ok_patch = client.patch(
         f"/api/v1/rooms/{room_id}",
         headers=headers,
@@ -802,5 +802,5 @@ def test_19_room_update_with_add_beds_enforces_capacity(client: TestClient, db: 
 
     cap = client.get("/api/v1/company/bed-capacity", headers=headers)
     assert cap.status_code == 200
-    assert cap.json()["data"]["used_beds"] == 240
+    assert cap.json()["data"]["used_beds"] == 250
     assert cap.json()["data"]["remaining_beds"] == 0

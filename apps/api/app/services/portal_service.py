@@ -139,6 +139,10 @@ def run_daily(db: Session, now: Optional[datetime] = None) -> dict:
         to = r.user.email if r.user and r.user.email else r.email
         if enforce(db, r, now):
             closed += 1
+            from app.services.alert_service import notify_home
+
+            notify_home(db, r.property_id, "ACCESS_PAUSED", f"Access paused: {r.full_name}",
+                        f"{r.full_name}'s KYC wasn't verified in time at {pg}, so their app access is paused.", f"/manage/resident/{r.id}")
             if to:
                 _safe(lambda: email.send_notice(
                     to, f"{pg}: your app access is paused", "Your app access is paused", r.full_name,

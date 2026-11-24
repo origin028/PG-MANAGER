@@ -379,7 +379,7 @@ async def request_resident_registration_otp(
     """
     content_type = request.headers.get("content-type", "").lower()
 
-    if "multipart/form-data" in content_type:
+    if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
         form = await request.form()
         full_name = form.get("full_name")
         dob_raw = form.get("date_of_birth")
@@ -430,13 +430,14 @@ async def request_resident_registration_otp(
             "resident_selfie_file": hasattr(resident_selfie_file, "filename") and bool(resident_selfie_file.filename),
         }
 
-        resolved_method = FileService.validate_kyc_method_and_files(str(verification_method), files_present)
+        later = str(verification_method).strip().upper() == "LATER" and not any(files_present.values())
+        resolved_method = None if later else FileService.validate_kyc_method_and_files(str(verification_method), files_present)
 
         aadhaar_front_path = await FileService.validate_and_save_upload(aadhaar_front_file, "aadhaar_front_file") if files_present["aadhaar_front_file"] else None
         aadhaar_back_path = await FileService.validate_and_save_upload(aadhaar_back_file, "aadhaar_back_file") if files_present["aadhaar_back_file"] else None
         pan_card_path = await FileService.validate_and_save_upload(pan_card_file, "pan_card_file") if files_present["pan_card_file"] else None
         passport_path = await FileService.validate_and_save_upload(passport_file, "passport_file") if files_present["passport_file"] else None
-        resident_selfie_path = await FileService.validate_and_save_upload(resident_selfie_file, "resident_selfie_file")
+        resident_selfie_path = await FileService.validate_and_save_upload(resident_selfie_file, "resident_selfie_file") if files_present["resident_selfie_file"] else None
 
     else:
         raw_body = await request.body()
@@ -785,6 +786,15 @@ def verify_resident_registration_otp(
         user_agent=user_agent,
     )
 
+    from app.services.alert_service import notify_home
+
+    notify_home(
+        db, prop.id, "NEW_SIGNUP", f"New sign-up at {prop.name}",
+        f"{user.full_name} ({user.phone}) wants to join {prop.name}."
+        + (" ID photos are attached." if resident.resident_selfie_path else " They'll add ID photos after you approve."),
+        "/manage/approvals", email=True,
+    )
+
     return APIResponse(
         success=True,
         message="Registration submitted successfully. Your account is pending administrator approval.",
@@ -953,6 +963,15 @@ def register_resident(
         user_agent=user_agent,
     )
 
+    from app.services.alert_service import notify_home
+
+    notify_home(
+        db, prop.id, "NEW_SIGNUP", f"New sign-up at {prop.name}",
+        f"{user.full_name} ({user.phone}) wants to join {prop.name}."
+        + (" ID photos are attached." if resident.resident_selfie_path else " They'll add ID photos after you approve."),
+        "/manage/approvals", email=True,
+    )
+
     return APIResponse(
         success=True,
         message="Registration submitted successfully. Your account is pending administrator approval.",
@@ -1039,7 +1058,7 @@ def admin_register(
         email=email_norm,
         phone=payload.phone,
         is_active=True,
-        bed_limit=240,
+        bed_limit=250,
     )
     db.add(company)
     db.flush()

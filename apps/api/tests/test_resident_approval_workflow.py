@@ -274,14 +274,15 @@ def test_super_admin_can_approve_resident_and_it_disappears_from_pending(client:
     res_data = approve_res.json()
     assert res_data["success"] is True
     assert res_data["data"]["status"] == "ACTIVE"
-    assert res_data["data"]["kyc_status"] == "VERIFIED"
+    # No ID documents were uploaded, so approval keeps KYC pending and starts the KYC deadline.
+    assert res_data["data"]["kyc_status"] == "PENDING"
 
     # 2. Verify in database
     db_factory = client.app.state.testing_session
     with db_factory() as db_session:
         updated_res = db_session.get(Resident, approval_setup["resident_id"])
         assert updated_res.status == "ACTIVE"
-        assert updated_res.kyc_status == "VERIFIED"
+        assert updated_res.kyc_status == "PENDING" and updated_res.kyc_due_at is not None
         assert str(updated_res.bed_id) == str(approval_setup["bed_id"])
 
         updated_user = db_session.get(User, updated_res.user_id)

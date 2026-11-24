@@ -2,7 +2,7 @@ import { router, usePathname } from "expo-router";
 import type { ReactNode } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import {
-  Bed, Buildings, ChartBar, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, House, IdentificationBadge,
+  Bed, Bell, Buildings, ChartBar, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, House, IdentificationBadge,
   Megaphone, QrCode, SignOut, User, UserPlus, Users, Wallet,
 } from "phosphor-react-native";
 import { confirmAction } from "@/components/kit";
@@ -13,11 +13,12 @@ type Item = { href: string; label: string; icon: typeof House; match?: string[] 
 const OWNER: { group?: string; items: Item[] }[] = [
   { items: [
     { href: "/owner", label: "Home", icon: House },
+    { href: "/manage/notifications", label: "Alerts", icon: Bell },
     { href: "/owner/residents", label: "Residents", icon: Users, match: ["/manage/resident", "/manage/add-resident", "/manage/approvals", "/approve"] },
     { href: "/owner/rooms", label: "Rooms & beds", icon: Bed, match: ["/manage/room"] },
     { href: "/owner/money", label: "Money", icon: Wallet, match: ["/manage/confirm-payments"] },
   ] },
-  { group: "Your PG", items: [
+  { group: "Your PGs", items: [
     { href: "/manage/properties", label: "Properties", icon: Buildings },
     { href: "/manage/staff", label: "Staff", icon: IdentificationBadge },
     { href: "/manage/menu", label: "Food menu", icon: ForkKnife },
@@ -26,6 +27,7 @@ const OWNER: { group?: string; items: Item[] }[] = [
     { href: "/manage/complaints", label: "Complaints", icon: ChatCircleDots },
     { href: "/manage/announcements", label: "Announcements", icon: Megaphone },
     { href: "/manage/leads", label: "Leads", icon: UserPlus },
+    { href: "/manage/join-qr", label: "Join QR code", icon: QrCode },
     { href: "/manage/attendance", label: "Attendance", icon: Fingerprint },
   ] },
   { group: "Business", items: [

@@ -85,6 +85,8 @@ def get_user_notifications(
             "channel": n.channel,
             "status": n.status,
             "is_read": n.status == "READ",
+            "kind": n.kind,
+            "link": n.link,
             "created_at": n.created_at.isoformat(),
         }
         for n in notifications

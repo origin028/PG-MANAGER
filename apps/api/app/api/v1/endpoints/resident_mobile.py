@@ -514,5 +514,11 @@ async def submit_my_kyc(request: Request, current_user: User = Depends(get_curre
                      user_email=current_user.email, user_role="RESIDENT", property_id=r.property_id, resource_id=str(r.id),
                      details={"method": method})
     db.commit()
+    from app.models.property import Property
+    from app.services.alert_service import notify_home
+
+    prop = db.get(Property, r.property_id)
+    notify_home(db, r.property_id, "KYC_SUBMITTED", f"KYC to check: {r.full_name}",
+                f"{r.full_name} sent their details and ID photos at {prop.name if prop else 'your PG'}.", f"/manage/resident/{r.id}")
     return APIResponse(success=True, message="Thanks! Your details were sent to the PG for verification.",
                        data={"kyc_status": r.kyc_status})

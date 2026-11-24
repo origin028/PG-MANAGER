@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 import sqlalchemy as sa
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import BadRequestError, NotFoundError
 from app.dependencies import get_current_user, get_db, require_roles
 from app.models.property import Company, Property
 from app.models.resident import Resident
@@ -165,3 +165,47 @@ def get_subscription_details(
         message="Subscription details retrieved successfully.",
         data=data,
     )
+
+
+# ---------------------------------------------------------------------------
+# Licence ("super key"). Built for selling the software; NOT enforced while LICENSE_ENFORCED=false.
+# ---------------------------------------------------------------------------
+class LicenseActivateRequest(BaseModel):
+    key: str = Field(..., min_length=20, max_length=2000)
+
+
+@router.get("/license", status_code=status.HTTP_200_OK, summary="Licence status (bed limit from the super key)")
+def get_license_status(
+    current_user: User = Depends(require_roles("SUPER_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    from app.services import license_service
+
+    company = db.get(Company, current_user.company_id)
+    if not company:
+        raise NotFoundError("Company record not found.")
+    return APIResponse(success=True, message="Licence status.", data=license_service.status(company))
+
+
+@router.post("/license/activate", status_code=status.HTTP_200_OK, summary="Activate a licence (super key)")
+def activate_license(
+    payload: LicenseActivateRequest,
+    current_user: User = Depends(require_roles("SUPER_ADMIN")),
+    db: Session = Depends(get_db),
+):
+    from app.core.rate_limit import hit
+    from app.services import license_service
+
+    if hit(f"license:{current_user.company_id}", 10, 3600):
+        raise BadRequestError("Too many attempts. Try again in an hour.")
+    company = db.get(Company, current_user.company_id)
+    if not company:
+        raise NotFoundError("Company record not found.")
+    lic = license_service.activate(company, payload.key)
+    record_audit_log(
+        db=db, action="LICENSE_ACTIVATED", resource_type="companies", user_id=current_user.id, user_email=current_user.email,
+        user_role=current_user.role.name if current_user.role else None, property_id=None, resource_id=str(company.id),
+        details={"license_id": lic.license_id, "max_beds": lic.max_beds, "expires": str(lic.expires) if lic.expires else None},
+    )
+    db.commit()
+    return APIResponse(success=True, message=f"Licence activated for up to {lic.max_beds} beds.", data=license_service.status(company))

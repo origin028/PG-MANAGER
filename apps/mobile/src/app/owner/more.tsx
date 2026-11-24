@@ -1,14 +1,16 @@
 import { router } from "expo-router";
 import { View } from "react-native";
-import { Buildings, ChartBar, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, IdentificationBadge, Megaphone, UserPlus } from "phosphor-react-native";
+import { Bell, Buildings, ChartBar, ChartLineUp, ChatCircleDots, CookingPot, Fingerprint, ForkKnife, Gear, IdentificationBadge, Megaphone, QrCode, UserPlus } from "phosphor-react-native";
 import { Divider, Header, ListRow } from "@/components/kit";
 import { Card, H2, Screen } from "@/components/ui";
 import { color } from "@/lib/theme";
 
 const ICON = { size: 24, color: color.ink, weight: "light" as const };
 const groups: { title: string; items: { icon: React.ReactNode; title: string; sub: string; href: string }[] }[] = [
-  { title: "Your PG", items: [
-    { icon: <Buildings {...ICON} />, title: "Properties", sub: "Homes, addresses, contacts", href: "/manage/properties" },
+  { title: "Your PGs", items: [
+    { icon: <Buildings {...ICON} />, title: "Your PGs", sub: "All PGs, addresses, contacts", href: "/manage/properties" },
+    { icon: <QrCode {...ICON} />, title: "Join QR code", sub: "Poster for new residents to sign up", href: "/manage/join-qr" },
+    { icon: <Bell {...ICON} />, title: "Alerts", sub: "Sign-ups, KYC sent, access paused", href: "/manage/notifications" },
     { icon: <IdentificationBadge {...ICON} />, title: "Staff", sub: "Wardens, cooks, housekeeping", href: "/manage/staff" },
     { icon: <ForkKnife {...ICON} />, title: "Food menu", sub: "Weekly menu, timings, photos", href: "/manage/menu" },
   ] },

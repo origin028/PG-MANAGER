@@ -74,10 +74,29 @@ Environment variables: `NEXT_PUBLIC_API_URL` = `https://<api>`, `NEXT_PUBLIC_APP
   apply themselves ("Join a home" in the app, or the enquiry form on the website).
 - **More → Kitchen & meal passes** stays **off** unless the owner wants the food scan.
 
+## Multiple PGs, sign-ups and alerts
+
+- One company runs all its PGs (4 now). Total capacity is shared: 250 beds across all PGs
+  (company `bed_limit`). Add each PG under **More → Your PGs**, then its rooms.
+- **Join QR code** (More → Join QR code): one poster per PG. New residents scan it, sign up with their
+  details (ID photos now or later), and the owner gets an alert: in the app (bell), by email, and as a
+  phone notification once the phone app is built with EAS.
+- Set `EXPO_PUBLIC_APP_URL` on the web app's Vercel project to its public address (used in the QR link).
+
+## Licence key ("super key"), built but OFF
+
+- `LICENSE_ENFORCED=false` (default): nothing is blocked. Keep it off while testing.
+- To sell to another customer later: `python scripts/license_keys.py genkeys` once (keep the private key
+  offline), put the public key in `LICENSE_PUBLIC_KEY`, issue a key with
+  `LICENSE_PRIVATE_KEY=... python scripts/license_keys.py issue --beds 250 --to "Customer"`, set
+  `LICENSE_ENFORCED=true`. The owner enters the key once (API: `POST /api/v1/settings/license/activate`);
+  the key fixes the maximum number of beds and cannot be edited or forged.
+
 ## Phone apps (iPhone / Android)
 
 Needs an Expo account (free) and, for the stores, Apple Developer (₹ yearly) and Google Play accounts.
 Build with `npx eas-cli build -p android` / `-p ios` from `apps/mobile` with `EXPO_PUBLIC_API_URL` set.
+`npx eas-cli init` links the app to an Expo project; that project id also switches on phone alerts for owners.
 Until then, residents and the owner can use the web app on their phones. It is the same app.
 
 ## Not switched on yet (on purpose)

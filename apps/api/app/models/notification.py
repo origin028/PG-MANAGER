@@ -24,6 +24,8 @@ class Notification(Base, UUIDMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(
         sa.String(50), default="PENDING", nullable=False, index=True
     )  # PENDING, SENT, FAILED
+    kind: Mapped[Optional[str]] = mapped_column(sa.String(50), nullable=True)  # NEW_SIGNUP, KYC_SUBMITTED, ACCESS_PAUSED...
+    link: Mapped[Optional[str]] = mapped_column(sa.String(300), nullable=True)  # app screen to open, e.g. /manage/approvals
     scheduled_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
     sent_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
 

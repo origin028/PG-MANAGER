@@ -7,6 +7,8 @@ import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+/** Public address of this web app (used in join links / QR posters). On the web it is simply where we are. */
+export const APP_URL = (process.env.EXPO_PUBLIC_APP_URL ?? (typeof window !== "undefined" && window.location?.origin ? window.location.origin : "http://localhost:8081")).replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(public status: number, public code: string, message: string, public details?: unknown) {

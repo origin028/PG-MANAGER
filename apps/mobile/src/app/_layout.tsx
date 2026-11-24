@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { WebShell } from "@/components/web-shell";
 import { useWide } from "@/lib/layout";
 import { onPortalOff } from "@/lib/api";
+import { registerOwnerPhone } from "@/lib/push";
 import { SessionProvider, useSession } from "@/lib/session";
 import { color } from "@/lib/theme";
 
@@ -15,6 +16,10 @@ function Gate() {
   const wide = useWide();
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    if (mode === "owner") registerOwnerPhone();
+  }, [mode]);
 
   useEffect(() => {
     onPortalOff.current = mode === "resident" ? () => { if (!pathname.startsWith("/access-paused") && !pathname.startsWith("/complete-kyc")) router.replace("/access-paused"); } : null;

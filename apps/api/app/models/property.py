@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -18,10 +19,15 @@ class Company(Base, UUIDMixin, TimestampMixin):
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=True, nullable=False)
     subscription_plan: Mapped[str] = mapped_column(sa.String(50), default="STANDARD", nullable=False)
     subscription_status: Mapped[str] = mapped_column(sa.String(50), default="ACTIVE", nullable=False)
-    bed_limit: Mapped[int] = mapped_column(sa.Integer, default=240, nullable=False, server_default="240")
+    bed_limit: Mapped[int] = mapped_column(sa.Integer, default=250, nullable=False, server_default="250")  # all homes together
     # Kitchen module (meal passes + kitchen staff logins). Off until the owner switches it on.
     kitchen_enabled: Mapped[bool] = mapped_column(sa.Boolean, default=False, nullable=False, server_default=sa.false())
     kyc_deadline_days: Mapped[int] = mapped_column(sa.Integer, default=7, nullable=False, server_default="7")
+    # Licence ("super key"); see app/services/license_service.py. Not enforced unless LICENSE_ENFORCED=true.
+    license_key: Mapped[Optional[str]] = mapped_column(sa.Text, nullable=True)
+    license_max_beds: Mapped[Optional[int]] = mapped_column(sa.Integer, nullable=True)
+    license_activated_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
+    license_expires_at: Mapped[Optional[datetime]] = mapped_column(sa.DateTime(timezone=True), nullable=True)
 
     # Relationships
     properties: Mapped[List["Property"]] = relationship("Property", back_populates="company")

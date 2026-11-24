@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { ArrowLeft, Clock } from "phosphor-react-native";
@@ -12,7 +12,9 @@ type Home = { id: string; name: string; city?: string };
 const STEPS = ["About you", "Address", "Documents", "Verify"] as const;
 
 export default function Join() {
+  const { home } = useLocalSearchParams<{ home?: string }>();
   const [step, setStep] = useState(0);
+  const [later, setLater] = useState(false);
   const [homes, setHomes] = useState<Home[]>([]);
   const [f, setF] = useState({
     full_name: "", date_of_birth: "", gender: "Female", occupation: "", primary_phone: "", email: "", emergency_contact: "",
@@ -29,9 +31,10 @@ export default function Join() {
   useEffect(() => {
     api<Home[]>("/auth/resident/properties", { auth: false }).then((h) => {
       setHomes(h);
-      if (h.length === 1) setF((p) => ({ ...p, property_id: h[0].id }));
+      const fromQr = home && h.some((x) => x.id === home) ? home : null;
+      if (fromQr || h.length === 1) setF((p) => ({ ...p, property_id: fromQr ?? h[0].id }));
     }).catch(() => setHomes([]));
-  }, []);
+  }, [home]);
 
   const set = (k: keyof typeof f) => (v: string) => setF((p) => ({ ...p, [k]: v }));
   const needed = neededDocs(method);
@@ -42,12 +45,12 @@ export default function Join() {
     needed.every((k) => docs[k]),
   ];
 
-  async function submit() {
-    setBusy(true); setError(null);
+  async function submit(skipDocs = false) {
+    setBusy(true); setError(null); setLater(skipDocs);
     try {
       const form = new FormData();
-      Object.entries({ ...f, primary_phone: f.primary_phone.replace(/\D/g, "").slice(-10), verification_method: method }).forEach(([k, v]) => form.append(k, v));
-      await appendDocs(form, method, docs);
+      Object.entries({ ...f, primary_phone: f.primary_phone.replace(/\D/g, "").slice(-10), verification_method: skipDocs ? "LATER" : method }).forEach(([k, v]) => form.append(k, v));
+      if (!skipDocs) await appendDocs(form, method, docs);
       const d = await api<{ email_masked?: string }>("/auth/resident/register/otp/request", { method: "POST", body: form, auth: false });
       setSentTo(d.email_masked ?? f.email);
       setStep(3);
@@ -68,7 +71,9 @@ export default function Join() {
         <View style={{ alignItems: "center", marginTop: space(20), gap: space(3) }}>
           <Clock size={56} color={color.ink} weight="light" />
           <Text style={[type.h1, { color: color.ink, textAlign: "center" }]}>You're in the queue</Text>
-          <Body muted style={{ textAlign: "center", maxWidth: 300 }}>The owner will check your documents and assign your bed. You can sign in as soon as you're approved.</Body>
+          <Body muted style={{ textAlign: "center", maxWidth: 300 }}>
+            {later ? "The owner will approve you and assign your bed. After that, sign in and add your ID photos under 'Finish your KYC'." : "The owner will check your documents and assign your bed. You can sign in as soon as you're approved."}
+          </Body>
           <Button title="Back to start" variant="secondary" onPress={() => router.replace("/welcome")} style={{ marginTop: space(6), alignSelf: "stretch" }} />
         </View>
       </Screen>
@@ -109,8 +114,10 @@ export default function Join() {
           <Field label="City" value={f.city} onChangeText={set("city")} />
           <Field label="State" value={f.state} onChangeText={set("state")} />
           <Field label="PIN code" value={f.pincode} onChangeText={(t) => set("pincode")(t.replace(/\D/g, "").slice(0, 6))} keyboardType="number-pad" />
-          <Text style={[type.label, { color: color.ink, marginBottom: space(2) }]}>Which home are you joining?</Text>
-          {homes.length ? (
+          {home && f.property_id === home ? (
+            <Body muted style={{ marginBottom: space(2) }}>Joining <Text style={{ fontWeight: "700", color: color.ink }}>{homes.find((h) => h.id === home)?.name}</Text></Body>
+          ) : <Text style={[type.label, { color: color.ink, marginBottom: space(2) }]}>Which home are you joining?</Text>}
+          {home && f.property_id === home ? null : homes.length ? (
             <Segmented value={f.property_id} onChange={set("property_id")} options={homes.map((h) => ({ value: h.id, label: h.name }))} />
           ) : <Body muted>No homes are open for joining right now.</Body>}
           <Button title="Continue" onPress={() => setStep(2)} disabled={!valid[1]} style={{ marginTop: space(6) }} />
@@ -122,7 +129,11 @@ export default function Join() {
           <Title sub="Clear photos, all four corners visible. Stored encrypted; only the owner can see them.">Your ID</Title>
           <KycDocPicker method={method} onMethod={setMethod} docs={docs} onDocs={setDocs} onError={setError} />
           {error ? <View style={{ marginTop: space(4) }}><ErrorBox message={error} /></View> : null}
-          <Button title="Submit and verify email" onPress={submit} loading={busy} disabled={!valid[2]} style={{ marginTop: space(6) }} />
+          <Button title="Submit and verify email" onPress={() => submit(false)} loading={busy && !later} disabled={!valid[2] || busy} style={{ marginTop: space(6) }} />
+          <Pressable onPress={() => submit(true)} disabled={busy} style={{ marginTop: space(5), alignSelf: "center", opacity: busy ? 0.4 : 1 }} accessibilityRole="button">
+            <Text style={[type.label, { color: color.ink }]}>{busy && later ? "Sending..." : "Add ID photos later"}</Text>
+          </Pressable>
+          <Body muted style={{ marginTop: space(2), textAlign: "center", fontSize: 13 }}>You can finish your KYC in the app after approval. You'll have a few days to do it.</Body>
         </>
       )}
 

@@ -615,9 +615,16 @@ def approve_resident_registration(
 
     # Transition states atomically
     resident.status = "ACTIVE"
-    resident.kyc_status = "VERIFIED"
-    resident.verified_by_id = current_user.id
-    resident.verified_at = datetime.now(timezone.utc)
+    from app.services import portal_service
+
+    if portal_service.kyc_submitted(resident):
+        resident.kyc_status = "VERIFIED"
+        resident.verified_by_id = current_user.id
+        resident.verified_at = datetime.now(timezone.utc)
+        resident.kyc_due_at = None
+    else:  # signed up with "add ID photos later": same KYC window as residents the owner adds
+        resident.kyc_status = "PENDING"
+        portal_service.start_deadline(db, resident)
     user.approval_status = "APPROVED"
     user.is_active = True
     user.is_verified = True

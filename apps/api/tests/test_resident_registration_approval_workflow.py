@@ -321,13 +321,14 @@ class TestResidentRegistrationApprovalWorkflow:
         assert approve_res.status_code == 200
         data = approve_res.json()["data"]
         assert data["status"] == "ACTIVE"
-        assert data["kyc_status"] == "VERIFIED"
+        # Registered without ID documents: KYC stays pending, with a deadline, until they upload and are verified.
+        assert data["kyc_status"] == "PENDING"
 
         # DB Check
         db = client.app.state.testing_session()
         resident = db.get(Resident, uuid.UUID(res_id))
         assert resident.status == "ACTIVE"
-        assert resident.kyc_status == "VERIFIED"
+        assert resident.kyc_status == "PENDING" and resident.kyc_due_at is not None
         user = db.get(User, resident.user_id)
         assert user.approval_status == "APPROVED"
         assert user.is_active is True

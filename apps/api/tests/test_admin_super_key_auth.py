@@ -263,7 +263,7 @@ def test_admin_registration_to_login_case_insensitive_super_key_and_dashboard_ac
 
     cap_resp = client.get("/api/v1/company/bed-capacity", headers=headers)
     assert cap_resp.status_code == 200
-    assert cap_resp.json()["data"]["total_capacity"] == 240
+    assert cap_resp.json()["data"]["total_capacity"] == 250
     assert cap_resp.json()["data"]["used_beds"] == 0
 
 

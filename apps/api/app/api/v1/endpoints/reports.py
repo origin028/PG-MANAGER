@@ -114,7 +114,7 @@ def get_dashboard_summary(
     # Pending rent
     inv_query = sa.select(
         sa.func.coalesce(sa.func.sum(Invoice.amount - Invoice.paid_amount), 0)
-    ).where(Invoice.status.in_(("PENDING", "PARTIALLY_PAID")))
+    ).where(Invoice.status.in_(("PENDING", "PARTIALLY_PAID", "OVERDUE")))
     if property_id:
         inv_query = inv_query.where(Invoice.property_id == property_id)
     elif prop_filter:
@@ -122,7 +122,7 @@ def get_dashboard_summary(
     pending_rent = float(db.scalar(inv_query) or 0.0)
 
     # Open complaints
-    comp_query = sa.select(sa.func.count(Complaint.id)).where(Complaint.status.in_(("PENDING", "ASSIGNED", "IN_PROGRESS")))
+    comp_query = sa.select(sa.func.count(Complaint.id)).where(Complaint.status.in_(("OPEN", "PENDING", "ASSIGNED", "IN_PROGRESS")))
     if property_id:
         comp_query = comp_query.where(Complaint.property_id == property_id)
     elif prop_filter:
@@ -504,3 +504,89 @@ def get_monthly_finance(
         verify_property_access(property_id, current_user, db)
     data = finance_report(db, scope_for(db, current_user.company_id, property_id), m, months_of_trend=months)
     return APIResponse(success=True, message="Monthly finance.", data=data)
+
+
+@router.get("/homes", status_code=status.HTTP_200_OK, summary="Every PG side by side, plus totals and bed capacity")
+def get_homes_overview(
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER")),
+    db: Session = Depends(get_db),
+):
+    """One row per PG the user can see (beds, occupancy, residents, this month's money, things to act on)
+    and company totals, including how much of the bed capacity (e.g. 250 across all PGs) is used."""
+    from datetime import datetime as _dt
+
+    from app.models.property import Company
+    from app.services.bed_capacity_service import BedCapacityService
+    from app.services.meal_service import tz
+    from app.models.user import User as _User
+
+    ids = accessible_property_ids(current_user, db)
+    props = db.scalars(sa.select(Property).where(Property.id.in_(ids), Property.is_active.is_(True)).order_by(Property.name)).all()
+    pids = [p.id for p in props]
+    month_start = _dt.now(tz()).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    def grouped(q):
+        return {k: v for k, v in db.execute(q).all()}
+
+    beds = grouped(sa.select(Room.property_id, sa.func.count(Bed.id)).join(Room, Bed.room_id == Room.id).where(*LIVE_BED, Room.property_id.in_(pids)).group_by(Room.property_id))
+    rooms = grouped(sa.select(Room.property_id, sa.func.count(Room.id)).where(Room.is_active.is_(True), Room.property_id.in_(pids)).group_by(Room.property_id))
+    occupied = grouped(
+        sa.select(Room.property_id, sa.func.count(sa.distinct(Bed.id))).select_from(Bed).join(Room, Bed.room_id == Room.id)
+        .join(Resident, Resident.bed_id == Bed.id).where(*LIVE_BED, Resident.status.in_(("ACTIVE", "NOTICE_PERIOD")), Room.property_id.in_(pids))
+        .group_by(Room.property_id)
+    )
+    open_res = (Resident.status.in_(("ACTIVE", "NOTICE_PERIOD")), Resident.property_id.in_(pids))
+    residents = grouped(sa.select(Resident.property_id, sa.func.count(Resident.id)).where(*open_res).group_by(Resident.property_id))
+    on_notice = grouped(sa.select(Resident.property_id, sa.func.count(Resident.id)).where(Resident.status == "NOTICE_PERIOD", Resident.property_id.in_(pids)).group_by(Resident.property_id))
+    kyc_check = grouped(sa.select(Resident.property_id, sa.func.count(Resident.id)).where(*open_res, Resident.kyc_status == "SUBMITTED").group_by(Resident.property_id))
+    paused = grouped(sa.select(Resident.property_id, sa.func.count(Resident.id)).where(*open_res, Resident.portal_enabled.is_(False)).group_by(Resident.property_id))
+    signups = grouped(
+        sa.select(Resident.property_id, sa.func.count(Resident.id)).join(_User, Resident.user_id == _User.id)
+        .where(Resident.status.in_(("PENDING_APPROVAL", "PENDING")), _User.approval_status.in_(("PENDING_APPROVAL", "PENDING")), Resident.property_id.in_(pids))
+        .group_by(Resident.property_id)
+    )
+    collected = grouped(
+        sa.select(Payment.property_id, sa.func.coalesce(sa.func.sum(Payment.amount), 0))
+        .where(Payment.status.in_(("SUCCESS", "PAID")), Payment.paid_at >= month_start, Payment.property_id.in_(pids)).group_by(Payment.property_id)
+    )
+    due = grouped(
+        sa.select(Invoice.property_id, sa.func.coalesce(sa.func.sum(Invoice.amount - Invoice.paid_amount), 0))
+        .where(Invoice.status.in_(("PENDING", "PARTIALLY_PAID", "OVERDUE")), Invoice.property_id.in_(pids)).group_by(Invoice.property_id)
+    )
+    upi_waiting = grouped(
+        sa.select(Payment.property_id, sa.func.count(Payment.id))
+        .where(Payment.status == "PENDING_VERIFICATION", Payment.property_id.in_(pids)).group_by(Payment.property_id)
+    )
+    complaints = grouped(
+        sa.select(Complaint.property_id, sa.func.count(Complaint.id))
+        .where(Complaint.status.in_(("OPEN", "PENDING", "ASSIGNED", "IN_PROGRESS")), Complaint.property_id.in_(pids)).group_by(Complaint.property_id)
+    )
+
+    homes = []
+    for p in props:
+        b, o = int(beds.get(p.id, 0)), int(occupied.get(p.id, 0))
+        homes.append({
+            "id": str(p.id), "name": p.name, "code": p.code, "city": p.city, "property_type": p.property_type,
+            "rooms": int(rooms.get(p.id, 0)), "beds": b, "occupied_beds": o, "free_beds": max(0, b - o),
+            "occupancy_percent": round(o / b * 100, 1) if b else None,
+            "residents": int(residents.get(p.id, 0)), "on_notice": int(on_notice.get(p.id, 0)),
+            "collected_this_month": float(collected.get(p.id, 0) or 0), "rent_due": float(due.get(p.id, 0) or 0),
+            "open_complaints": int(complaints.get(p.id, 0)), "signups_waiting": int(signups.get(p.id, 0)),
+            "kyc_to_verify": int(kyc_check.get(p.id, 0)), "access_paused": int(paused.get(p.id, 0)),
+            "upi_to_confirm": int(upi_waiting.get(p.id, 0)),
+        })
+    total = lambda k: sum(h[k] or 0 for h in homes)  # noqa: E731
+    t_beds, t_occ = total("beds"), total("occupied_beds")
+    company = db.get(Company, current_user.company_id)
+    cap = BedCapacityService.get_company_bed_usage(company.id, db) if company else None
+    return APIResponse(success=True, message=f"{len(homes)} homes.", data={
+        "homes": homes,
+        "totals": {
+            "homes": len(homes), "rooms": total("rooms"), "beds": t_beds, "occupied_beds": t_occ, "free_beds": max(0, t_beds - t_occ),
+            "occupancy_percent": round(t_occ / t_beds * 100, 1) if t_beds else None, "residents": total("residents"),
+            "on_notice": total("on_notice"), "collected_this_month": total("collected_this_month"), "rent_due": total("rent_due"),
+            "open_complaints": total("open_complaints"), "signups_waiting": total("signups_waiting"),
+            "kyc_to_verify": total("kyc_to_verify"), "access_paused": total("access_paused"), "upi_to_confirm": total("upi_to_confirm"),
+        },
+        "capacity": {"limit": cap["total_capacity"], "used": cap["used_beds"], "remaining": cap["remaining_beds"]} if cap else None,
+    })

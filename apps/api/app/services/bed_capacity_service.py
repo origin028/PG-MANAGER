@@ -7,6 +7,7 @@ from app.core.exceptions import BedCapacityExceededError, NotFoundError
 from app.models.bed import Bed
 from app.models.property import Company, Property
 from app.models.room import Room
+from app.services.license_service import effective_bed_limit
 
 
 class BedCapacityService:
@@ -16,7 +17,7 @@ class BedCapacityService:
         if not company:
             raise NotFoundError("Company not found.")
 
-        total_capacity = company.bed_limit or 240
+        total_capacity = effective_bed_limit(company)
 
         # Count all non-deleted beds across all properties belonging to this company
         stmt = (
@@ -31,7 +32,7 @@ class BedCapacityService:
         used_beds = db.scalar(stmt) or 0
         remaining_beds = max(0, total_capacity - used_beds)
         usage_percentage = round((used_beds / total_capacity * 100), 1) if total_capacity > 0 else 0.0
-        is_warning_threshold = used_beds >= int(0.9 * total_capacity)  # >= 216 beds for 240
+        is_warning_threshold = used_beds >= int(0.9 * total_capacity)  # 90% of the limit (225 of 250)
         is_capacity_reached = used_beds >= total_capacity
 
         return {
@@ -64,7 +65,7 @@ class BedCapacityService:
         if not company:
             raise NotFoundError("Company not found.")
 
-        total_capacity = company.bed_limit or 240
+        total_capacity = effective_bed_limit(company)
 
         stmt = (
             sa.select(sa.func.count(Bed.id))

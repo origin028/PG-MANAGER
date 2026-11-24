@@ -1,22 +1,37 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { API_URL, api, tokenStore } from "./api";
 
-export type Property = { id: string; name: string };
+export type Property = { id: string; name: string; property_type?: string; city?: string };
 
-/** The owner's properties; most screens scope to one at a time. */
+/** The PG picked on one screen stays picked on every owner screen (Home, Residents, Rooms, Money...). */
+const KEY = "origin.selectedPg";
+const saved = () => { try { return globalThis.sessionStorage?.getItem(KEY) ?? null; } catch { return null; } };
+let selected: string | null = saved(); // web: survives a page refresh in the same tab
+const listeners = new Set<() => void>();
+const selection = {
+  get: () => selected,
+  set: (id: string | null) => {
+    selected = id;
+    try { if (id) globalThis.sessionStorage?.setItem(KEY, id); } catch { /* storage may be blocked */ }
+    listeners.forEach((l) => l());
+  },
+  subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; },
+};
+
+/** The owner's PGs; most screens work on one at a time and share the choice. */
 export function useProperties() {
   const [props, setProps] = useState<Property[]>([]);
-  const [current, setCurrent] = useState<string | null>(null);
+  const current = useSyncExternalStore(selection.subscribe, selection.get, selection.get);
   useEffect(() => {
     api<Property[] | { items: Property[] }>("/properties")
       .then((d) => {
         const list = Array.isArray(d) ? d : d.items;
         setProps(list);
-        setCurrent((c) => c ?? list[0]?.id ?? null);
+        if (!selection.get() || !list.some((p) => p.id === selection.get())) selection.set(list[0]?.id ?? null);
       })
       .catch(() => setProps([]));
   }, []);
-  return { props, current, setCurrent };
+  return { props, current, setCurrent: selection.set };
 }
 
 /** Loads a protected KYC image with the bearer token and returns a data URI (works on iOS, Android, web). */
