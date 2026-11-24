@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     INVITE_CODE_HOURS: int = 48
     # Phone alerts to owners through Expo's push service ("EXPO") or nowhere ("MOCK").
     PUSH_PROVIDER: str = "EXPO"
+    # Where uploaded files (encrypted KYC photos, menu and complaint photos) live:
+    # "local" = the server's disk (dev); "gcs" = a Google Cloud / Firebase Storage bucket (Cloud Run).
+    STORAGE_BACKEND: str = "local"
+    GCS_BUCKET: str = ""
     # Licence ("super key"). Off while testing: keys can be activated and stored, nothing is blocked.
     LICENSE_ENFORCED: bool = False
     LICENSE_PUBLIC_KEY: str = ""  # Ed25519 public key (base64) that licence keys must be signed with  # how long the "set your password" code in a welcome email stays valid

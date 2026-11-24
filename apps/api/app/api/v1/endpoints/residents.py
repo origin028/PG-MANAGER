@@ -1339,23 +1339,11 @@ def get_resident_kyc_document(
     if not rel_path:
         raise NotFoundError(f"KYC document '{doc_type}' is not on record for this resident.")
 
-    # 5. Directory traversal prevention & path resolution
-    clean_rel = rel_path.lstrip("/\\")
-    backend_root = Path(__file__).resolve().parents[4]  # backend root
-    full_path = (backend_root / clean_rel).resolve()
-    uploads_root = (backend_root / "uploads").resolve()
-
-    if uploads_root not in full_path.parents and full_path != uploads_root:
-        raise PermissionDeniedError("Access to the requested document path is forbidden.")
-
-    if not full_path.is_file():
-        raise NotFoundError(f"KYC document file '{doc_type}' not found on server storage.")
-
-    # 6. Decrypt in memory and stream with strict privacy headers
+    # 5. Load by stored key (validated format, local disk or cloud bucket), decrypt in memory
     try:
-        content, mime_type = FileService.read_document(full_path)
-    except ValueError:
-        raise NotFoundError(f"KYC document '{doc_type}' could not be read.")
+        content, mime_type = FileService.load(rel_path)
+    except NotFoundError:
+        raise NotFoundError(f"KYC document '{doc_type}' not found on server storage.")
 
     return Response(
         content=content,

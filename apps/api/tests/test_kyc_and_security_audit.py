@@ -144,7 +144,7 @@ def security_test_env(client):
         backend_root = Path(__file__).resolve().parent.parent
         kyc_dir = backend_root / "uploads" / "kyc"
         kyc_dir.mkdir(parents=True, exist_ok=True)
-        dummy_filename = f"test_sec_{uuid.uuid4().hex}_aadhaar_front.jpg"
+        dummy_filename = f"{uuid.uuid4().hex}.jpg"  # same naming as real uploads (strictly validated on read)
         dummy_file_path = kyc_dir / dummy_filename
         dummy_file_path.write_bytes(b"\xFF\xD8\xFF\xE0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xFF\xDB\x00C\x00" + b"TEST_IMAGE_DATA")
 

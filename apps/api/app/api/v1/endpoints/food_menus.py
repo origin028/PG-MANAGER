@@ -349,14 +349,11 @@ def get_menu_image(menu_id: uuid.UUID, current_user: User = Depends(get_current_
 
     from fastapi.responses import Response
 
-    from app.services.file_service import BASE_DIR, FileService
+    from app.services.file_service import FileService
 
     item = db.get(FoodMenu, menu_id)
     if not item or not item.image_path:
         raise NotFoundError("No photo for this meal.")
     verify_property_access(item.property_id, current_user, db)
-    full = (BASE_DIR / item.image_path).resolve()
-    if (BASE_DIR / "uploads").resolve() not in full.parents or not Path(full).is_file():
-        raise NotFoundError("No photo for this meal.")
-    content, mime = FileService.read_document(full)
+    content, mime = FileService.load(item.image_path)
     return Response(content=content, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})

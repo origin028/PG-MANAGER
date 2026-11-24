@@ -13,6 +13,8 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 UPLOAD_DIR = BASE_DIR / "uploads" / "kyc"
+# Keys look like uploads/kyc/<32 hex>.<ext>.enc (older demo files may lack .enc).
+STORED_KEY = re.compile(r"uploads/kyc/[0-9a-f]{32}\.(jpg|jpeg|png|pdf)(\.enc)?")
 
 
 def sanitize_filename(filename: str) -> str:
@@ -63,11 +65,10 @@ class FileService:
         if ext not in allowed_exts:
             raise BadRequestError(f"File content does not match its extension for '{field_name}'.")
 
-        cls.ensure_upload_dir()
-        # Random name only: user-supplied names never reach the filesystem.
-        stored_filename = f"{uuid.uuid4().hex}{ext}.enc"
-        (UPLOAD_DIR / stored_filename).write_bytes(encrypt_bytes(content))
-        return f"uploads/kyc/{stored_filename}"
+        # Random name only: user-supplied names never reach storage.
+        key = f"uploads/kyc/{uuid.uuid4().hex}{ext}.enc"
+        cls._put(key, encrypt_bytes(content))
+        return key
 
     @classmethod
     async def validate_and_save_upload(
@@ -90,6 +91,55 @@ class FileService:
             return cls._validate_and_store(upload, filename or f"{field_name}.jpg", field_name)
 
         raise BadRequestError(f"Unsupported upload type for '{field_name}'.")
+
+    # ---- storage backends -------------------------------------------------------------------
+    @staticmethod
+    def _gcs_bucket():
+        from google.cloud import storage  # imported only when the bucket backend is used
+
+        from app.core.config import settings
+
+        if not settings.GCS_BUCKET:
+            raise RuntimeError("GCS_BUCKET is not set.")
+        return storage.Client().bucket(settings.GCS_BUCKET)
+
+    @classmethod
+    def _put(cls, key: str, data: bytes) -> None:
+        from app.core.config import settings
+
+        if settings.STORAGE_BACKEND.lower() == "gcs":
+            cls._gcs_bucket().blob(key).upload_from_string(data, content_type="application/octet-stream")
+        else:
+            cls.ensure_upload_dir()
+            (BASE_DIR / key).write_bytes(data)
+
+    @classmethod
+    def load(cls, key: Optional[str]) -> Tuple[bytes, str]:
+        """Reads a stored file by the key we saved it under. Raises NotFoundError for anything else."""
+        from app.core.config import settings
+        from app.core.exceptions import NotFoundError
+
+        clean = (key or "").strip().lstrip("/\\")
+        if not STORED_KEY.fullmatch(clean):  # only names this service generated: no path tricks
+            raise NotFoundError("File not found.")
+        try:
+            if settings.STORAGE_BACKEND.lower() == "gcs":
+                blob = cls._gcs_bucket().blob(clean)
+                if not blob.exists():
+                    raise NotFoundError("File not found.")
+                raw = blob.download_as_bytes()
+            else:
+                path = (BASE_DIR / clean).resolve()
+                if (BASE_DIR / "uploads").resolve() not in path.parents or not path.is_file():
+                    raise NotFoundError("File not found.")
+                raw = path.read_bytes()
+            if clean.endswith(".enc"):
+                raw = decrypt_bytes(raw)
+        except NotFoundError:
+            raise
+        except ValueError:
+            raise NotFoundError("File could not be read.")
+        return raw, sniff_mime(raw) or "application/octet-stream"
 
     @staticmethod
     def read_document(full_path: Path) -> Tuple[bytes, str]:

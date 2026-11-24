@@ -1,4 +1,27 @@
-# Going live: Render (API + database) and Vercel (websites)
+# Going live
+
+## Option A (chosen): Firebase / Google Cloud for the API, Vercel for the websites
+
+Project: Firebase `originpg` (region asia-south1, Mumbai). One script sets up everything:
+Cloud Run (API + scheduled jobs), Cloud SQL PostgreSQL 16 (daily backups, 14 kept), a private Storage
+bucket for encrypted KYC/photos, Secret Manager (keys generated once, never printed), Cloud Scheduler.
+
+1. Firebase console → Upgrade to **Blaze** (pay as you go). Expected: Cloud SQL ~₹800–1,000/month;
+   Cloud Run, Storage, Scheduler mostly within free limits at this size.
+2. `gcloud auth login origin.workin@gmail.com`
+3. Run (values from your email provider and the website addresses):
+   ```bash
+   SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USERNAME=... SMTP_PASSWORD=<app password> SMTP_FROM_EMAIL=... \
+   CORS_ORIGINS="https://<web app>,https://<landing site>" APP_URL="https://<web app>" \
+   OWNER_COMPANY="Origin Living" OWNER_EMAIL=... OWNER_PHONE=... OWNER_NAME=... OWNER_PASSWORD=... \
+   bash infra/firebase/deploy.sh
+   ```
+4. The database starts **empty** (no demo data). The script creates the first owner when OWNER_* are given.
+5. Point the web app (`EXPO_PUBLIC_API_URL`) at the printed API address.
+
+Re-running the script deploys a new version; data, secrets and the bucket are kept.
+
+## Option B: Render (API + database) and Vercel (websites)
 
 Three pieces, all from this repo:
 
