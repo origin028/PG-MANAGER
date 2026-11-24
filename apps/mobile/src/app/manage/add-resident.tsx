@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 import { useProperties } from "@/lib/owner";
 import { color, rupees, space, type } from "@/lib/theme";
 
-/** Owner adds a walk-in resident directly (no app signup). They can later sign in with their mobile number. */
+/** Owner adds a walk-in resident. With an email, they get a code to set their own password and then sign in with email or mobile. */
 export default function AddResident() {
   const { props, current, setCurrent } = useProperties();
   const [f, setF] = useState({ full_name: "", phone: "", email: "", occupation: "", gender: "Male", emergency_contact_name: "", emergency_contact_phone: "", city: "", monthly_rent: "", security_deposit: "" });
@@ -21,7 +21,7 @@ export default function AddResident() {
     if (!current || !bed) return;
     setBusy(true); setError(null);
     try {
-      const res = await api<{ id?: string; resident_id?: string }>("/residents/onboard", {
+      const res = await api<{ id?: string; resident_id?: string; invite_sent?: boolean | null }>("/residents/onboard", {
         method: "POST",
         json: {
           ...f, phone: digits(f.phone).slice(-10), emergency_contact_phone: digits(f.emergency_contact_phone).slice(-10) || null,
@@ -31,7 +31,8 @@ export default function AddResident() {
       });
       const id = res.id ?? res.resident_id;
       if (id && Number(f.security_deposit) > 0) await api(`/residents/${id}/deposit`, { method: "POST", json: { amount: Number(f.security_deposit).toFixed(2), note: "Deposit received at joining" } }).catch(() => {});
-      if (id) router.replace({ pathname: "/manage/resident/[id]", params: { id } }); else router.back();
+      const invite = res.invite_sent ? "sent" : f.email.trim() ? "failed" : "none";
+      if (id) router.replace({ pathname: "/manage/resident/[id]", params: { id, invite } }); else router.back();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -42,8 +43,9 @@ export default function AddResident() {
       {props.length > 1 ? <View style={{ marginBottom: space(4) }}><Segmented value={current ?? ""} onChange={(v) => { setCurrent(v); setBed(null); }} options={props.map((p) => ({ value: p.id, label: p.name }))} /></View> : null}
       <Card>
         <Field label="Full name" value={f.full_name} onChangeText={set("full_name")} />
-        <Field label="Mobile" value={f.phone} onChangeText={set("phone")} keyboardType="phone-pad" hint="They sign in with this number." />
-        <Field label="Email (optional)" value={f.email} onChangeText={set("email")} autoCapitalize="none" keyboardType="email-address" />
+        <Field label="Mobile" value={f.phone} onChangeText={set("phone")} keyboardType="phone-pad" />
+        <Field label="Email" value={f.email} onChangeText={set("email")} autoCapitalize="none" keyboardType="email-address"
+          hint={f.email.trim() ? "We'll email them a code to set their own password. They then sign in with this email or their mobile." : "Needed for their login: we email them a code to set their own password. You can add it later too."} />
         <Text style={[type.label, { color: color.ink, marginBottom: space(2) }]}>Gender</Text>
         <Segmented value={f.gender} onChange={set("gender")} options={[{ value: "Male", label: "Male" }, { value: "Female", label: "Female" }, { value: "Other", label: "Other" }]} />
         <View style={{ height: space(4) }} />

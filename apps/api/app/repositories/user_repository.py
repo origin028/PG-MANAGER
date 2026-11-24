@@ -30,10 +30,18 @@ class UserRepository:
 
     def get_by_identifier(self, identifier: str) -> Optional[User]:
         cleaned = identifier.strip()
+        phones = {cleaned}
+        if "@" not in cleaned:
+            try:
+                from app.services.otp_service import normalize_phone
+
+                phones.add(normalize_phone(cleaned))
+            except Exception:
+                pass
         stmt = sa.select(User).where(
             sa.or_(
                 sa.func.lower(User.email) == cleaned.lower(),
-                User.phone == cleaned,
+                User.phone.in_(phones),
             )
         )
         return self.db.scalar(stmt)

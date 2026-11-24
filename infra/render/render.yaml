@@ -3,7 +3,8 @@
 #
 # Before the first sync, create an Environment Group named "pg-secrets" in the Render dashboard with:
 #   SECRET_KEY, ENCRYPTION_KEY, ADMIN_REGISTRATION_SUPER_KEY, ATTENDANCE_DEVICE_KEY, CORS_ORIGINS,
-#   SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL, SMTP_FROM_NAME
+#   SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL, SMTP_FROM_NAME,
+#   APP_URL (the web app address, used in "set your password" emails)
 # Step-by-step guide: docs/DEPLOY.md. Never put these values in git.
 #
 # Plan names/prices change - confirm on render.com/pricing before syncing.

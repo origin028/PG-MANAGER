@@ -402,6 +402,10 @@ def convert_lead(
 
     db.commit()
 
+    from app.services.otp_service import OTPService
+
+    prop = db.get(Property, lead.property_id)
+    invite_sent = OTPService(db).send_account_invite(user, prop.name if prop else "your PG")
     return APIResponse(
         success=True,
         message=f"Lead '{lead.name}' successfully converted to resident.",
@@ -411,5 +415,6 @@ def convert_lead(
             user_id=user.id,
             status="CONVERTED",
             message=f"Lead '{lead.name}' converted successfully.",
+            invite_sent=invite_sent,
         ),
     )

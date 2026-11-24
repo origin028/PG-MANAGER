@@ -598,10 +598,20 @@ class OTPService:
         norm_email = email.strip().lower()
         now = datetime.now(timezone.utc)
 
-        # 1. Verify user exists
+        # Same answer whether or not the email has an account, so nobody can use this
+        # screen to find out who lives in the PG.
+        generic = {
+            "email": norm_email,
+            "email_masked": mask_email(norm_email),
+            "expires_in_seconds": self.EXPIRY_MINUTES * 60,
+            "cooldown_seconds": self.COOLDOWN_SECONDS,
+            "is_mock": getattr(get_email_provider(), "is_mock", False),
+        }
+
+        # 1. Verify user exists and may sign in
         user = self.db.scalar(sa.select(User).where(sa.func.lower(User.email) == norm_email))
-        if not user:
-            raise NotFoundError("Administrator account not found with this email.")
+        if not user or not user.is_active:
+            return generic
 
         # 2. Rate-limiting: Cooldown check
         recent_otp = self.db.scalar(
@@ -617,8 +627,7 @@ class OTPService:
             rec_created = recent_otp.created_at.replace(tzinfo=timezone.utc) if recent_otp.created_at.tzinfo is None else recent_otp.created_at
             elapsed = (now - rec_created).total_seconds()
             if elapsed < self.COOLDOWN_SECONDS:
-                wait_sec = int(self.COOLDOWN_SECONDS - elapsed)
-                raise TooManyRequestsError(f"Please wait {wait_sec} seconds before requesting a new OTP.")
+                return generic  # a code was just sent; answer the same way as for unknown emails
 
         # 3. Generate 6-digit secure code & salt
         raw_otp = str(secrets.randbelow(900000) + 100000)
@@ -671,6 +680,41 @@ class OTPService:
             "cooldown_seconds": self.COOLDOWN_SECONDS,
             "is_mock": getattr(provider, "is_mock", False),
         }
+
+    def send_account_invite(self, user: User, pg_name: str) -> bool:
+        """Emails a new resident a long-lived one-time code to set their own password.
+
+        Uses the same PASSWORD_CHANGE code as "forgot password", so one screen handles both.
+        Never raises: the resident is already saved, and the owner can resend the invite.
+        """
+        from app.core.config import settings
+
+        if not user.email or not user.is_active:
+            return False
+        norm_email = user.email.strip().lower()
+        now = datetime.now(timezone.utc)
+        raw_otp = str(secrets.randbelow(900000) + 100000)
+        salt = secrets.token_hex(16)
+        try:
+            self.email_service.send_account_invite(
+                to_email=norm_email, otp=raw_otp, name=user.full_name, pg_name=pg_name, phone=user.phone,
+                set_password_url=f"{settings.APP_URL.rstrip('/')}/set-password", valid_hours=settings.INVITE_CODE_HOURS,
+            )
+            self.db.execute(
+                sa.update(OTPVerification)
+                .where(OTPVerification.email == norm_email, OTPVerification.purpose == "PASSWORD_CHANGE", OTPVerification.is_verified == False)  # noqa: E712
+                .values(is_verified=True)
+            )
+            self.db.add(OTPVerification(
+                email=norm_email, phone=user.phone, otp_hash=hash_otp(salt, raw_otp), salt=salt, purpose="PASSWORD_CHANGE",
+                attempts=0, max_attempts=self.MAX_ATTEMPTS, expires_at=now + timedelta(hours=settings.INVITE_CODE_HOURS), is_verified=False,
+            ))
+            self.db.commit()
+            return True
+        except Exception:
+            self.db.rollback()
+            logger.exception("Could not send the login invite email.")
+            return False
 
     def verify_password_change_otp(self, email: str, otp: str, consume: bool = True) -> User:
         """Validates Password Change OTP, consumes code, and returns verified User."""

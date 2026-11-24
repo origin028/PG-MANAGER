@@ -34,7 +34,8 @@ Never change it once residents have uploaded documents.
 1. Dashboard → **Environment Groups** → New group `pg-secrets` with:
    `SECRET_KEY`, `ENCRYPTION_KEY`, `ADMIN_REGISTRATION_SUPER_KEY`, `ATTENDANCE_DEVICE_KEY`,
    `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL`, `SMTP_FROM_NAME`,
-   `CORS_ORIGINS` = `https://<vercel-app-domain>,https://<vercel-landing-domain>` (exact addresses, comma separated, no `*`).
+   `CORS_ORIGINS` = `https://<vercel-app-domain>,https://<vercel-landing-domain>` (exact addresses, comma separated, no `*`),
+   `APP_URL` = `https://<vercel-app-domain>` (the "set your password" link in welcome emails points here).
 2. **New → Blueprint** → this repo → `infra/render/render.yaml`. It creates the database, the API
    (with a 5 GB disk for encrypted KYC files) and two cron jobs (bills on the 1st at 07:30 IST, reminders daily 09:00 IST).
 3. Deploy. Migrations run automatically before traffic switches (`preDeployCommand`).
@@ -65,6 +66,9 @@ Environment variables: `NEXT_PUBLIC_API_URL` = `https://<api>`, `NEXT_PUBLIC_APP
 
 - Put both final Vercel addresses into `CORS_ORIGINS` on Render if they changed, and redeploy the API.
 - In the app: **More → Properties** add the home(s), then **Rooms** add rooms (beds are created automatically).
+- **Adding residents:** the owner adds them with their email; they get a welcome email with a code
+  (valid 48 hours) to set their own password, then sign in with email or mobile. New people can also
+  apply themselves ("Join a home" in the app, or the enquiry form on the website).
 - **More → Kitchen & meal passes** stays **off** unless the owner wants the food scan.
 
 ## Phone apps (iPhone / Android)

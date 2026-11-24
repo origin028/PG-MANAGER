@@ -59,6 +59,8 @@ class Settings(BaseSettings):
     RAZORPAY_KEY_SECRET: str = ""
     RAZORPAY_WEBHOOK_SECRET: str = ""
     PAYMENT_LINK_BASE_URL: str = "http://localhost:3000/pay"
+    APP_URL: str = "http://localhost:8081"  # owner/resident web app; used in emails
+    INVITE_CODE_HOURS: int = 48  # how long the "set your password" code in a welcome email stays valid
 
     WHATSAPP_PROVIDER: str = ""
     WHATSAPP_PHONE_NUMBER_ID: str = ""

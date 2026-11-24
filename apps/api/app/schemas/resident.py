@@ -103,6 +103,7 @@ class ResidentRead(ResidentBase):
 
 
 class ResidentDetailRead(BaseModel):
+    invite_sent: Optional[bool] = None  # set when the owner adds a resident: was the "set your password" email sent?
     id: uuid.UUID
     user_id: Optional[uuid.UUID] = None
     full_name: Optional[str] = None

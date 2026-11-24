@@ -14,6 +14,7 @@ class EmailService:
         otp: str,
         security_warning: str,
         footer_note: str,
+        validity: str = "Valid for 10 minutes only",
     ) -> str:
         """Renders responsive branded HTML email template for SMART GROUP PG'S OTP delivery."""
         return f"""<!DOCTYPE html>
@@ -42,7 +43,7 @@ class EmailService:
               <div style="background-color: #f8fafc; border: 2px dashed #93c5fd; border-radius: 8px; padding: 24px 16px; text-align: center; margin: 0 0 24px 0;">
                 <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b; margin-bottom: 8px; font-weight: 600;">Your Verification Code</div>
                 <div style="font-size: 38px; font-weight: 800; letter-spacing: 8px; color: #1e3a8a; font-family: 'Courier New', Courier, monospace;">{otp}</div>
-                <div style="margin-top: 10px; font-size: 13px; font-weight: 600; color: #dc2626;">⏱ Valid for 10 minutes only</div>
+                <div style="margin-top: 10px; font-size: 13px; font-weight: 600; color: #dc2626;">⏱ {validity}</div>
               </div>
               <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; border-radius: 4px; padding: 14px 16px; margin: 0 0 24px 0;">
                 <p style="margin: 0; color: #991b1b; font-size: 13px; line-height: 1.5; font-weight: 500;">
@@ -396,6 +397,38 @@ class EmailService:
             body_html=body_html,
         )
 
+    def send_account_invite(
+        self,
+        to_email: str,
+        otp: str,
+        name: Optional[str],
+        pg_name: str,
+        phone: Optional[str],
+        set_password_url: str,
+        valid_hours: int,
+    ) -> bool:
+        """Welcome email for a resident added by the owner: a one-time code to set their own password."""
+        greeting = f"Hello {name}," if name else "Hello,"
+        title = f"Welcome to {pg_name}"
+        subject = f"Welcome to {pg_name}: set your password"
+        login_ids = f"this email address or your phone number ({phone})" if phone else "this email address"
+        purpose_desc = (
+            f"Your account at {pg_name} is ready. To sign in for the first time, open {set_password_url} "
+            f"(or tap 'Set or forgot password' in the app), enter this email address and the code below, "
+            f"then choose your own password. After that, sign in with {login_ids} and your password."
+        )
+        security_warning = "Never share this code. The PG staff will never ask you for it."
+        footer_note = f"The code works for {valid_hours} hours. If it has expired, ask for a new one on the same screen."
+        body_text = (
+            f"{title}\n\n{greeting}\n\n{purpose_desc}\n\n"
+            f"YOUR CODE: {otp}\n(valid for {valid_hours} hours)\n\n{security_warning}\n{footer_note}\n"
+        )
+        body_html = self._render_email_html(
+            title=title, greeting=greeting, purpose_desc=purpose_desc, otp=otp,
+            security_warning=security_warning, footer_note=footer_note, validity=f"Valid for {valid_hours} hours",
+        )
+        return self.provider.send_email(to_email=to_email, subject=subject, body_text=body_text, body_html=body_html)
+
     def send_password_change_otp(
         self,
         to_email: str,
@@ -403,17 +436,14 @@ class EmailService:
         admin_name: Optional[str] = None,
     ) -> bool:
         """Dispatches 6-digit Admin Password Change Verification OTP via email."""
-        name_greeting = f"Hello {admin_name}," if admin_name else "Hello Administrator,"
-        title = "Password Change Verification Code"
-        subject = "PG Management — Password Change Verification Code"
+        name_greeting = f"Hello {admin_name}," if admin_name else "Hello,"
+        title = "Your code to set a new password"
+        subject = "Your code to set a new password"
         purpose_desc = (
-            "A password change request was initiated for your administrator account. "
-            "Please enter the 6-digit one-time password (OTP) below to verify your identity and update your credentials."
+            "Someone asked to set a new password for your account. "
+            "Enter the 6-digit code below in the app, then choose your new password."
         )
-        security_warning = (
-            "This OTP authorizes a password update for your administrative account. "
-            "Never share this code with anyone. If you did not request this, please contact support immediately."
-        )
+        security_warning = "Never share this code with anyone. Staff will never ask you for it."
         footer_note = "If you did not request a password change, please ignore this email. Your current password remains secure."
 
         body_text = (

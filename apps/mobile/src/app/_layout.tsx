@@ -19,7 +19,7 @@ function Gate() {
     if (!ready) return;
     // Paths each mode may visit; anything else redirects to that mode's home.
     const allowed: Record<string, string[]> = {
-      signedOut: ["/welcome", "/resident-login", "/owner-login", "/join"],
+      signedOut: ["/welcome", "/resident-login", "/owner-login", "/join", "/set-password"],
       resident: ["/resident", "/new-complaint", "/meal-pass"],
       kitchen: ["/kitchen"],
       owner: ["/owner", "/approve", "/manage"],

@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import field_validator, BaseModel, Field
 from app.schemas.user import UserProfile
 
 
@@ -41,7 +41,14 @@ class PasswordChangeOtpVerifyRequest(BaseModel):
 
 
 class PasswordChangeWithOtpRequest(BaseModel):
-    email: str = Field(..., description="Registered administrator email address")
-    otp: str = Field(..., min_length=4, max_length=10, description="6-digit verification code")
-    new_password: str = Field(..., min_length=6, description="New secure password")
+    email: str = Field(..., description="Account email address")
+    otp: str = Field(..., min_length=4, max_length=10, description="6-digit code from the email")
+    new_password: str = Field(..., min_length=8, max_length=128, description="New password: 8+ characters with a letter and a number")
+
+    @field_validator("new_password")
+    @classmethod
+    def letters_and_numbers(cls, v: str) -> str:
+        if not (any(c.isalpha() for c in v) and any(c.isdigit() for c in v)):
+            raise ValueError("Password needs at least one letter and one number.")
+        return v
 

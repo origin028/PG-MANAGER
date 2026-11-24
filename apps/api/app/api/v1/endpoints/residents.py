@@ -254,11 +254,50 @@ def onboard_resident(
     db.commit()
     db.refresh(resident)
 
+    invite_sent = _send_invite(db, user, resident)
+    data = _build_resident_detail(resident, db)
+    data.invite_sent = invite_sent
     return APIResponse(
         success=True,
-        message=f"Resident '{resident.full_name}' successfully onboarded.",
-        data=_build_resident_detail(resident, db),
+        message=f"Resident '{resident.full_name}' added."
+        + (f" We emailed {clean_email} a code to set their password." if invite_sent else
+           " No login email was sent: add an email address, then use 'Send login invite'." if not clean_email else
+           " The login email could not be sent right now: use 'Send login invite' to try again."),
+        data=data,
     )
+
+
+def _send_invite(db: Session, user: User, resident: Resident) -> bool:
+    from app.services.otp_service import OTPService
+
+    prop = db.get(Property, resident.property_id)
+    return OTPService(db).send_account_invite(user, prop.name if prop else "your PG")
+
+
+@router.post("/{resident_id}/send-invite", status_code=status.HTTP_200_OK, summary="Email the resident a code to set their password")
+def send_login_invite(
+    resident_id: uuid.UUID,
+    current_user: User = Depends(require_roles("SUPER_ADMIN", "PROPERTY_MANAGER")),
+    db: Session = Depends(get_db),
+):
+    """(Re)sends the welcome email with a one-time code so the resident can set their own password."""
+    from app.core.rate_limit import hit
+
+    resident = db.get(Resident, resident_id)
+    if not resident:
+        raise NotFoundError("Resident not found.")
+    verify_property_access(resident.property_id, current_user, db)
+    user = db.get(User, resident.user_id) if resident.user_id else None
+    if not user or not user.email:
+        raise BadRequestError("Add the resident's email address first.")
+    if not user.is_active or resident.status not in ("ACTIVE", "NOTICE_PERIOD"):
+        raise BadRequestError("This resident has moved out or is not active.")
+    wait = hit(f"invite:{resident_id}", 3, 3600)
+    if wait:
+        raise BadRequestError(f"Invite already sent several times. Try again in {wait // 60 + 1} minutes.")
+    if not _send_invite(db, user, resident):
+        raise BadRequestError("The email could not be sent right now. Please try again in a few minutes.")
+    return APIResponse(success=True, message=f"Login invite sent to {user.email}.", data={"email": user.email})
 
 
 @router.get("", response_model=APIResponse[PaginatedData[ResidentSummary]], status_code=status.HTTP_200_OK, summary="List Residents")
@@ -996,6 +1035,8 @@ def update_resident_details(
     phone_val = update_dict.pop("phone", None)
     if phone_val and str(phone_val).strip():
         clean_p = normalize_phone(str(phone_val))
+        if user and db.scalar(sa.select(User.id).where(User.phone == clean_p, User.id != user.id)):
+            raise ConflictError("Another account already uses this mobile number.")
         resident.phone = clean_p
         if user:
             user.phone = clean_p
@@ -1003,6 +1044,8 @@ def update_resident_details(
     email_val = update_dict.pop("email", None)
     if email_val and str(email_val).strip():
         clean_e = str(email_val).strip().lower()
+        if user and db.scalar(sa.select(User.id).where(sa.func.lower(User.email) == clean_e, User.id != user.id)):
+            raise ConflictError("Another account already uses this email address.")
         resident.email = clean_e
         if user:
             user.email = clean_e

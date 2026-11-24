@@ -20,13 +20,17 @@ type Panel = null | "edit" | "move" | "deposit" | "checkout" | "reject";
 const DOCS = [["aadhaar_front", "Aadhaar front"], ["aadhaar_back", "Aadhaar back"], ["pan_card", "PAN"], ["passport", "Passport"], ["resident_selfie", "Selfie"]] as const;
 
 export default function ResidentDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, invite } = useLocalSearchParams<{ id: string; invite?: string }>();
   const r = useData<Detail>(`/residents/${id}`);
   const dep = useData<Deposit>(`/residents/${id}/deposit`);
   const [panel, setPanel] = useState<Panel>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(
+    invite === "sent" ? "Resident added. We emailed them a code to set their password." :
+    invite === "failed" ? "Resident added, but the login email could not be sent. Use \"Send login invite\" below." :
+    invite === "none" ? "Resident added. Add their email (Edit) and send a login invite so they can sign in." : null,
+  );
   const [form, setForm] = useState({ full_name: "", phone: "", email: "", monthly_rent: "", occupation: "", emergency_contact_name: "", emergency_contact_phone: "" });
   const [bed, setBed] = useState<FreeBed | null>(null);
   const [amount, setAmount] = useState("");
@@ -55,6 +59,7 @@ export default function ResidentDetail() {
   const addDeposit = () => run(() => api(`/residents/${id}/deposit`, { method: "POST", json: { amount: Number(amount).toFixed(2) } }), "Deposit recorded.");
   const verify = () => run(() => api(`/residents/${id}/kyc/verify`, { method: "POST", json: {} }), "KYC verified.");
   const reject = () => run(() => api(`/residents/${id}/kyc/reject`, { method: "POST", json: { notes: reason.trim() } }), "KYC rejected.");
+  const invite_ = () => run(() => api(`/residents/${id}/send-invite`, { method: "POST" }), `Login invite sent to ${r.data?.email}. The code works for 48 hours.`);
 
   async function checkout(force = false) {
     setBusy(true); setError(null);
@@ -176,6 +181,15 @@ export default function ResidentDetail() {
             {d.emergency_contact_name ? <Row label="Emergency" value={`${d.emergency_contact_name} ${d.emergency_contact_phone ?? ""}`} /> : null}
             {d.date_of_birth ? <Row label="Born" value={fmtDate(d.date_of_birth)} /> : null}
           </Card>
+          {active ? (
+            <Card tone="cream" style={{ marginTop: space(3), gap: space(2) }}>
+              <Text style={[type.label, { color: color.ink }]}>App login</Text>
+              <Body muted style={{ fontSize: 14 }}>
+                {d.email ? `They sign in with ${d.email} or ${d.phone}. Send a code if they haven't set a password or forgot it.` : "Add their email (Edit) so they can set a password and sign in."}
+              </Body>
+              {d.email ? <Button title="Send login invite" variant="secondary" onPress={invite_} loading={busy} /> : null}
+            </Card>
+          ) : null}
           <Button title="Back to residents" variant="ghost" onPress={() => router.back()} style={{ marginTop: space(6) }} />
         </>
       )}

@@ -1,11 +1,11 @@
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable } from "react-native";
+import { Pressable, Text } from "react-native";
 import { ArrowLeft } from "phosphor-react-native";
 import { Button, ErrorBox, Field, Screen, Title } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { color, space } from "@/lib/theme";
+import { color, space, type } from "@/lib/theme";
 
 export default function OwnerLogin() {
   const { signInWithTokens } = useSession();
@@ -35,6 +35,9 @@ export default function OwnerLogin() {
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={submit} />
       {error ? <ErrorBox message={error} /> : null}
       <Button title="Sign in" onPress={submit} loading={busy} disabled={!email || password.length < 4} style={{ marginTop: space(2) }} />
+      <Pressable onPress={() => router.push(email.includes("@") ? { pathname: "/set-password", params: { email: email.trim() } } : "/set-password")} style={{ marginTop: space(5), alignSelf: "center" }}>
+        <Text style={[type.label, { color: color.ink }]}>Forgot password?</Text>
+      </Pressable>
     </Screen>
   );
 }

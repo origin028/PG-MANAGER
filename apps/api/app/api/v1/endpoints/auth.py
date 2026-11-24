@@ -59,6 +59,8 @@ from app.services.auth_service import AuthService
 from app.services.file_service import FileService
 from app.services.otp_service import OTPService, hash_otp, normalize_phone
 
+from app.models.user import RefreshToken
+
 router = APIRouter(dependencies=[Depends(auth_throttle)])
 
 
@@ -216,6 +218,9 @@ def reset_password_with_otp(
     user = service.verify_password_change_otp(email=payload.email, otp=payload.otp, consume=True)
 
     user.password_hash = get_password_hash(payload.new_password)
+    user.is_verified = True
+    # Sign out every existing session: whoever had the old password loses access.
+    db.execute(sa.update(RefreshToken).where(RefreshToken.user_id == user.id).values(is_revoked=True))
     db.commit()
 
     ip_address = request.client.host if request.client else None

@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text } from "react-native";
 import { ArrowLeft } from "phosphor-react-native";
@@ -10,15 +10,18 @@ import { color, space, type } from "@/lib/theme";
 /** Resident sign-in: mobile number -> 6-digit code sent to the registered email -> in. */
 export default function ResidentLogin() {
   const { signInWithTokens } = useSession();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"phone" | "otp" | "password">("phone");
+  const [step, setStep] = useState<"phone" | "otp" | "password">(mode === "password" ? "password" : "phone");
   const [password, setPassword] = useState("");
   const [sentTo, setSentTo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const digits = phone.replace(/\D/g, "").slice(-10);
+  const isEmail = phone.includes("@");
+  const identifier = isEmail ? phone.trim().toLowerCase() : digits;
 
   async function requestCode() {
     setBusy(true); setError(null);
@@ -32,7 +35,7 @@ export default function ResidentLogin() {
   async function passwordLogin() {
     setBusy(true); setError(null);
     try {
-      const d = await api<{ access_token: string; refresh_token: string }>("/auth/login", { method: "POST", json: { identifier: digits, password, client_type: "resident_mobile" }, auth: false });
+      const d = await api<{ access_token: string; refresh_token: string }>("/auth/login", { method: "POST", json: { identifier, password, client_type: "resident_mobile" }, auth: false });
       await signInWithTokens(d.access_token, d.refresh_token, "resident_mobile");
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
@@ -62,11 +65,14 @@ export default function ResidentLogin() {
         </>
       ) : step === "password" ? (
         <>
-          <Title sub="Sign in with your mobile number and password.">Welcome back</Title>
-          <Field label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" maxLength={14} />
+          <Title sub="Sign in with your mobile number or email and your password.">Welcome back</Title>
+          <Field label="Mobile or email" value={phone} onChangeText={setPhone} autoCapitalize="none" keyboardType="email-address" autoComplete="username" textContentType="username" maxLength={120} />
           <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={passwordLogin} />
           {error ? <ErrorBox message={error} /> : null}
-          <Button title="Sign in" onPress={passwordLogin} loading={busy} disabled={digits.length !== 10 || password.length < 4} style={{ marginTop: space(2) }} />
+          <Button title="Sign in" onPress={passwordLogin} loading={busy} disabled={(!isEmail && digits.length !== 10) || password.length < 4} style={{ marginTop: space(2) }} />
+          <Pressable onPress={() => router.push(isEmail ? { pathname: "/set-password", params: { email: identifier } } : "/set-password")} style={{ marginTop: space(5), alignSelf: "center" }}>
+            <Text style={[type.label, { color: color.ink }]}>Set or forgot password?</Text>
+          </Pressable>
           <Pressable onPress={() => { setError(null); setStep("phone"); }} style={{ marginTop: space(5), alignSelf: "center" }}>
             <Text style={[type.label, { color: color.ink }]}>Use a code instead</Text>
           </Pressable>
@@ -82,7 +88,9 @@ export default function ResidentLogin() {
           </Pressable>
         </>
       )}
-      <Body muted style={{ marginTop: space(8), textAlign: "center" }}>New here? Choose "Join a home" on the first screen.</Body>
+      <Body muted style={{ marginTop: space(8), textAlign: "center" }}>
+        Added by your PG? Check your email for a code, then tap &quot;Set or forgot password&quot;. Joining a new PG? Choose &quot;Join a home&quot; on the first screen.
+      </Body>
     </Screen>
   );
 }
