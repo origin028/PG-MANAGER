@@ -6,7 +6,8 @@
 #   gcloud auth login <account that owns the Firebase project>      (once)
 #   SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USERNAME=... SMTP_PASSWORD=... SMTP_FROM_EMAIL=... \
 #   CORS_ORIGINS="https://<web app>,https://<landing site>" APP_URL="https://<web app>" \
-#   [OWNER_COMPANY="Origin Living" OWNER_EMAIL=... OWNER_PHONE=... OWNER_NAME=... OWNER_PASSWORD=...] \
+#   [EXTERNAL_DATABASE_URL="postgresql+psycopg://...?...sslmode=require"]   (free Postgres; skips paid Cloud SQL) \
+#   [OWNER_COMPANY="Origin Living" OWNER_EMAIL=... OWNER_PHONE=... OWNER_NAME=... OWNER_PASSWORD=... [OWNER_TEMP_WEAK=1]] \
 #   bash infra/firebase/deploy.sh
 #
 # The production database starts EMPTY (no demo data; the demo seed scripts refuse to run in production).
@@ -54,12 +55,15 @@ gcloud storage buckets describe "gs://$BUCKET" >/dev/null 2>&1 || \
   gcloud storage buckets create "gs://$BUCKET" --location "$REGION" --uniform-bucket-level-access --public-access-prevention
 gcloud storage buckets add-iam-policy-binding "gs://$BUCKET" --member "serviceAccount:$SA" --role roles/storage.objectAdmin >/dev/null
 
+# Database: EXTERNAL_DATABASE_URL (free Supabase/Neon Postgres, ~₹0) or Cloud SQL (~₹800-1,000/month).
+if [ -z "${EXTERNAL_DATABASE_URL:-}" ]; then
 say "PostgreSQL 16 (Cloud SQL). The first creation takes about 10 minutes"
 gcloud sql instances describe "$SQL_INSTANCE" >/dev/null 2>&1 || \
   gcloud sql instances create "$SQL_INSTANCE" --database-version POSTGRES_16 --edition ENTERPRISE --tier "$SQL_TIER" \
     --region "$REGION" --storage-size 10 --storage-auto-increase --backup-start-time 20:30 --retained-backups-count 14
 gcloud sql databases describe "$DB_NAME" --instance "$SQL_INSTANCE" >/dev/null 2>&1 || \
   gcloud sql databases create "$DB_NAME" --instance "$SQL_INSTANCE"
+fi
 
 # Secrets: generated once (or taken from the environment for SMTP / owner password); never echoed.
 put_secret() { # name value [update]
@@ -71,14 +75,17 @@ put_secret() { # name value [update]
 }
 rand() { python3 -c "import secrets;print(secrets.token_urlsafe($1))"; }
 say "Secrets"
-if ! gcloud secrets describe DB_PASSWORD >/dev/null 2>&1; then
+if [ -n "${EXTERNAL_DATABASE_URL:-}" ]; then
+  put_secret DATABASE_URL "$EXTERNAL_DATABASE_URL" update
+elif ! gcloud secrets describe DB_PASSWORD >/dev/null 2>&1; then
   DB_PASS="$(rand 32)"
   put_secret DB_PASSWORD "$DB_PASS"
   gcloud sql users create "$DB_USER" --instance "$SQL_INSTANCE" --password "$DB_PASS" >/dev/null
+  put_secret DATABASE_URL "postgresql+psycopg://${DB_USER}:${DB_PASS}@/${DB_NAME}?host=/cloudsql/${CONN}"
 else
   DB_PASS="$(gcloud secrets versions access latest --secret DB_PASSWORD)"
+  put_secret DATABASE_URL "postgresql+psycopg://${DB_USER}:${DB_PASS}@/${DB_NAME}?host=/cloudsql/${CONN}"
 fi
-put_secret DATABASE_URL "postgresql+psycopg://${DB_USER}:${DB_PASS}@/${DB_NAME}?host=/cloudsql/${CONN}"
 put_secret SECRET_KEY "$(rand 48)"
 put_secret ENCRYPTION_KEY "$(python3 -c 'import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())')"
 put_secret ADMIN_REGISTRATION_SUPER_KEY "$(rand 24)"
@@ -96,8 +103,9 @@ ENVS+="@PUSH_PROVIDER=EXPO@LICENSE_ENFORCED=false@FORWARDED_ALLOW_IPS=169.254.0.
 SECRETS="DATABASE_URL=DATABASE_URL:latest,SECRET_KEY=SECRET_KEY:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest"
 SECRETS+=",ADMIN_REGISTRATION_SUPER_KEY=ADMIN_REGISTRATION_SUPER_KEY:latest,ATTENDANCE_DEVICE_KEY=ATTENDANCE_DEVICE_KEY:latest"
 SECRETS+=",SMTP_PASSWORD=SMTP_PASSWORD:latest"
-COMMON=(--image "$IMAGE" --region "$REGION" --service-account "$SA" --set-cloudsql-instances "$CONN"
+COMMON=(--image "$IMAGE" --region "$REGION" --service-account "$SA"
         --set-env-vars "$ENVS" --set-secrets "$SECRETS" --memory 512Mi)
+[ -n "${EXTERNAL_DATABASE_URL:-}" ] || COMMON+=(--set-cloudsql-instances "$CONN")
 
 job() { # name command [args...]
   local name="$1" cmd="$2"; shift 2
@@ -134,7 +142,7 @@ if [ -n "${OWNER_EMAIL:-}" ]; then
   for v in OWNER_COMPANY OWNER_PHONE OWNER_NAME OWNER_PASSWORD; do need "$v"; done
   put_secret OWNER_INITIAL_PASSWORD "$OWNER_PASSWORD" update
   gcloud run jobs deploy pg-create-owner "${COMMON[@]}" --set-secrets "${SECRETS},OWNER_PASSWORD=OWNER_INITIAL_PASSWORD:latest" \
-    --command python --args "scripts/create_owner.py,--company,${OWNER_COMPANY},--email,${OWNER_EMAIL},--phone,${OWNER_PHONE},--name,${OWNER_NAME},--beds,250" \
+    --command python --args "scripts/create_owner.py,--company,${OWNER_COMPANY},--email,${OWNER_EMAIL},--phone,${OWNER_PHONE},--name,${OWNER_NAME},--beds,250${OWNER_TEMP_WEAK:+,--temporary-weak-password}" \
     --max-retries 0 >/dev/null
   gcloud run jobs execute pg-create-owner --region "$REGION" --wait || echo "(Owner may already exist; see the job logs.)"
   gcloud secrets delete OWNER_INITIAL_PASSWORD --quiet >/dev/null || true

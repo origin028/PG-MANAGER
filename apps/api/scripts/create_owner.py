@@ -38,11 +38,17 @@ def main() -> None:
     ap.add_argument("--phone", required=True)
     ap.add_argument("--name", required=True)
     ap.add_argument("--beds", type=int, default=250, help="Bed capacity on the plan")
+    ap.add_argument("--temporary-weak-password", action="store_true",
+                    help="Testing phase only: accept a weak password (e.g. admin/admin). Change it before real residents join.")
     a = ap.parse_args()
 
     password = os.environ.get("OWNER_PASSWORD") or getpass.getpass("Owner password: ")
+    if not password:
+        raise SystemExit("A password is required.")
     if not strong(password):
-        raise SystemExit("Password must be at least 10 characters with upper case, lower case and a number.")
+        if not a.temporary_weak_password:
+            raise SystemExit("Password must be at least 10 characters with upper case, lower case and a number.")
+        print("WARNING: weak temporary owner password accepted. Change it in Settings before real residents join.")
 
     db = SessionLocal()
     try:
