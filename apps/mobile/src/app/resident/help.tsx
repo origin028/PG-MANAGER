@@ -1,7 +1,8 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback } from "react";
 import { Text, View } from "react-native";
-import { Plus, Wrench } from "phosphor-react-native";
+import { CheckCircle, Clock, Plus, Wrench } from "phosphor-react-native";
+import { IconTile, Reveal } from "@/components/motion";
 import { Badge, Body, Button, Card, Empty, ErrorBox, LoadingCards, Screen, Title, pretty, statusTone } from "@/components/ui";
 import { fmtDate } from "@/lib/dates";
 import { color, space, type } from "@/lib/theme";
@@ -20,15 +21,18 @@ export default function Help() {
       <View style={{ height: space(5) }} />
       {loading ? <LoadingCards n={2} /> : error ? <ErrorBox message={error} onRetry={reload} /> : data?.length ? (
         <View style={{ gap: space(3) }}>
-          {data.map((c) => (
-            <Card key={c.id} style={{ gap: space(2) }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(3) }}>
+          {data.map((c, i) => (
+            <Reveal key={c.id} index={i}>
+            <Card style={{ gap: space(2) }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space(3) }}>
+                <IconTile icon={["RESOLVED", "CLOSED"].includes(c.status) ? CheckCircle : c.status === "IN_PROGRESS" ? Wrench : Clock} tone={["RESOLVED", "CLOSED"].includes(c.status) ? "green" : c.status === "IN_PROGRESS" ? "blue" : "amber"} size={38} />
                 <Text style={[type.label, { color: color.ink, fontSize: 16, flex: 1 }]}>{c.title}</Text>
                 <Badge label={pretty(c.status)} tone={statusTone(c.status)} />
               </View>
               <Body muted>{pretty(c.category)} · {fmtDate(c.created_at)}</Body>
               {c.resolution_notes ? <Body>{c.resolution_notes}</Body> : null}
             </Card>
+            </Reveal>
           ))}
         </View>
       ) : <Empty icon={<Wrench size={44} color={color.ink} weight="light" />} title="No issues reported" body="Everything working? Great." />}

@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ToastHost } from "@/components/motion";
 import { WebShell } from "@/components/web-shell";
 import { useWide } from "@/lib/layout";
 import { onPortalOff } from "@/lib/api";
@@ -64,6 +65,7 @@ export default function RootLayout() {
       <SessionProvider>
         <StatusBar style="dark" />
         <Gate />
+        <ToastHost />
       </SessionProvider>
     </SafeAreaProvider>
   );

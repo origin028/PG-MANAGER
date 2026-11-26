@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { AppState, Linking, Platform, Text, View } from "react-native";
 import { CheckCircle, Receipt } from "phosphor-react-native";
+import { CountUp, Reveal, toast } from "@/components/motion";
 import { Badge, Body, Button, Card, Empty, ErrorBox, H2, LoadingCards, Row, Screen, Title, pretty, statusTone } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmtDate, monthName } from "@/lib/dates";
@@ -54,7 +55,7 @@ export default function Pay() {
   async function markPaid() {
     if (!active) return;
     await api(`/payments/upi/${active.payment_id}/return`, { method: "POST", json: {} }).catch(() => {});
-    setSubmitted(true); setActive(null);
+    setSubmitted(true); setActive(null); toast("Payment submitted. Your owner will confirm it.");
     inv.reload(); pays.reload();
   }
 
@@ -66,10 +67,10 @@ export default function Pay() {
       {error ? <View style={{ marginBottom: space(3) }}><ErrorBox message={error} /></View> : null}
 
       {submitted ? (
-        <Card tone="cream" style={{ flexDirection: "row", gap: space(3), alignItems: "center", marginBottom: space(3) }}>
+        <Reveal><Card tone="cream" style={{ flexDirection: "row", gap: space(3), alignItems: "center", marginBottom: space(3) }}>
           <CheckCircle size={28} color={color.ok} weight="fill" />
           <Body style={{ flex: 1 }}>Payment submitted. You'll see it as paid once the owner confirms.</Body>
-        </Card>
+        </Card></Reveal>
       ) : null}
 
       {active && !submitted ? (
@@ -84,16 +85,18 @@ export default function Pay() {
 
       {inv.loading ? <LoadingCards n={2} /> : inv.error ? <ErrorBox message={inv.error} onRetry={inv.reload} /> : open.length ? (
         <View style={{ gap: space(3) }}>
-          {open.map((i) => (
-            <Card key={i.id} style={{ gap: space(3) }}>
+          {open.map((i, idx) => (
+            <Reveal key={i.id} index={idx}>
+            <Card style={{ gap: space(3) }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={[type.label, { color: color.ink, fontSize: 16 }]}>{monthName(i.billing_month)}</Text>
                 <Badge label={pretty(i.status)} tone={statusTone(i.status)} />
               </View>
-              <Text style={{ fontSize: 34, fontWeight: "700", letterSpacing: -1, color: color.ink }}>{rupees(i.outstanding_balance)}</Text>
+              <CountUp value={i.outstanding_balance} format={rupees} style={{ fontSize: 34, fontWeight: "700", letterSpacing: -1, color: color.ink }} />
               <Body muted>Due {fmtDate(i.due_date)}</Body>
               <Button title="Pay with UPI" onPress={() => pay(i)} loading={busy === i.id} />
             </Card>
+            </Reveal>
           ))}
         </View>
       ) : (

@@ -20,7 +20,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { CONTENT_MAX, useWide } from "@/lib/layout";
-import { color, radius, space, type } from "@/lib/theme";
+import { Springy } from "@/components/motion";
+import { color, radius, shadow, space, type } from "@/lib/theme";
 
 export const tap = () => {
   if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -33,6 +34,7 @@ export function Screen({
   scroll = true,
   padded = true,
   narrow = false,
+  overlay,
 }: {
   children: ReactNode;
   onRefresh?: () => void;
@@ -41,6 +43,8 @@ export function Screen({
   padded?: boolean;
   /** Forms (sign-in, sign-up): a centred column on desktop instead of full width. */
   narrow?: boolean;
+  /** Floating things drawn above the scroll content (e.g. a "+" button). */
+  overlay?: ReactNode;
 }) {
   const wide = useWide();
   const body = padded
@@ -64,6 +68,7 @@ export function Screen({
           <View style={[{ flex: 1 }, body]}>{children}</View>
         )}
       </KeyboardAvoidingView>
+      {overlay}
     </SafeAreaView>
   );
 }
@@ -87,15 +92,12 @@ export function Body({ children, muted, style }: { children: ReactNode; muted?: 
 
 export function Card({ children, style, onPress, tone = "white" }: { children: ReactNode; style?: ViewStyle; onPress?: () => void; tone?: "white" | "cream" | "black" }) {
   const bg = tone === "black" ? color.ink : tone === "cream" ? color.cream : color.card;
-  const inner = <View style={[s.card, { backgroundColor: bg }, style]}>{children}</View>;
-  if (!onPress) return inner;
-  // Layout props (flex/width) belong on the touchable wrapper, otherwise the card won't stretch in a row.
-  const flat = (StyleSheet.flatten(style) ?? {}) as ViewStyle;
-  const outer: ViewStyle = { flex: flat.flex, width: flat.width, alignSelf: flat.alignSelf };
+  const lift = tone === "white" ? shadow : null;
+  if (!onPress) return <View style={[s.card, lift, { backgroundColor: bg }, style]}>{children}</View>;
   return (
-    <Pressable onPress={() => { tap(); onPress(); }} style={({ pressed }) => [outer, { transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
-      {inner}
-    </Pressable>
+    <Springy onPress={() => { tap(); onPress(); }} scaleTo={0.975} style={[s.card, lift, { backgroundColor: bg }, style]}>
+      {children}
+    </Springy>
   );
 }
 
@@ -124,15 +126,10 @@ export function Button({
   }[variant];
   const off = disabled || loading;
   return (
-    <Pressable
-      accessibilityRole="button"
+    <Springy
       disabled={off}
       onPress={() => { tap(); onPress(); }}
-      style={({ pressed }) => [
-        s.btn,
-        { backgroundColor: v.bg, borderColor: v.border, opacity: off ? 0.5 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
-        style,
-      ]}
+      style={[s.btn, { backgroundColor: v.bg, borderColor: v.border, opacity: off ? 0.5 : 1 }, style]}
     >
       {loading ? <ActivityIndicator color={v.fg} /> : (
         <View style={{ flexDirection: "row", alignItems: "center", gap: space(2) }}>
@@ -140,7 +137,7 @@ export function Button({
           <Text style={[type.label, { color: v.fg, fontSize: 16 }]}>{title}</Text>
         </View>
       )}
-    </Pressable>
+    </Springy>
   );
 }
 

@@ -1,7 +1,8 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { TextInput, View } from "react-native";
-import { MagnifyingGlass, Plus, UserCheck, Users } from "phosphor-react-native";
+import { Linking, Pressable, TextInput, View } from "react-native";
+import { MagnifyingGlass, Phone, Plus, UserCheck, Users, X } from "phosphor-react-native";
+import { Reveal } from "@/components/motion";
 import { Header, Initials, ListRow, SmallButton, nice } from "@/components/kit";
 import { Badge, Body, Card, Empty, ErrorBox, LoadingCards, Screen, Segmented, statusTone } from "@/components/ui";
 import { listOf } from "@/lib/owner";
@@ -28,7 +29,7 @@ export default function ResidentsTab() {
 
   return (
     <Screen onRefresh={() => { list.reload(); pending.reload(); }} refreshing={list.refreshing}>
-      <Header back={false} title="Residents" action={<SmallButton label="Add" icon={<Plus size={16} color={color.bg} weight="bold" />} onPress={() => router.push("/manage/add-resident")} />} />
+      <Header back={false} title="Residents" sub={items.length && !list.loading ? `${items.length} ${items.length === 1 ? "person" : "people"}${q ? " found" : ""}` : undefined} action={<SmallButton label="Add" icon={<Plus size={16} color={color.bg} weight="bold" />} onPress={() => router.push("/manage/add-resident")} />} />
       {waiting ? (
         <Card tone="black" onPress={() => router.push("/manage/approvals")} style={{ flexDirection: "row", alignItems: "center", gap: space(3), marginBottom: space(4) }}>
           <UserCheck size={26} color={color.bg} />
@@ -38,19 +39,25 @@ export default function ResidentsTab() {
       <View style={{ flexDirection: "row", alignItems: "center", gap: space(2), backgroundColor: color.card, borderRadius: radius.md, borderWidth: 1, borderColor: color.line, paddingHorizontal: space(4), height: 50, marginBottom: space(3) }}>
         <MagnifyingGlass size={18} color={color.ink3} />
         <TextInput value={q} onChangeText={setQ} placeholder="Search name, phone or room" placeholderTextColor={color.ink3} style={{ flex: 1, fontSize: 16, color: color.ink }} />
+        {q ? <Pressable onPress={() => setQ("")} hitSlop={10} accessibilityLabel="Clear search" style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: color.cream, alignItems: "center", justifyContent: "center" }}><X size={13} color={color.ink} weight="bold" /></Pressable> : null}
       </View>
       <Segmented value={status} onChange={setStatus} options={[{ value: "ACTIVE", label: "Living here" }, { value: "NOTICE_PERIOD", label: "On notice" }, { value: "CHECKED_OUT", label: "Moved out" }]} />
       <View style={{ height: space(3) }} />
       {list.loading ? <LoadingCards /> : list.error ? <ErrorBox message={list.error} onRetry={list.reload} /> : items.length ? (
         <Card style={{ paddingVertical: space(1) }}>
-          {items.map((r) => (
-            <ListRow key={r.id} leading={<Initials name={r.full_name} />} title={r.full_name}
+          {items.map((r, i) => (
+            <Reveal key={r.id} index={i} from={8}>
+            <ListRow leading={<Initials name={r.full_name} />} title={r.full_name}
               sub={`${r.room_number ? `Room ${r.room_number} · Bed ${r.bed_number}` : "No bed"} · ${r.phone}`}
               right={r.portal_enabled === false ? <Badge label="Access paused" tone="bad" />
                 : r.kyc_status === "SUBMITTED" ? <Badge label="KYC to check" tone="warn" />
                 : r.kyc_status && r.kyc_status !== "VERIFIED" ? <Badge label={r.kyc_days_left != null ? `KYC · ${r.kyc_days_left}d left` : `KYC ${nice(r.kyc_status).toLowerCase()}`} tone={r.kyc_days_left != null && r.kyc_days_left <= 2 ? "bad" : statusTone(r.kyc_status)} />
-                : undefined}
+                : <Pressable onPress={() => Linking.openURL(`tel:${r.phone}`).catch(() => {})} hitSlop={8} accessibilityLabel={`Call ${r.full_name}`}
+                    style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, backgroundColor: color.cream, alignItems: "center", justifyContent: "center", opacity: pressed ? 0.6 : 1 })}>
+                    <Phone size={17} color={color.ink} weight="fill" />
+                  </Pressable>}
               onPress={() => router.push({ pathname: "/manage/resident/[id]", params: { id: r.id } })} />
+            </Reveal>
           ))}
         </Card>
       ) : <Empty icon={<Users size={44} color={color.ink} weight="light" />} title={q ? "No matches" : "No residents here"} />}

@@ -1,9 +1,10 @@
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import { ChartLineUp, FilePdf, Plus, Trash, Wallet } from "phosphor-react-native";
-import { Divider, Header, ListRow, SmallButton, confirmAction, digits, nice } from "@/components/kit";
-import { Badge, Body, Button, Card, Empty, ErrorBox, Field, H2, LoadingCards, Row, Screen, Segmented, statusTone } from "@/components/ui";
+import { Linking, Platform, Pressable, Text, View } from "react-native";
+import { ChartLineUp, FilePdf, Phone, Plus, Trash, Wallet, WhatsappLogo } from "phosphor-react-native";
+import { Header, ListRow, SmallButton, confirmAction, digits, nice } from "@/components/kit";
+import { CountUp, IconTile, ProgressBar, Reveal, toast } from "@/components/motion";
+import { Badge, Body, Button, Card, Empty, ErrorBox, Field, H2, LoadingCards, Screen, Segmented, statusTone } from "@/components/ui";
 import { api } from "@/lib/api";
 import { downloadProtected } from "@/lib/download";
 import { fmtDate, monthName } from "@/lib/dates";
@@ -14,10 +15,20 @@ import { useData } from "@/lib/use-data";
 type Report = { gross_collections: number; total_expenses: number; net_operating_profit: number; pending_rent: number; expenses_by_category: Record<string, number> };
 type Expense = { id: string; title: string; category: string; amount: number; date: string };
 type Invoice = { id: string; invoice_number: string; billing_month: string; invoice_type: string; amount: number; paid_amount: number; due_date: string; status: string; resident_id: string; resident_name?: string; room_number?: string };
-type Res = { id: string; full_name: string; room_number?: string };
+type Res = { id: string; full_name: string; room_number?: string; phone?: string };
 const CATS = ["GROCERIES", "SALARIES", "UTILITIES", "MAINTENANCE", "SUPPLIES", "OTHER"];
 const OPEN = ["PENDING", "PARTIALLY_PAID", "OVERDUE"];
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** Opens WhatsApp with a polite, pre-filled rent reminder to the resident. */
+function remind(phone: string, name: string, amount: number, due: string, month: string) {
+  const n = phone.replace(/\D/g, "").slice(-10);
+  const text = `Hi ${name.split(" ")[0]}, a friendly reminder that ${rupees(amount)} for ${month} was due on ${fmtDate(due)}. You can pay by UPI from the Origin Living app. Thank you!`;
+  const url = `https://wa.me/91${n}?text=${encodeURIComponent(text)}`;
+  if (Platform.OS === "web") globalThis.open?.(url, "_blank");
+  else Linking.openURL(url).catch(() => toast("Couldn't open WhatsApp", "error"));
+}
+const call = (phone: string) => Linking.openURL(`tel:${phone.replace(/\D/g, "").slice(-10)}`).catch(() => {});
 
 function Overview() {
   const rep = useData<Report>("/reports/financial");
@@ -30,14 +41,20 @@ function Overview() {
     <>
       <Card tone="black" style={{ gap: space(1) }}>
         <Text style={[type.small, { color: "#ffffffaa" }]}>{r.net_operating_profit < 0 ? "Loss" : "Profit"}</Text>
-        <Text style={{ fontSize: 44, fontWeight: "700", letterSpacing: -1.5, color: color.bg }}>{rupees(r.net_operating_profit)}</Text>
+        <CountUp value={r.net_operating_profit} format={rupees} style={{ fontSize: 44, fontWeight: "700", letterSpacing: -1.5, color: r.net_operating_profit < 0 ? "#ff8a80" : color.bg }} />
         <Text style={[type.small, { color: "#ffffffaa" }]}>{rupees(r.gross_collections)} collected · {rupees(r.total_expenses)} spent</Text>
       </Card>
-      <Card style={{ marginTop: space(3), paddingVertical: space(2) }}>
-        <Row label="Collected" value={rupees(r.gross_collections)} /><Divider />
-        <Row label="Spent" value={rupees(r.total_expenses)} /><Divider />
-        <Row label="Rent still pending" value={rupees(r.pending_rent)} />
-      </Card>
+      <View style={{ flexDirection: "row", gap: space(3), marginTop: space(3) }}>
+        {([["Collected", r.gross_collections, "green", Wallet], ["Spent", r.total_expenses, "rose", Trash], ["Pending", r.pending_rent, "amber", ChartLineUp]] as const).map(([label, v, tone, I], i) => (
+          <Reveal key={label} index={i + 1} style={{ flex: 1 }}>
+            <Card style={{ padding: space(3.5), gap: space(2) }}>
+              <IconTile icon={I} tone={tone} size={34} />
+              <CountUp value={v} format={rupees} style={[type.label, { color: color.ink, fontSize: 16 }]} />
+              <Body muted style={{ fontSize: 12 }}>{label}</Body>
+            </Card>
+          </Reveal>
+        ))}
+      </View>
       {cats.length ? (
         <>
           <H2>Where money went</H2>
@@ -45,7 +62,7 @@ function Overview() {
             {cats.map(([k, v]) => (
               <View key={k} style={{ gap: space(1.5) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={[type.label, { color: color.ink }]}>{nice(k)}</Text><Body>{rupees(v)}</Body></View>
-                <View style={{ height: 6, borderRadius: 3, width: `${(v / max) * 100}%`, backgroundColor: color.ink }} />
+                <ProgressBar pct={(v / max) * 100} />
               </View>
             ))}
           </Card>
@@ -63,7 +80,7 @@ function Dues({ propertyId }: { propertyId: string }) {
   const [bill, setBill] = useState<null | { resident: string; type: string; amount: string; due: string; notes: string }>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const phoneOf = new Map(listOf<Res>(res.data as never).map((r) => [r.id, r.phone ?? ""]));
 
   const dues = (inv.data ?? []).filter((i) => OPEN.includes(i.status)).sort((a, b) => a.due_date.localeCompare(b.due_date));
   const total = dues.reduce((s, i) => s + (i.amount - i.paid_amount), 0);
@@ -74,7 +91,7 @@ function Dues({ propertyId }: { propertyId: string }) {
       const r = await api<{ receipt_number: string; remaining_balance: number }>("/payments/collect", {
         method: "POST", json: { resident_id: i.resident_id, invoice_id: i.id, property_id: propertyId, collect_amount: Number(pay.amount).toFixed(2), payment_mode: pay.mode, transaction_reference: pay.ref.trim() || null },
       });
-      setOpen(null); setNotice(`Recorded. Receipt ${r.receipt_number}${r.remaining_balance > 0 ? `, ${rupees(r.remaining_balance)} still due` : ""}.`); inv.reload();
+      setOpen(null); toast(`Payment saved · receipt ${r.receipt_number}${r.remaining_balance > 0 ? ` · ${rupees(r.remaining_balance)} still due` : ""}`); inv.reload();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   async function createBill() {
@@ -82,7 +99,7 @@ function Dues({ propertyId }: { propertyId: string }) {
     setBusy(true); setError(null);
     try {
       await api("/invoices", { method: "POST", json: { property_id: propertyId, resident_id: bill.resident, invoice_type: bill.type, amount: Number(bill.amount), due_date: bill.due, billing_month: bill.due.slice(0, 7), notes: bill.notes.trim() || null } });
-      setBill(null); setNotice("Bill created. The resident sees it in their app."); inv.reload();
+      setBill(null); toast("Bill created. The resident sees it in their app."); inv.reload();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
 
@@ -92,7 +109,6 @@ function Dues({ propertyId }: { propertyId: string }) {
         <Body>{dues.length} unpaid · {rupees(total)}</Body>
         <SmallButton label="New bill" tone="light" icon={<Plus size={16} color={color.ink} />} onPress={() => setBill({ resident: "", type: "MAINTENANCE", amount: "", due: today(), notes: "" })} />
       </View>
-      {notice ? <Card tone="cream" style={{ marginBottom: space(3) }}><Body>{notice}</Body></Card> : null}
       {error ? <View style={{ marginBottom: space(3) }}><ErrorBox message={error} /></View> : null}
       {bill ? (
         <Card style={{ marginBottom: space(3) }}>
@@ -110,10 +126,13 @@ function Dues({ propertyId }: { propertyId: string }) {
       ) : null}
       {inv.loading ? <LoadingCards /> : inv.error ? <ErrorBox message={inv.error} onRetry={inv.reload} /> : dues.length ? (
         <View style={{ gap: space(3) }}>
-          {dues.map((i) => {
+          {dues.map((i, idx) => {
             const bal = i.amount - i.paid_amount;
+            const phone = phoneOf.get(i.resident_id);
+            const late = Math.round((Date.parse(today()) - Date.parse(i.due_date.slice(0, 10))) / 86_400_000);
             return (
-              <Card key={i.id} style={{ gap: space(2) }}>
+              <Reveal key={i.id} index={idx}>
+              <Card style={{ gap: space(2) }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space(3) }}>
                   <View style={{ flex: 1 }}>
                     <Text style={[type.label, { color: color.ink, fontSize: 16 }]}>{i.resident_name ?? "Resident"}{i.room_number ? ` · ${i.room_number}` : ""}</Text>
@@ -121,7 +140,10 @@ function Dues({ propertyId }: { propertyId: string }) {
                   </View>
                   <Badge label={nice(i.status)} tone={statusTone(i.status)} />
                 </View>
-                <Text style={{ fontSize: 24, fontWeight: "700", color: color.ink }}>{rupees(bal)}</Text>
+                <View style={{ flexDirection: "row", alignItems: "baseline", gap: space(2) }}>
+                  <Text style={{ fontSize: 24, fontWeight: "700", color: color.ink }}>{rupees(bal)}</Text>
+                  {late > 0 ? <Text style={[type.small, { color: color.bad, fontWeight: "700" }]}>{late} day{late === 1 ? "" : "s"} late</Text> : null}
+                </View>
                 {open === i.id ? (
                   <>
                     <Field label="Amount received (₹)" value={pay.amount} onChangeText={(t) => setPay({ ...pay, amount: digits(t) })} keyboardType="number-pad" />
@@ -130,8 +152,25 @@ function Dues({ propertyId }: { propertyId: string }) {
                     {pay.mode !== "CASH" ? <Field label="Reference / UTR" value={pay.ref} onChangeText={(t) => setPay({ ...pay, ref: t })} autoCapitalize="characters" /> : null}
                     <Button title="Save payment" onPress={() => collect(i)} loading={busy} disabled={Number(pay.amount) <= 0 || Number(pay.amount) > bal || (pay.mode !== "CASH" && pay.ref.trim().length < 4)} />
                   </>
-                ) : <Button title="Record payment" variant="secondary" onPress={() => { setOpen(i.id); setPay({ amount: String(bal), mode: "CASH", ref: "" }); setError(null); }} />}
+                ) : (
+                  <View style={{ flexDirection: "row", gap: space(2) }}>
+                    <Button title="Record payment" variant="secondary" onPress={() => { setOpen(i.id); setPay({ amount: String(bal), mode: "CASH", ref: "" }); setError(null); }} style={{ flex: 1 }} />
+                    {phone ? (
+                      <>
+                        <Pressable onPress={() => remind(phone, i.resident_name ?? "there", bal, i.due_date, monthName(i.billing_month))} accessibilityLabel="Send WhatsApp reminder"
+                          style={({ pressed }) => ({ width: 54, height: 54, borderRadius: 27, backgroundColor: "#e3f7ea", alignItems: "center", justifyContent: "center", transform: [{ scale: pressed ? 0.92 : 1 }] })}>
+                          <WhatsappLogo size={24} color="#1a8d4a" weight="fill" />
+                        </Pressable>
+                        <Pressable onPress={() => call(phone)} accessibilityLabel="Call resident"
+                          style={({ pressed }) => ({ width: 54, height: 54, borderRadius: 27, backgroundColor: color.cream, alignItems: "center", justifyContent: "center", transform: [{ scale: pressed ? 0.92 : 1 }] })}>
+                          <Phone size={22} color={color.ink} weight="fill" />
+                        </Pressable>
+                      </>
+                    ) : null}
+                  </View>
+                )}
               </Card>
+              </Reveal>
             );
           })}
         </View>
@@ -178,10 +217,10 @@ function Expenses({ propertyId }: { propertyId: string }) {
   async function add() {
     if (!f) return;
     setBusy(true); setError(null);
-    try { await api("/expenses", { method: "POST", json: { property_id: propertyId, title: f.title.trim(), amount: Number(f.amount).toFixed(2), category: f.category, method: f.method, date: today() } }); setF(null); exp.reload(); }
+    try { await api("/expenses", { method: "POST", json: { property_id: propertyId, title: f.title.trim(), amount: Number(f.amount).toFixed(2), category: f.category, method: f.method, date: today() } }); setF(null); toast("Expense saved"); exp.reload(); }
     catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
-  const remove = (e: Expense) => confirmAction("Delete expense?", `${e.title} · ${rupees(e.amount)}`, "Delete", async () => { try { await api(`/expenses/${e.id}`, { method: "DELETE" }); exp.reload(); } catch (x) { setError((x as Error).message); } });
+  const remove = (e: Expense) => confirmAction("Delete expense?", `${e.title} · ${rupees(e.amount)}`, "Delete", async () => { try { await api(`/expenses/${e.id}`, { method: "DELETE" }); toast("Expense deleted"); exp.reload(); } catch (x) { setError((x as Error).message); } });
   return (
     <>
       {f ? (
@@ -214,15 +253,21 @@ function Expenses({ propertyId }: { propertyId: string }) {
 
 export default function MoneyTab() {
   const { props, current, setCurrent } = useProperties();
-  const [tab, setTab] = useState<"overview" | "dues" | "history" | "expenses">("overview");
+  type Tab = "overview" | "dues" | "history" | "expenses";
+  const params = useLocalSearchParams<{ tab?: Tab }>();
+  const valid = (t?: string): t is Tab => !!t && ["overview", "dues", "history", "expenses"].includes(t);
+  const [tab, setTab] = useState<Tab>(valid(params.tab) ? params.tab : "overview");
+  // Deep links like /owner/money?tab=dues (from the home screen) open the right section.
+  const [seenParam, setSeenParam] = useState(params.tab);
+  if (params.tab !== seenParam) { setSeenParam(params.tab); if (valid(params.tab)) setTab(params.tab); }
   const [key, setKey] = useState(0);
   useFocusEffect(useCallback(() => { setKey((k) => k + 1); }, []));
   return (
     <Screen onRefresh={() => setKey((k) => k + 1)}>
       <Header back={false} title="Money" />
       <View style={{ flexDirection: "row", gap: space(3), marginBottom: space(4) }}>
-        <Card onPress={() => router.push("/manage/confirm-payments")} style={{ flex: 1, gap: space(2) }}><Wallet size={22} color={color.ink} /><Text style={[type.label, { color: color.ink }]}>Confirm UPI</Text></Card>
-        <Card onPress={() => router.push("/manage/finance")} style={{ flex: 1, gap: space(2) }}><ChartLineUp size={22} color={color.ink} /><Text style={[type.label, { color: color.ink }]}>Finance</Text></Card>
+        <Card onPress={() => router.push("/manage/confirm-payments")} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: space(3), padding: space(4) }}><IconTile icon={Wallet} tone="green" size={38} /><Text style={[type.label, { color: color.ink }]}>Confirm UPI</Text></Card>
+        <Card onPress={() => router.push("/manage/finance")} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: space(3), padding: space(4) }}><IconTile icon={ChartLineUp} tone="blue" size={38} /><Text style={[type.label, { color: color.ink }]}>Finance</Text></Card>
       </View>
       {props.length > 1 ? <View style={{ marginBottom: space(3) }}><Segmented value={current ?? ""} onChange={setCurrent} options={props.map((p) => ({ value: p.id, label: p.name }))} /></View> : null}
       <Segmented value={tab} onChange={setTab} options={[{ value: "overview", label: "Overview" }, { value: "dues", label: "Dues" }, { value: "history", label: "History" }, { value: "expenses", label: "Expenses" }]} />

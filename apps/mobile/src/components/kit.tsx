@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { Alert, Platform, Pressable, Text, View } from "react-native";
 import { ArrowLeft, CaretRight } from "phosphor-react-native";
 import { Body, tap } from "@/components/ui";
-import { color, radius, space, type } from "@/lib/theme";
+import { color, radius, space, tint, type } from "@/lib/theme";
 
 export function Header({ title, sub, action, back = true }: { title: string; sub?: string; action?: ReactNode; back?: boolean }) {
   return (
@@ -58,10 +58,14 @@ export function Divider() {
   return <View style={{ height: 1, backgroundColor: color.line }} />;
 }
 
-export function Initials({ name }: { name: string }) {
+const AVATAR_TONES = ["violet", "blue", "teal", "green", "amber", "rose"] as const;
+/** Round avatar with initials; each name always gets the same soft colour. */
+export function Initials({ name, size = 42 }: { name: string; size?: number }) {
+  const h = [...name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const [bg, fg] = tint[AVATAR_TONES[h % AVATAR_TONES.length]];
   return (
-    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: color.cream, alignItems: "center", justifyContent: "center" }}>
-      <Text style={[type.label, { color: color.ink }]}>{name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</Text>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: "center", justifyContent: "center" }}>
+      <Text style={[type.label, { color: fg, fontWeight: "700" }]}>{name.split(" ").filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}</Text>
     </View>
   );
 }

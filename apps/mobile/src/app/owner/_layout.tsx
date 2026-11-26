@@ -3,7 +3,9 @@ import { Tabs } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { AppState, Platform, Text, View } from "react-native";
 import { Bed, DotsThreeOutline, House, LockSimple, Users, Wallet } from "phosphor-react-native";
+import { tabBarBase, tabIcon } from "@/components/tab-icon";
 import { Button } from "@/components/ui";
+import { api } from "@/lib/api";
 import { useWide } from "@/lib/layout";
 import { color, space, type } from "@/lib/theme";
 
@@ -29,16 +31,27 @@ function useBiometricLock() {
   return { locked, unlock };
 }
 
-function icon(I: typeof House) {
-  function TabIcon({ color: c, focused }: { color: unknown; focused: boolean }) {
-    return <I size={24} color={c as string} weight={focused ? "fill" : "regular"} />;
-  }
-  return TabIcon;
+const icon = tabIcon;
+
+/** Small counts for the tab bar badges; refreshed every minute and when the app comes back. */
+function useTabCounts() {
+  const [n, setN] = useState({ signups: 0 });
+  useEffect(() => {
+    let alive = true;
+    const load = () => api<{ items?: unknown[] } | unknown[]>("/residents/pending-approvals")
+      .then((d) => { if (alive) setN({ signups: (Array.isArray(d) ? d : d.items ?? []).length }); }).catch(() => {});
+    load();
+    const t = setInterval(load, 60_000);
+    const sub = AppState.addEventListener("change", (st) => { if (st === "active") load(); });
+    return () => { alive = false; clearInterval(t); sub.remove(); };
+  }, []);
+  return n;
 }
 
 export default function OwnerTabs() {
   const { locked, unlock } = useBiometricLock();
   const wide = useWide();
+  const counts = useTabCounts();
   if (locked) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: space(4), backgroundColor: color.bg, padding: space(8) }}>
@@ -54,13 +67,15 @@ export default function OwnerTabs() {
         headerShown: false,
         tabBarActiveTintColor: color.ink,
         tabBarInactiveTintColor: color.ink3,
-        tabBarStyle: wide ? { display: "none" } : { backgroundColor: color.card, borderTopColor: color.line, height: 84, paddingTop: 8 },
+        tabBarStyle: wide ? { display: "none" } : tabBarBase,
+        tabBarBadgeStyle: { backgroundColor: color.bad, fontSize: 10, fontWeight: "700" },
         tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         sceneStyle: { backgroundColor: color.bg },
+        animation: "shift",
       }}
     >
       <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: icon(House) }} />
-      <Tabs.Screen name="residents" options={{ title: "Residents", tabBarIcon: icon(Users) }} />
+      <Tabs.Screen name="residents" options={{ title: "Residents", tabBarIcon: icon(Users), tabBarBadge: counts.signups || undefined }} />
       <Tabs.Screen name="rooms" options={{ title: "Rooms", tabBarIcon: icon(Bed) }} />
       <Tabs.Screen name="money" options={{ title: "Money", tabBarIcon: icon(Wallet) }} />
       <Tabs.Screen name="more" options={{ title: "More", tabBarIcon: icon(DotsThreeOutline) }} />
