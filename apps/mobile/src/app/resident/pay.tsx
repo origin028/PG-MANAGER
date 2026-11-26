@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { AppState, Linking, Platform, Text, View } from "react-native";
-import { CheckCircle, Receipt } from "phosphor-react-native";
-import { CountUp, Reveal, toast } from "@/components/motion";
+import { AppState, Linking, Platform, Pressable, Text, View } from "react-native";
+import { CaretRight, CheckCircle, Receipt } from "phosphor-react-native";
+import { CountUp, Reveal, Sheet, toast } from "@/components/motion";
 import { Badge, Body, Button, Card, Empty, ErrorBox, H2, LoadingCards, Row, Screen, Title, pretty, statusTone } from "@/components/ui";
 import { api } from "@/lib/api";
 import { fmtDate, monthName } from "@/lib/dates";
@@ -9,7 +9,15 @@ import { color, rupees, space, type } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
 
 type Invoice = { id: string; invoice_number: string; billing_month: string; amount: number; outstanding_balance: number; due_date: string; status: string; can_pay: boolean };
-type Payment = { id?: string; payment_number?: string; amount: number; status: string; created_at?: string; paid_at?: string };
+type Payment = {
+  id?: string; payment_number?: string; invoice_number?: string; amount: number; status: string; created_at?: string; paid_at?: string;
+  payment_mode?: string; transaction_reference?: string; receipt_number?: string | null;
+};
+/** "INV-202602-..." -> "February 2026" */
+const monthOf = (p: Payment) => {
+  const m = p.invoice_number?.match(/INV-(\d{4})(\d{2})/);
+  return m ? monthName(`${m[1]}-${m[2]}`) : null;
+};
 type Upi = { payment_id: string; amount: number; payee_vpa: string; payee_name: string; upi_uri: string };
 
 /**
@@ -23,6 +31,7 @@ export default function Pay() {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [receipt, setReceipt] = useState<Payment | null>(null);
   const pending = useRef<Upi | null>(null);
 
   const onReturnFromUpi = useEffectEvent(async () => {
@@ -107,17 +116,34 @@ export default function Pay() {
       {pays.data?.length ? (
         <Card style={{ paddingVertical: space(2) }}>
           {pays.data.slice(0, 12).map((p, idx) => (
-            <View key={p.id ?? idx} style={{ flexDirection: "row", alignItems: "center", gap: space(3), paddingVertical: space(3) }}>
+            <Pressable key={p.id ?? idx} onPress={() => setReceipt(p)} accessibilityRole="button" accessibilityLabel={`Receipt for ${rupees(p.amount)}`}
+              style={{ flexDirection: "row", alignItems: "center", gap: space(3), paddingVertical: space(3) }}>
               <Receipt size={22} color={color.ink} weight="light" />
               <View style={{ flex: 1 }}>
-                <Text style={[type.label, { color: color.ink }]}>{rupees(p.amount)}</Text>
+                <Text style={[type.label, { color: color.ink }]}>{rupees(p.amount)}{monthOf(p) ? <Text style={{ color: color.ink3, fontWeight: "400" }}>{` · ${monthOf(p)}`}</Text> : null}</Text>
                 <Body muted>{fmtDate(p.paid_at ?? p.created_at)}</Body>
               </View>
               <Badge label={pretty(p.status)} tone={statusTone(p.status)} />
-            </View>
+              <CaretRight size={16} color={color.ink3} />
+            </Pressable>
           ))}
         </Card>
       ) : <Body muted>No payments yet.</Body>}
+
+      <Sheet open={!!receipt} onClose={() => setReceipt(null)} title="Payment receipt">
+        {receipt ? (
+          <View style={{ gap: space(1) }}>
+            <Text style={{ fontSize: 34, fontWeight: "700", color: color.ink, letterSpacing: -1 }}>{rupees(receipt.amount)}</Text>
+            <View style={{ alignSelf: "flex-start", marginBottom: space(2) }}><Badge label={pretty(receipt.status)} tone={statusTone(receipt.status)} /></View>
+            {monthOf(receipt) ? <Row label="Rent for" value={monthOf(receipt)!} /> : null}
+            <Row label="Paid on" value={fmtDate(receipt.paid_at ?? receipt.created_at)} />
+            <Row label="Method" value={pretty(receipt.payment_mode ?? "UPI")} />
+            <Row label="Receipt no." value={receipt.receipt_number ?? receipt.payment_number ?? "-"} />
+            {receipt.invoice_number ? <Row label="Bill no." value={receipt.invoice_number} /> : null}
+            {receipt.transaction_reference && receipt.transaction_reference !== receipt.payment_number ? <Row label="UPI reference" value={receipt.transaction_reference} /> : null}
+          </View>
+        ) : null}
+      </Sheet>
     </Screen>
   );
 }

@@ -74,6 +74,8 @@ class Resident(Base, UUIDMixin, TimestampMixin):
     actual_check_out_date: Mapped[Optional[date]] = mapped_column(sa.Date, nullable=True)
     security_deposit: Mapped[float] = mapped_column(sa.Numeric(10, 2), default=0.00, nullable=False)
     monthly_rent: Mapped[float] = mapped_column(sa.Numeric(10, 2), default=0.00, nullable=False)
+    # Day of the month rent is due (1-28). Empty means the company default (RENT_DUE_DAY).
+    rent_due_day: Mapped[Optional[int]] = mapped_column(sa.SmallInteger, nullable=True)
 
     # KYC
     kyc_status: Mapped[str] = mapped_column(

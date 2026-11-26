@@ -4,6 +4,8 @@ import { Pressable, Text } from "react-native";
 import { ArrowLeft } from "phosphor-react-native";
 import { Button, ErrorBox, Field, Screen, Title } from "@/components/ui";
 import { api } from "@/lib/api";
+import { DEMO } from "@/demo"; // DEMO-MODE
+import { DemoHint } from "@/demo/demo-entry"; // DEMO-MODE
 import { useSession } from "@/lib/session";
 import { color, space, type } from "@/lib/theme";
 
@@ -31,6 +33,7 @@ export default function OwnerLogin() {
         <ArrowLeft size={24} color={color.ink} />
       </Pressable>
       <Title sub="Owners and kitchen staff sign in here.">Staff login</Title>
+      {DEMO && <DemoHint login="admin" password="admin" onUse={() => { setEmail("admin"); setPassword("admin"); }} />}{/* DEMO-MODE */}
       <Field label="Email or mobile" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="username" />
       <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={submit} />
       {error ? <ErrorBox message={error} /> : null}

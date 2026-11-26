@@ -134,6 +134,7 @@ class ResidentApprovalActionRequest(BaseModel):
     monthly_rent: Optional[float] = None
     security_deposit: Optional[float] = None
     check_in_date: Optional[date] = None
+    rent_due_day: Optional[int] = Field(default=None, ge=1, le=28, description="Day of the month rent is due (1-28)")
 
 
 class ResidentRejectionActionRequest(BaseModel):

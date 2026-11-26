@@ -23,3 +23,16 @@ export function DemoEntry() {
     </View>
   );
 }
+
+/** DEMO MODE: shows the demo login on the sign-in screens and fills it in with one tap. */
+export function DemoHint({ login, password, onUse }: { login: string; password: string; onUse: () => void }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space(3), padding: space(3.5), borderRadius: radius.md, backgroundColor: color.cream, marginBottom: space(4) }}>
+      <View style={{ flex: 1 }}>
+        <Text style={[type.label, { color: color.ink }]}>Demo login</Text>
+        <Text style={[type.small, { color: color.ink3 }]}>{login} / {password}</Text>
+      </View>
+      <Button title="Use it" variant="secondary" onPress={onUse} />
+    </View>
+  );
+}

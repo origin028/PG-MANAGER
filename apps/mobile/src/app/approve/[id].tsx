@@ -21,6 +21,7 @@ export default function Approve() {
   const [bedId, setBedId] = useState<string>("");
   const [rent, setRent] = useState("");
   const [deposit, setDeposit] = useState("");
+  const [dueDay, setDueDay] = useState("5");
   const [reason, setReason] = useState("");
   const [mode, setMode] = useState<"approve" | "reject">("approve");
   const [busy, setBusy] = useState(false);
@@ -34,6 +35,7 @@ export default function Approve() {
   }, [p?.property_id]);
 
   const bed = beds?.find((b) => b.id === bedId);
+  const validDay = Number(dueDay) >= 1 && Number(dueDay) <= 28;
   const chooseBed = (id: string) => {
     setBedId(id);
     const b = beds?.find((x) => x.id === id);
@@ -44,7 +46,7 @@ export default function Approve() {
     if (!bed) return;
     setBusy(true); setError(null);
     try {
-      await api(`/residents/${id}/approve`, { method: "POST", json: { room_id: bed.room_id, bed_id: bed.id, monthly_rent: Number(rent) } });
+      await api(`/residents/${id}/approve`, { method: "POST", json: { room_id: bed.room_id, bed_id: bed.id, monthly_rent: Number(rent), rent_due_day: Number(dueDay) } });
       if (Number(deposit) > 0) await api(`/residents/${id}/deposit`, { method: "POST", json: { amount: Number(deposit).toFixed(2), note: "Deposit received at joining" } });
       router.back();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -93,9 +95,11 @@ export default function Approve() {
           ) : <Body muted>No free beds in this home. Free a bed first.</Body>}
           <View style={{ height: space(4) }} />
           <Field label="Monthly rent (₹)" value={rent} onChangeText={(t) => setRent(t.replace(/\D/g, ""))} keyboardType="number-pad" />
+          <Field label="Rent due every month on (day)" value={dueDay} onChangeText={(t) => setDueDay(t.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad"
+            hint={validDay ? `Rent is due on day ${dueDay} of every month.` : "Enter a day from 1 to 28."} />
           <Field label="Deposit received (₹)" value={deposit} onChangeText={(t) => setDeposit(t.replace(/\D/g, ""))} keyboardType="number-pad" hint={Number(deposit) > 0 ? `They get ${rupees(Number(deposit) / 2)} back when they leave.` : "Leave empty if not collected yet."} />
           {error ? <ErrorBox message={error} /> : null}
-          <Button title="Approve and assign bed" onPress={approve} loading={busy} disabled={!bed || Number(rent) <= 0} style={{ marginTop: space(2) }} />
+          <Button title="Approve and assign bed" onPress={approve} loading={busy} disabled={!bed || Number(rent) <= 0 || !validDay} style={{ marginTop: space(2) }} />
         </>
       ) : (
         <>

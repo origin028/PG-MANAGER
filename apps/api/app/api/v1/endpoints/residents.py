@@ -608,6 +608,8 @@ def approve_resident_registration(
 
     if payload.monthly_rent is not None:
         resident.monthly_rent = payload.monthly_rent
+    if payload.rent_due_day is not None:
+        resident.rent_due_day = payload.rent_due_day
     if payload.security_deposit is not None:
         resident.security_deposit = payload.security_deposit
     if payload.check_in_date is not None:

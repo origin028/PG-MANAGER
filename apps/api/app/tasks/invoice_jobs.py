@@ -16,9 +16,9 @@ from app.models.property import Property
 from app.models.resident import Resident
 
 
-def _due_date(billing_month: str) -> date:
+def _due_date(billing_month: str, due_day: int | None = None) -> date:
     year, month = (int(x) for x in billing_month.split("-"))
-    return date(year, month, min(settings.RENT_DUE_DAY, calendar.monthrange(year, month)[1]))
+    return date(year, month, min(due_day or settings.RENT_DUE_DAY, calendar.monthrange(year, month)[1]))
 
 
 def generate_monthly_invoices(db: Session, billing_month: str) -> dict:
@@ -63,7 +63,7 @@ def generate_monthly_invoices(db: Session, billing_month: str) -> dict:
                 invoice_type="RENT",
                 amount=Decimal(str(r.monthly_rent)),
                 paid_amount=Decimal("0.00"),
-                due_date=_due_date(billing_month),
+                due_date=_due_date(billing_month, r.rent_due_day),
                 status="PENDING",
                 notes="Auto-generated monthly rent",
             )

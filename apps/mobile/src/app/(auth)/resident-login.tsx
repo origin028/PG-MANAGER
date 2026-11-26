@@ -4,6 +4,8 @@ import { Pressable, Text } from "react-native";
 import { ArrowLeft } from "phosphor-react-native";
 import { Body, Button, ErrorBox, Field, Screen, Title } from "@/components/ui";
 import { api } from "@/lib/api";
+import { DEMO } from "@/demo"; // DEMO-MODE
+import { DemoHint } from "@/demo/demo-entry"; // DEMO-MODE
 import { useSession } from "@/lib/session";
 import { color, space, type } from "@/lib/theme";
 
@@ -56,6 +58,7 @@ export default function ResidentLogin() {
       {step === "phone" ? (
         <>
           <Title sub="We'll send a 6-digit code to the email on your account.">Welcome back</Title>
+          {DEMO && <DemoHint login="0000000000" password="0000000000" onUse={() => { setPhone("0000000000"); setPassword("0000000000"); setStep("password"); }} />}{/* DEMO-MODE */}
           <Field label="Mobile number" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" maxLength={14} autoFocus />
           {error ? <ErrorBox message={error} /> : null}
           <Button title="Send code" onPress={requestCode} loading={busy} disabled={digits.length !== 10} style={{ marginTop: space(2) }} />
@@ -66,6 +69,7 @@ export default function ResidentLogin() {
       ) : step === "password" ? (
         <>
           <Title sub="Sign in with your mobile number or email and your password.">Welcome back</Title>
+          {DEMO && <DemoHint login="0000000000" password="0000000000" onUse={() => { setPhone("0000000000"); setPassword("0000000000"); setStep("password"); }} />}{/* DEMO-MODE */}
           <Field label="Mobile or email" value={phone} onChangeText={setPhone} autoCapitalize="none" keyboardType="email-address" autoComplete="username" textContentType="username" maxLength={120} />
           <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" onSubmitEditing={passwordLogin} />
           {error ? <ErrorBox message={error} /> : null}

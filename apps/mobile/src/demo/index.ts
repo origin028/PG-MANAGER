@@ -82,9 +82,32 @@ const DROP_FROM_LIST: Record<string, string[]> = {
 
 const ROLES: Role[] = ["owner", "resident", "kitchen"];
 
+/** Free beds of one PG, built from the recorded room layouts (the API's /beds?status=AVAILABLE). */
+function freeBeds(propertyId: string) {
+  const all = load().owner;
+  const out: any[] = [];
+  for (const [k, v] of Object.entries(all)) {
+    if (!k.startsWith("/rooms/floor-wise") || (v as any)?.property_id !== propertyId) continue;
+    for (const floor of (v as any).floors ?? [])
+      for (const room of floor.rooms ?? []) {
+        const recorded = all[`/beds/rooms/${room.id}/beds`] as any[] | undefined;
+        if (recorded) { out.push(...recorded.filter((b) => b.status === "AVAILABLE")); continue; }
+        const taken = room.occupied_beds ?? 0;
+        for (let i = taken; i < (room.total_beds ?? 0); i++)
+          out.push({ id: `${room.id}-bed-${i}`, property_id: propertyId, room_id: room.id, room_number: room.room_number, bed_number: `${room.room_number}-${String.fromCharCode(65 + i)}`, status: "AVAILABLE", monthly_rent: room.base_rent, is_active: true });
+      }
+  }
+  if (!out.length) // PG without a recorded room layout: offer a few sample beds.
+    for (const [room, bed] of [["101", "A"], ["101", "B"], ["102", "A"]])
+      out.push({ id: `${propertyId}-${room}${bed}`, property_id: propertyId, room_id: `${propertyId}-${room}`, room_number: room, bed_number: `${room}-${bed}`, status: "AVAILABLE", monthly_rent: 8000, is_active: true });
+  return out;
+}
+
 function find(role: Role, path: string) {
   const all = load();
   const base = path.split("?")[0];
+  const q = new URLSearchParams(path.split("?")[1] ?? "");
+  if (base === "/beds" && q.get("status") === "AVAILABLE" && q.get("property_id")) return freeBeds(q.get("property_id")!);
   const order = [role, ...ROLES.filter((r) => r !== role)];
   for (const r of order) if (path in all[r]) return all[r][path];
   for (const r of order) {

@@ -3,7 +3,7 @@ import { useCallback, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import {
   Bed, Bell, Buildings, ChatCircleDots, CurrencyInr, DoorOpen, HourglassMedium, IdentificationCard, LockKey, Megaphone,
-  QrCode, Receipt, TrendUp, UserCheck, UserPlus, Users, Wallet, WarningCircle,
+  ArrowRight, QrCode, Receipt, TrendUp, UserCheck, UserPlus, Users, Wallet, WarningCircle,
 } from "phosphor-react-native";
 import { Chip } from "@/components/charts";
 import { Divider } from "@/components/kit";
@@ -13,7 +13,7 @@ import { greeting } from "@/lib/dates";
 import { useWide } from "@/lib/layout";
 import { useProperties } from "@/lib/owner";
 import { useSession } from "@/lib/session";
-import { color, radius, rupees, shadow, space, type, type Tint } from "@/lib/theme";
+import { color, radius, rupees, shadow, space, tint, type, type Tint } from "@/lib/theme";
 import { useData } from "@/lib/use-data";
 
 type Stats = {
@@ -104,18 +104,19 @@ export default function Home() {
   const billed = s ? s.collected_this_month + s.rent_due : 0;
   const collectedPct = billed ? Math.round((s!.collected_this_month / billed) * 100) : 0;
 
+  const onboard = () => go("/manage/add-resident", one?.id);
   const quick = [
-    { icon: UserPlus, label: "Add resident", tone: "violet" as Tint, onPress: () => go("/manage/add-resident", one?.id) },
     { icon: Receipt, label: "Record payment", tone: "green" as Tint, onPress: () => go("/owner/money?tab=dues", one?.id) },
+    { icon: UserCheck, label: "Approvals", tone: "violet" as Tint, onPress: () => go("/manage/approvals", one?.id), badge: s?.signups_waiting },
     { icon: QrCode, label: "Join QR", tone: "blue" as Tint, onPress: () => go("/manage/join-qr", one?.id) },
     { icon: Megaphone, label: "Notice", tone: "amber" as Tint, onPress: () => go("/manage/announcements", one?.id) },
   ];
   const more = [
+    { icon: UserPlus, label: "Add resident", tone: "violet" as Tint, onPress: onboard },
     ...quick,
     { icon: Bed, label: "Add room", tone: "teal" as Tint, onPress: () => go("/owner/rooms", one?.id) },
     { icon: TrendUp, label: "Add expense", tone: "rose" as Tint, onPress: () => go("/owner/money?tab=expenses", one?.id) },
     { icon: ChatCircleDots, label: "Complaints", tone: "sand" as Tint, onPress: () => go("/manage/complaints", one?.id) },
-    { icon: UserCheck, label: "Approvals", tone: "violet" as Tint, onPress: () => go("/manage/approvals", one?.id), badge: s?.signups_waiting },
     { icon: Buildings, label: "Your PGs", tone: "sand" as Tint, onPress: () => go("/manage/properties") },
   ];
 
@@ -194,6 +195,19 @@ export default function Home() {
           </Reveal>
 
           <Reveal index={2} style={{ marginTop: space(6) }}>
+            <Card onPress={onboard} style={{ flexDirection: "row", alignItems: "center", gap: space(4), backgroundColor: tint.violet[0], borderColor: tint.violet[0] }}>
+              <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: tint.violet[1], alignItems: "center", justifyContent: "center" }}>
+                <UserPlus size={26} color="#fff" weight="bold" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { color: color.ink, fontSize: 17 }]}>Onboard a new resident</Text>
+                <Body muted style={{ fontSize: 13 }}>Name, mobile and email. They finish KYC themselves.</Body>
+              </View>
+              <ArrowRight size={22} color={tint.violet[1]} weight="bold" />
+            </Card>
+          </Reveal>
+
+          <Reveal index={3} style={{ marginTop: space(4) }}>
             <ActionGrid items={quick} columns={4} />
           </Reveal>
 
