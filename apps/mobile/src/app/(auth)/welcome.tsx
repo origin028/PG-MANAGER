@@ -3,6 +3,8 @@ import { router } from "expo-router";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui";
+import { DEMO } from "@/demo"; // DEMO-MODE
+import { DemoEntry } from "@/demo/demo-entry"; // DEMO-MODE
 import { useWide } from "@/lib/layout";
 import { color, radius, space, type } from "@/lib/theme";
 
@@ -22,6 +24,7 @@ function Brand() {
 function Actions() {
   return (
     <View style={{ gap: space(3) }}>
+      {DEMO && <DemoEntry />}{/* DEMO-MODE */}
       <Button title="I live here" onPress={() => router.push("/resident-login")} />
       <Button title="Join a home" variant="secondary" onPress={() => router.push("/join")} />
       <Button title="Owner or kitchen login" variant="ghost" onPress={() => router.push("/owner-login")} />

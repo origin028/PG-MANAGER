@@ -161,6 +161,7 @@ Protect the `production` environment with required reviewers to add a manual app
 | API | see [`apps/api/.env.example`](apps/api/.env.example) | Database, secrets, SMTP, CORS, storage. In production the API refuses to start if a secret is missing or weak. |
 | App (`apps/mobile`) | `EXPO_PUBLIC_API_URL` | API address, baked in at build time |
 | | `EXPO_PUBLIC_APP_URL` | Public address of the web app (used in join QR links) |
+| | `EXPO_PUBLIC_DEMO` | `1` runs the app on built-in sample data with no backend (temporary; see [apps/mobile/src/demo/README.md](apps/mobile/src/demo/README.md)) |
 | Landing (`apps/web`) | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_APP_URL` | API and app addresses |
 
 `ENVIRONMENT` defaults to **production**. Never commit `.env` files; only `.env.example` templates are tracked.

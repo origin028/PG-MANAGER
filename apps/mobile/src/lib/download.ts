@@ -2,6 +2,7 @@ import { Directory, File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 import { API_URL, tokenStore } from "./api";
+import { DEMO } from "@/demo"; // DEMO-MODE
 
 /**
  * Downloads a protected file (receipt PDF, CSV export) with the user's token.
@@ -9,6 +10,7 @@ import { API_URL, tokenStore } from "./api";
  * (Save to Files, WhatsApp, email...).
  */
 export async function downloadProtected(path: string, filename: string, mimeType: string) {
+  if (DEMO) throw new Error("Downloads are not available in the demo."); // DEMO-MODE
   const t = await tokenStore.get();
   const headers: Record<string, string> = t ? { Authorization: `Bearer ${t.access}` } : {};
   const url = `${API_URL}/api/v1${path}`;

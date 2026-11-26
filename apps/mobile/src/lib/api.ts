@@ -5,6 +5,7 @@
  */
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { DEMO, demoApi, recordResponse } from "@/demo"; // DEMO-MODE
 
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
 /** Public address of this web app (used in join links / QR posters). On the web it is simply where we are. */
@@ -69,6 +70,7 @@ function messageFrom(body: any, status: number): ApiError {
 
 export async function api<T = any>(path: string, init: RequestInit & { json?: unknown; auth?: boolean } = {}): Promise<T> {
   const { json, auth = true, ...rest } = init;
+  if (DEMO) return demoApi(path, (rest.method ?? "GET").toUpperCase(), json, (await store.get())?.access) as Promise<T>; // DEMO-MODE
   const send = async () => {
     const headers = new Headers(rest.headers);
     if (json !== undefined) headers.set("Content-Type", "application/json");
@@ -93,5 +95,6 @@ export async function api<T = any>(path: string, init: RequestInit & { json?: un
     if (body?.error?.code === "PORTAL_OFF") onPortalOff.current?.();
     throw messageFrom(body, res.status);
   }
+  recordResponse(path, (rest.method ?? "GET").toUpperCase(), body && "data" in body ? body.data : body); // DEMO-MODE
   return (body && "data" in body ? body.data : body) as T;
 }

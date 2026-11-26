@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { API_URL, api, tokenStore } from "./api";
+import { DEMO, DEMO_IMAGE } from "@/demo"; // DEMO-MODE
 
 export type Property = { id: string; name: string; property_type?: string; city?: string };
 
@@ -36,6 +37,7 @@ export function useProperties() {
 
 /** Loads a protected KYC image with the bearer token and returns a data URI (works on iOS, Android, web). */
 export async function loadProtectedImage(path: string): Promise<string> {
+  if (DEMO) return DEMO_IMAGE; // DEMO-MODE
   const t = await tokenStore.get();
   const res = await fetch(`${API_URL}/api/v1${path}`, { headers: t ? { Authorization: `Bearer ${t.access}` } : {} });
   if (!res.ok) throw new Error("Document not available");
