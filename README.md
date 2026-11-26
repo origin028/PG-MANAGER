@@ -13,7 +13,7 @@ apps/
   admin/         Flutter owner/admin app  (web + Android + iOS)     [frontend - pending design approval]
   resident/      Flutter resident app     (web + Android + iOS)     [frontend - pending design approval]
   checkout-web/  React payment-link page                            [payments untouched for now]
-docs/            architecture.md, api-contract.md, database-schema.md, archive/ (old audit reports)
+docs/            DEPLOY.md, architecture.md, api-contract.md, database-schema.md
 infra/           docker/ (local stack), render/ (API deploy blueprint). Vercel config lives in apps/web and apps/mobile. See docs/DEPLOY.md
 .github/         CI: lint, tests against Postgres, dependency audit
 Makefile         common commands
