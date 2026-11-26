@@ -1,0 +1,88 @@
+name: Deploy API
+
+# Continuous deployment of the API to Google Cloud Run (project created by infra/firebase/deploy.sh).
+# Runs after CI succeeds on main, or manually. The websites are deployed by Vercel's Git integration,
+# not by this workflow.
+#
+# One-time setup (repository Settings → Secrets and variables → Actions → Variables):
+#   GCP_PROJECT                      e.g. originpg
+#   GCP_REGION                       e.g. asia-south1
+#   GCP_WORKLOAD_IDENTITY_PROVIDER   projects/<number>/locations/global/workloadIdentityPools/<pool>/providers/<provider>
+#   GCP_DEPLOY_SERVICE_ACCOUNT       deployer@<project>.iam.gserviceaccount.com
+# Until GCP_WORKLOAD_IDENTITY_PROVIDER is set, this workflow is skipped.
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    name: Cloud Run · production
+    if: >-
+      vars.GCP_WORKLOAD_IDENTITY_PROVIDER != '' &&
+      (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      PROJECT: ${{ vars.GCP_PROJECT }}
+      REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+      SERVICE: pg-api
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Build and push image
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/pg/api:$(git rev-parse --short HEAD)"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build -t "$IMAGE" apps/api
+          docker push "$IMAGE"
+
+      - name: Run database migrations
+        run: |
+          gcloud run jobs update pg-migrate --image "$IMAGE" --region "$REGION" --quiet
+          gcloud run jobs execute pg-migrate --region "$REGION" --wait
+
+      - name: Deploy API service
+        id: deploy
+        run: |
+          # Only the image changes; environment, secrets and scaling set by deploy.sh are kept.
+          gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --quiet
+          echo "url=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')" >> "$GITHUB_OUTPUT"
+
+      - name: Update scheduled jobs
+        run: |
+          for job in pg-monthly-invoices pg-rent-reminders pg-kyc-deadlines; do
+            gcloud run jobs update "$job" --image "$IMAGE" --region "$REGION" --quiet
+          done
+
+      - name: Smoke test
+        run: |
+          for i in 1 2 3 4 5; do
+            curl -fsS "${{ steps.deploy.outputs.url }}/api/v1/health" && exit 0
+            sleep 10
+          done
+          echo "Health check failed. Roll back in Cloud Run → pg-api → Revisions." && exit 1

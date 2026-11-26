@@ -1,4 +1,4 @@
-.PHONY: help setup db-up db-down migrate migration dev test lint audit jobs
+.PHONY: help setup db-up db-down migrate migration dev test lint audit jobs app app-check web-check checkout-check check
 
 API = apps/api
 
@@ -12,6 +12,8 @@ help:
 	@echo "make lint       ruff static checks"
 	@echo "make audit      scan dependencies for known vulnerabilities"
 	@echo "make jobs       run monthly invoicing + reminders once (local)"
+	@echo "make app        run the Expo app (press w for web, i for iOS)"
+	@echo "make check      run every CI check locally (API, app, website, payment page)"
 
 setup:
 	python3 -m venv $(API)/.venv
@@ -44,3 +46,18 @@ audit:
 
 jobs:
 	cd $(API) && .venv/bin/python -m app.tasks.run monthly-invoices && .venv/bin/python -m app.tasks.run reminders
+
+app:
+	cd apps/mobile && EXPO_PUBLIC_API_URL=$${EXPO_PUBLIC_API_URL:-http://localhost:8000} npx expo start
+
+app-check:
+	cd apps/mobile && npm run typecheck && npm run lint && EXPO_PUBLIC_API_URL=https://api.example.invalid npx expo export -p web --output-dir dist
+
+web-check:
+	npm run lint -w @pg/web && npm run build -w @pg/web
+
+checkout-check:
+	cd apps/checkout-web && npm test && npm run build
+
+check: lint test audit app-check web-check checkout-check
+	@echo "All checks passed."

@@ -4,9 +4,9 @@
 
 ```
 Phone browser / installed app  ->  HTTPS  ->  FastAPI (apps/api)  ->  PostgreSQL
-(admin + resident Flutter)                       |        |-> encrypted KYC files (disk volume)
+(Expo app: apps/mobile)                          |        |-> encrypted KYC files (private bucket)
 Fingerprint bridge  -- X-Device-Key -->          |        |-> SMTP (OTP, reminders)
-Render cron  ->  python -m app.tasks.run  ------>+
+Scheduler    ->  python -m app.tasks.run  ------>+
 ```
 
 ## Backend (`apps/api/app`)
@@ -23,8 +23,10 @@ Render cron  ->  python -m app.tasks.run  ------>+
 - Invoices: unique per (resident, month, type), so jobs are idempotent.
 
 ## Two ways to use it (phone or app)
-Both Flutter apps build for **web** (installable PWA, works from any phone browser) and **native**
-(Android/iOS) from one codebase, calling the same API. No separate mobile backend.
+One Expo app (`apps/mobile`) serves owners, residents and kitchen staff. It builds for the **web**
+(any phone browser, deployed on Vercel) and **native** iOS/Android (EAS Build) from one codebase,
+calling the same API. No separate mobile backend. The older Flutter apps (`apps/admin`, `apps/resident`)
+are superseded and not deployed.
 
 ## Decisions
 1. Stay on PostgreSQL (relational money rules); not Firestore.
